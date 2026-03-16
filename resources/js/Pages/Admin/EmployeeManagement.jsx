@@ -1,14 +1,25 @@
 import settingsIcon from '@/assets/settings.png';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, Link } from '@inertiajs/react';
-import { useEffect, useState } from 'react'; // Added these imports
+import { Head, Link, useForm } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 
-export default function EmployeeManagement({ users = [] }) {
+import InputError from '@/Components/InputError';
+import InputLabel from '@/Components/InputLabel';
+import Modal from '@/Components/Modal';
+import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
+import TextInput from '@/Components/TextInput';
+
+export default function EmployeeManagement({ users = [], departments = [] }) {
     
-    // 1. State to track exactly which dropdown is open
     const [activeDropdown, setActiveDropdown] = useState(null);
+    const [isPositionModalOpen, setPositionModalOpen] = useState(false);
 
-    // 2. Listen for clicks anywhere on the screen to instantly close the dropdown
+    const {data, setData, post , processing, errors, reset, clearErrors} = useForm({
+        department_id: '',
+        position_name: '',
+    });
+    
     useEffect(() => {
         const closeDropdown = () => setActiveDropdown(null);
         document.addEventListener('click', closeDropdown);
@@ -22,6 +33,23 @@ export default function EmployeeManagement({ users = [] }) {
         { label: 'Branch Assignments', href: '#', active: false },
         { label: 'System Logs & Security', href: '#', active: false },
     ];
+
+    const closePositionModal = () => {
+        setPositionModalOpen(false);
+        clearErrors();
+        reset();
+    };
+
+    const submitPosition = (e) => {
+        e.preventDefault();
+        post(route('admin.positions.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                closePositionModal();
+                reset();
+            },
+        });
+    };
 
     return (
         <SidebarLayout
@@ -42,7 +70,7 @@ export default function EmployeeManagement({ users = [] }) {
                         <button className="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700">
                             + Add Users
                         </button>
-                        <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-gray-50">
+                        <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-gray-50" onClick={() => setPositionModalOpen(true)}>
                             + Add Position
                         </button>
                         <button className="rounded-md border border-gray-300 bg-yellow-500 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-yellow-600">
@@ -50,7 +78,6 @@ export default function EmployeeManagement({ users = [] }) {
                         </button>
                     </div>
 
-                    {/* 3. Removed 'overflow-hidden' and added 'pb-32' to give the bottom dropdown room to breathe */}
                     <div className="bg-white shadow-sm sm:rounded-lg pb-32">
                         <div className="overflow-visible">
                             <table className="w-full whitespace-nowrap text-left text-sm text-gray-500">
@@ -86,11 +113,11 @@ export default function EmployeeManagement({ users = [] }) {
                                                 </span>
                                             </td>
                                             
-                                            {/* 4. The Action Cell must be 'relative' so the absolute dropdown anchors to it */}
+                                           
                                             <td className="relative px-6 py-4 text-center">
                                                 <button
                                                     onClick={(e) => {
-                                                        e.stopPropagation(); // Stops the document click listener from instantly closing it
+                                                        e.stopPropagation(); 
                                                         setActiveDropdown(activeDropdown === employee.id ? null : employee.id);
                                                     }}
                                                     className="inline-flex items-center justify-center rounded-md p-1 hover:bg-gray-200 focus:outline-none"
@@ -98,7 +125,7 @@ export default function EmployeeManagement({ users = [] }) {
                                                     <img src={settingsIcon} alt="Settings" className="h-5 w-5 opacity-70 hover:opacity-100" />
                                                 </button>
 
-                                                {/* 5. The Custom Dropdown Menu */}
+                                                
                                                 {activeDropdown === employee.id && (
                                                     <div
                                                         onClick={(e) => e.stopPropagation()} 
@@ -125,6 +152,59 @@ export default function EmployeeManagement({ users = [] }) {
 
                 </div>
             </div>
+
+            {/* Add Position Modal */}
+
+            <Modal show={isPositionModalOpen} onClose={closePositionModal}>
+    <form onSubmit={submitPosition} className="p-6">
+        <h2 className="text-lg font-medium text-gray-900">
+            Add New Position
+        </h2>
+        <p className="mt-1 text-sm text-gray-600">
+            Select the department and enter the new position name.
+        </p>
+
+        
+        <div className="mt-6">
+            <InputLabel htmlFor="department_id" value="Select Department" />
+            <select
+                id="department_id"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                value={data.department_id}
+                onChange={(e) => setData('department_id', e.target.value)}
+                required
+            >
+                <option value="" disabled>Select a department...</option>
+                {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                    </option>
+                ))}
+            </select>
+            <InputError message={errors.department_id} className="mt-2" />
+        </div>
+
+        <div className="mt-6">
+            <InputLabel htmlFor="position_name" value="Position Name" />
+            <TextInput
+                id="position_name"
+                className="mt-1 block w-full"
+                value={data.position_name}
+                onChange={(e) => setData('position_name', e.target.value)}
+                required
+                placeholder="e.g. Veterinarian, Tech Support"
+            />
+            <InputError message={errors.position_name} className="mt-2" />
+        </div>
+
+        <div className="mt-6 flex justify-end">
+            <SecondaryButton onClick={closePositionModal}>Cancel</SecondaryButton>
+            <PrimaryButton className="ms-3" disabled={processing}>
+                Save Position
+            </PrimaryButton>
+        </div>
+    </form>
+</Modal>
         </SidebarLayout>
     );
 }

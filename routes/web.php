@@ -30,6 +30,8 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     })->name('.dashboard');
 
     Route::get('/employees', [EmployeeController::class, 'index'])->name('.employees');
+
+    Route::post('/positions', [EmployeeController::class, 'storePosition'])->name('.positions.store');
 });
 
 require __DIR__.'/auth.php';
