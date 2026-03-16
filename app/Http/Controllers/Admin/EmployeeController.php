@@ -24,7 +24,8 @@ class EmployeeController extends Controller
 
     public function storePosition(Request $request)
     {
-        $request->validate([
+        try{
+            $request->validate([
             'department_id' => 'required|exists:departments,id',
             'position_name' => 'required|string|max:255',
         ]);
@@ -35,7 +36,9 @@ class EmployeeController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Position added successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'An error occurred while adding the position: ' . $e->getMessage());
+        }
+        
     }
-
-
 }

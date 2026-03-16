@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
+import FlashMessage from '@/Components/FlashMessage';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -9,6 +10,8 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
 
     return (
         <div className="flex h-screen overflow-hidden bg-gray-100">
+
+            <FlashMessage/>
             
             {/* --- MOBILE SIDEBAR BACKDROP --- */}
             {isMobileSidebarOpen && (
