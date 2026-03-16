@@ -87,7 +87,7 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
 
                             <Dropdown.Content>
                                 {/* Role-based Module Links */}
-                                {(user.role === 'admin') && (
+                                {(user.role?.name === 'admin') && (
                                     <Dropdown.Link href={route('admin.dashboard')}>
                                         Admin Module
                                     </Dropdown.Link>

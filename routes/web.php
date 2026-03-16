@@ -32,6 +32,16 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::get('/employees', [EmployeeController::class, 'index'])->name('.employees');
 
     Route::post('/positions', [EmployeeController::class, 'storePosition'])->name('.positions.store');
+
+    Route::post('/branches', [EmployeeController::class, 'storeBranch'])->name('.branches.store');
+
+    Route::post('/users', [EmployeeController::class, 'storeUser'])->name('.users.store');
+
+    Route::put('/users/{user}', [EmployeeController::class, 'updateUser'])->name('.users.update');
+
+    Route::patch('/users/{user}/reset-device', [EmployeeController::class, 'resetDevice'])->name('.users.reset-device');
+
+    Route::delete('/users/{user}', [EmployeeController::class, 'destroy'])->name('.users.destroy');
 });
 
 require __DIR__.'/auth.php';

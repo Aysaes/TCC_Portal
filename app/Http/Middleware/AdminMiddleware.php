@@ -15,7 +15,7 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(!request()->user() || request()->user()->role !== 'admin') {
+        if(!request()->user() || request()->user()->role->name !== 'admin') {
             abort(403, 'Unauthorized access. Admin privileges are required to access this module');
 
         }

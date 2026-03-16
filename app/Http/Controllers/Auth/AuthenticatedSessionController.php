@@ -33,7 +33,6 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        Log::info('📥 Login Attempt Received. Data:', $request->all());
 
        $request->validate([
         'email' => 'required|email',
