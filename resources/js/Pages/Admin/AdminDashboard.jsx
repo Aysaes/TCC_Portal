@@ -1,30 +1,10 @@
+import { getAdminLinks } from "@/Config/navigation";
 import SidebarLayout from "@/Layouts/SidebarLayout";
 import { Head } from "@inertiajs/react";
 
 export default function AdminDashboard() {
 
-    const adminLinks = [
-        {
-            label: 'Admin Overview',
-            href: route('admin.dashboard'),
-            active: route().current('admin.dashboard'),
-        },
-        {
-            label: 'Employee Management',
-            href: route('admin.employees'),
-            active: false,
-        },
-        {
-            label: 'Branch Assignments',
-            href: '#',
-            active: false,
-        },
-        {
-            label: 'System Logs & Security',
-            href: '#',
-            active: false,
-        },
-    ];
+    const adminLinks = getAdminLinks();
 
     return (
         <SidebarLayout

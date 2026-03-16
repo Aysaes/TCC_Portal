@@ -1,5 +1,6 @@
 import settingsIcon from '@/assets/settings.png';
 import ConfirmModal from '@/Components/ConfirmModal';
+import { getAdminLinks } from "@/Config/navigation";
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
@@ -12,6 +13,8 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 
 export default function EmployeeManagement({ users = [], departments = [], positions = [], branches = [], roles = [] }) {
+
+    const adminLinks = getAdminLinks();
 
     // Global Confirm Modal
     const [confirmDialog, setConfirmDialog] = useState({ 
@@ -35,14 +38,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         document.addEventListener('click', closeDropdown);
         return () => document.removeEventListener('click', closeDropdown);
     }, []);
-
-    // ESS Sidebar Pattern Links
-    const adminLinks = [
-        { label: 'Admin Overview', href: route('admin.dashboard'), active: false },
-        { label: 'Employee Management', href: route('admin.employees'), active: true },
-        { label: 'Branch Assignments', href: '#', active: false },
-        { label: 'System Logs & Security', href: '#', active: false },
-    ];
 
     //For Position
 
