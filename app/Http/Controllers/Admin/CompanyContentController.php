@@ -7,21 +7,25 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Models\CompanyContent;
+use App\Models\ContentType;
 
 class CompanyContentController extends Controller
 {
     public function index()
     {
         $contents = CompanyContent::all();
+        $contentTypes = ContentType::all();
+
         return Inertia::render('Admin/CompanyContent', [
             'contents' => $contents,
+            'contentTypes' => $contentTypes,
         ]);
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'type' => 'required|string|in:mission,vision', // Restrict to these two types for now
+            'type' => 'required|string|max:50', // Restrict to these two types for now
             'title' => 'nullable|string|max:255',
             'content' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Max 2MB image
@@ -47,7 +51,7 @@ class CompanyContentController extends Controller
     public function update(Request $request, CompanyContent $companyContent)
     {
         $request->validate([
-            'type' => 'required|string|in:mission,vision',
+            'type' => 'required|string|max:50',
             'title' => 'nullable|string|max:255',
             'content' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -90,6 +94,17 @@ class CompanyContentController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to delete content: ' . $e->getMessage());
         }
+    }
+
+    public function storeType(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:50|unique:content_types,name',
+        ]);
+
+        ContentType::create($request->only('name'));
+
+        return back()->with('success', 'New content type added!');
     }
 }
 

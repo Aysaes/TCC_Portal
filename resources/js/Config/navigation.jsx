@@ -15,7 +15,8 @@ export const getDashboardLinks = () => [
         label: 'Organizational Chart',
         href: '#',
         active: false,
-    }
+    },
+
 ];
 
 
@@ -30,12 +31,12 @@ export const getAdminLinks = () => [
     {
         label: 'Employee Management',
         href: route('admin.employees'),
-        active: route().current('admin.employees'), // dynamically checks the route!
+        active: route().current('admin.employees'),
     },
     {
         label: 'Announcements & Notices',
-        href: '#',
-        active: false,
+        href: route('admin.announcements.index'),
+        active: route().current('admin.announcements.*'),
     },
     {
         label: 'Company Content Management',
@@ -49,6 +50,27 @@ export const getAdminLinks = () => [
         active: false,
     },
    
-
+   
 
 ];
+
+ // Document Repository Links
+
+ export const getDocumentRepoLinks = () => [
+    {
+        label: 'Handbooks',
+        href: '#',
+        active: false,
+    },
+    {
+        label: 'Memos',
+        href: '#',
+        active: false,
+    },
+    {
+        label: 'Manuals',
+        href: '#',
+        active: false,
+    },
+
+ ];

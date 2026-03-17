@@ -18,4 +18,9 @@ class Branch extends Model
     {
         return $this->belongsToMany(User::class, 'branch_user');
     }
+
+    public function announcements(): BelongsToMany
+    {
+        return $this->belongsToMany(Announcement::class, 'announcement_branch');
+    }
 }

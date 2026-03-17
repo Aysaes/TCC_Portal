@@ -10,8 +10,27 @@ import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function CompanyContent({ auth, contents = [] }) {
+export default function CompanyContent({ auth, contents = [], contentTypes = [] }) {
     const adminLinks = getAdminLinks();
+
+    // --- MINI-MODAL FOR NEW CONTENT TYPE ---
+    const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+    const { data: typeData, setData: setTypeData, post: postType, processing: typeProcessing, reset: resetType, clearErrors: clearTypeErrors } = useForm({
+        name: ''
+    });
+
+    const closeTypeModal = () => { setIsTypeModalOpen(false); resetType(); clearTypeErrors(); };
+    const submitType = (e) => {
+        e.preventDefault();
+        postType(route('admin.company-content.type.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeTypeModal();
+                // Auto-select the newly created type in the main Add form
+                setAddData({ ...addData, type: typeData.name });
+            }
+        });
+    };
 
     // --- GLOBAL CONFIRMATION MODAL (For Deletes) ---
     const [confirmDialog, setConfirmDialog] = useState({ 
@@ -117,6 +136,8 @@ export default function CompanyContent({ auth, contents = [] }) {
                         >
                             + Add Content
                         </button>
+
+                        
                     </div>
 
                     {/* Content Grid */}
@@ -169,10 +190,28 @@ export default function CompanyContent({ auth, contents = [] }) {
                     <div className="space-y-4">
                         <div>
                             <InputLabel htmlFor="add_type" value="Content Type" />
-                            <select id="add_type" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value={addData.type} onChange={(e) => setAddData('type', e.target.value)} required>
-                                <option value="mission">Mission</option>
-                                <option value="vision">Vision</option>
-                            </select>
+                            <div className="mt-1 flex gap-2">
+                                <select 
+                                    id="add_type" 
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                                    value={addData.type} 
+                                    onChange={(e) => setAddData('type', e.target.value)} 
+                                    required
+                                >
+                                    <option value="" disabled>Select a type...</option>
+                                    {contentTypes.map(type => (
+                                        <option key={type.id} value={type.name}>{type.name}</option>
+                                    ))}
+                                </select>
+                                
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsTypeModalOpen(true)}
+                                    className="whitespace-nowrap rounded-md bg-indigo-100 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
+                                >
+                                    + Add Type
+                                </button>
+                            </div>
                             <InputError message={addErrors.type} className="mt-2" />
                         </div>
 
@@ -210,11 +249,29 @@ export default function CompanyContent({ auth, contents = [] }) {
                     <div className="space-y-4">
                         <div>
                             <InputLabel htmlFor="edit_type" value="Content Type" />
-                            <select id="edit_type" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value={editData.type} onChange={(e) => setEditData('type', e.target.value)} required>
-                                <option value="mission">Mission</option>
-                                <option value="vision">Vision</option>
-                            </select>
-                            <InputError message={editErrors.type} className="mt-2" />
+                            <div className="mt-1 flex gap-2">
+                                <select 
+                                    id="edit_type" 
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                                    value={editData.type} 
+                                    onChange={(e) => setAddData('type', e.target.value)} 
+                                    required
+                                >
+                                    <option value="" disabled>Select a type...</option>
+                                    {contentTypes.map(type => (
+                                        <option key={type.id} value={type.name}>{type.name}</option>
+                                    ))}
+                                </select>
+                                
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsTypeModalOpen(true)}
+                                    className="whitespace-nowrap rounded-md bg-indigo-100 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
+                                >
+                                    + Add Type
+                                </button>
+                            </div>
+                            <InputError message={addErrors.type} className="mt-2" />
                         </div>
 
                         <div>
@@ -239,6 +296,21 @@ export default function CompanyContent({ auth, contents = [] }) {
                     <div className="mt-6 flex justify-end">
                         <SecondaryButton onClick={closeEditModal}>Cancel</SecondaryButton>
                         <PrimaryButton className="ms-3" disabled={editProcessing}>Update Content</PrimaryButton>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* --- ADD NEW CONTENT TYPE MODAL --- */}
+            <Modal show={isTypeModalOpen} onClose={closeTypeModal} maxWidth="sm">
+                <form onSubmit={submitType} className="p-6">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Add Custom Content Type</h2>
+                    <div>
+                        <InputLabel htmlFor="new_type_name" value="Type Name (e.g. Core Values)" />
+                        <TextInput id="new_type_name" className="mt-1 block w-full" value={typeData.name} onChange={(e) => setTypeData('name', e.target.value)} required />
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                        <SecondaryButton onClick={closeTypeModal}>Cancel</SecondaryButton>
+                        <PrimaryButton className="ms-3" disabled={typeProcessing}>Save Type</PrimaryButton>
                     </div>
                 </form>
             </Modal>

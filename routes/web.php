@@ -52,6 +52,14 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::post('/company-content', [CompanyContentController::class, 'store'])->name('.company-content.store');
     Route::put('/company-content/{companyContent}', [CompanyContentController::class, 'update'])->name('.company-content.update');
     Route::delete('/company-content/{companyContent}', [CompanyContentController::class, 'destroy'])->name('.company-content.destroy');
+    Route::post('/company-content/type', [CompanyContentController::class, 'storeType'])->name('.company-content.type.store');
+
+    // --- Announcements & Notices ---
+    Route::get('/announcements', [\App\Http\Controllers\Admin\AnnouncementController::class, 'index'])->name('.announcements.index');
+    Route::post('/announcements', [\App\Http\Controllers\Admin\AnnouncementController::class, 'store'])->name('.announcements.store');
+    Route::put('/announcements/{announcement}', [\App\Http\Controllers\Admin\AnnouncementController::class, 'update'])->name('.announcements.update');
+    Route::delete('/announcements/{announcement}', [\App\Http\Controllers\Admin\AnnouncementController::class, 'destroy'])->name('.announcements.destroy');
+    Route::post('/announcements/priority', [\App\Http\Controllers\Admin\AnnouncementController::class, 'storePriority'])->name('.announcements.priority.store');
 });
 
 require __DIR__.'/auth.php';
