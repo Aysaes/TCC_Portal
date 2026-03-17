@@ -1,3 +1,24 @@
+// Dashboard Links
+
+export const getDashboardLinks = () => [
+    {
+        label: 'Announcements',
+        href: route('dashboard'),
+        active: route().current('dashboard'),
+    },
+    {
+        label: 'Mission & Vision',
+        href: route('dashboard.mission-vision'),
+        active: route().current('dashboard.mission-vision'),
+    },
+    {
+        label: 'Organizational Chart',
+        href: '#',
+        active: false,
+    }
+];
+
+
 // Admin Module Links
 
 export const getAdminLinks = () => [
@@ -17,8 +38,17 @@ export const getAdminLinks = () => [
         active: false,
     },
     {
+        label: 'Company Content Management',
+        href: route('admin.company-content.index'),
+        active: route().current('admin.company-content.*'),
+    },
+    
+    {
         label: 'System Logs & Security',
         href: '#',
         active: false,
     },
+   
+
+
 ];

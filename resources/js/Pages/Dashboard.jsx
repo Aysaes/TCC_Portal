@@ -1,15 +1,11 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
+
+import { getDashboardLinks } from '@/Config/navigation';
 import { Head } from '@inertiajs/react';
 
 export default function Dashboard() {
 
-    const dashboardLinks = [
-        {
-            label: 'Overview',
-            href: route('dashboard'),
-            active: route().current('dashboard'),
-        }
-    ];
+    const dashboardLinks = getDashboardLinks();
     return (
         <SidebarLayout
             activeModule="General"
