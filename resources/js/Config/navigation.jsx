@@ -43,7 +43,7 @@ export const getAdminLinks = () => [
         href: route('admin.company-content.index'),
         active: route().current('admin.company-content.*'),
     },
-    
+
     {
         label: 'System Logs & Security',
         href: '#',
@@ -56,21 +56,19 @@ export const getAdminLinks = () => [
 
  // Document Repository Links
 
- export const getDocumentRepoLinks = () => [
-    {
-        label: 'Handbooks',
-        href: '#',
-        active: false,
-    },
-    {
-        label: 'Memos',
-        href: '#',
-        active: false,
-    },
-    {
-        label: 'Manuals',
-        href: '#',
-        active: false,
-    },
 
- ];
+export const getDocumentSidebarLinks = (categories = [], activeCategory = 'Overview') => {
+    return [
+        {
+            label: 'Document Overview',
+            href: route('admin.documents.index'),
+            active: activeCategory === 'Overview'
+        },
+
+        ...categories.map(cat => ({
+            label: cat.name,
+            href: route('admin.documents.index', { category: cat.name }),
+            active: activeCategory === cat.name
+        }))
+    ];
+};

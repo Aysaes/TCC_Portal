@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\CompanyContentController;
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Controllers\Admin\DocumentController;
+use App\Http\Controllers\Admin\AnnouncementController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,6 +24,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard/mission-vision', function () {
     return Inertia::render('MissionVision');
     })->name('dashboard.mission-vision');
+
+       Route::get('/admin/documents', [DocumentController::class, 'index'])->name('admin.documents.index');
+       Route::get('/documents/{document}/view', [DocumentController::class, 'show'])->name('documents.show');
 });
 
 
@@ -55,11 +60,16 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::post('/company-content/type', [CompanyContentController::class, 'storeType'])->name('.company-content.type.store');
 
     // --- Announcements & Notices ---
-    Route::get('/announcements', [\App\Http\Controllers\Admin\AnnouncementController::class, 'index'])->name('.announcements.index');
-    Route::post('/announcements', [\App\Http\Controllers\Admin\AnnouncementController::class, 'store'])->name('.announcements.store');
-    Route::put('/announcements/{announcement}', [\App\Http\Controllers\Admin\AnnouncementController::class, 'update'])->name('.announcements.update');
-    Route::delete('/announcements/{announcement}', [\App\Http\Controllers\Admin\AnnouncementController::class, 'destroy'])->name('.announcements.destroy');
-    Route::post('/announcements/priority', [\App\Http\Controllers\Admin\AnnouncementController::class, 'storePriority'])->name('.announcements.priority.store');
+    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('.announcements.index');
+    Route::post('/announcements', [AnnouncementController::class, 'store'])->name('.announcements.store');
+    Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('.announcements.update');
+    Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('.announcements.destroy');
+    Route::post('/announcements/priority', [AnnouncementController::class, 'storePriority'])->name('.announcements.priority.store');
+
+    // Document Repository Routes
+    Route::post('/documents', [DocumentController::class, 'store'])->name('.documents.store');
+    Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
+    Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
 });
 
 require __DIR__.'/auth.php';

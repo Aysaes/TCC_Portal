@@ -118,7 +118,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
 
     return (
         <SidebarLayout
-            activeModule="Company Content"
+            activeModule="Admin"
             sidebarLinks={adminLinks}
             header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Company Content Management</h2>}
         >
