@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CompanyContent;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\CompanyContentController;
@@ -14,14 +15,27 @@ Route::get('/', function () {
     ]);
 });
 
+// Keep this protective wrapper exactly as it is!
 Route::middleware(['auth', 'verified'])->group(function () {
+    
+    // Your main dashboard route stays the same
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
+    // ONLY change the inside of the mission-vision route:
     Route::get('/dashboard/mission-vision', function () {
-    return Inertia::render('MissionVision');
+        
+        // Grab the data (Make sure you added 'use App\Models\CompanyContent;' at the top of the file!)
+        $contents = App\Models\CompanyContent::all();
+
+        // Pass it to React
+        return Inertia::render('MissionVision', [
+            'contents' => $contents
+        ]);
+
     })->name('dashboard.mission-vision');
+
 });
 
 
