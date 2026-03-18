@@ -39,7 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard.mission-vision');
 
        Route::get('/admin/documents', [DocumentController::class, 'index'])->name('admin.documents.index');
-       Route::get('/documents/{document}/view', [DocumentController::class, 'show'])->name('documents.show');
+       Route::get('/documents/{document}/view/{filename?}', [DocumentController::class, 'show'])->name('documents.show');
 });
 
 

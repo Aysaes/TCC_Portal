@@ -120,10 +120,14 @@ export default function Documents({ auth, documents = [], categories = [], activ
                             <div className="mt-6 flex items-center justify-between border-t pt-4">
                                 <span className="text-xs text-gray-400">Uploaded {new Date(doc.created_at).toLocaleDateString()}</span>
                                 <div className="flex gap-3">
-                                    <a href={route('documents.show', doc.id)} target="_blank" rel="noreferrer" className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                                    <a 
+                                        href={route('documents.show', [doc.id, `${doc.title.replace(/[^a-zA-Z0-9-_\.]/g, '_')}.pdf`])} 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                                    >
                                         View
                                     </a>
-                                    {/* 👇 Delete is also hidden from standard users! */}
                                     {isAdmin && (
                                         <button 
                                             onClick={() => triggerDelete(doc)} // 👈 Updated!

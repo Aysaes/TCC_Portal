@@ -83,7 +83,7 @@ class DocumentController extends Controller
         return back()->with('success', 'New document category added!');
     }
 
-    public function show($id)
+    public function show($id, $filename = null)
     {
         $document = Document::findOrFail($id);
 
@@ -100,7 +100,11 @@ class DocumentController extends Controller
             abort(404, 'Document file could not be found in the secure vault.');
         }
 
+        $headers = [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $document->title . '.pdf"'
+        ];
         // 4. Securely stream the file directly to the browser
-        return response()->file($path);
+        return response()->file($path, $headers);
     }
 }
