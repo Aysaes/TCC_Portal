@@ -121,7 +121,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
 
 
     return (
-        <SidebarLayout activeModule="Announcements & Notices" sidebarLinks={adminLinks} header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Announcements</h2>}>
+        <SidebarLayout activeModule="Admin" sidebarLinks={adminLinks} header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Announcements</h2>}>
             <Head title="Announcements & Notices" />
 
             <div className="py-12">
