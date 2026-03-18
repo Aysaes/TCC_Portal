@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Announcement;
 use App\Models\CompanyContent;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\EmployeeController;
@@ -22,7 +23,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Your main dashboard route stays the same
     Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
+
+        // Grab all announcements from the database, newest first
+        $announcements = Announcement::with(['priorityLevel', 'branches'])->latest()->paginate(3);
+
+        // Pass them to the React component
+        return Inertia::render('Dashboard', [
+            'announcements' => $announcements
+        ]);
+
     })->name('dashboard');
 
     // ONLY change the inside of the mission-vision route:
