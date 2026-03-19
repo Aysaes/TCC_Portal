@@ -78,3 +78,18 @@ export const getDocumentSidebarLinks = (categories = [], activeCategory = 'Overv
         }))
     ];
 };
+
+// Duty Meal Module Links
+
+export const getDutyMealLinks = () => [
+    {
+        label: 'Duty Meal Overview',
+        href: route('admin.duty-meals.index'),
+        active: route().current('admin.duty-meals.index'),
+    },
+    {
+        label: 'Set Up Roster',
+        href: route('admin.duty-meals.create'),
+        active: route().current('admin.duty-meals.create'),
+    },
+];

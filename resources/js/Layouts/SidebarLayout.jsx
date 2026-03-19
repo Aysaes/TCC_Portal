@@ -125,11 +125,11 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                                     <Dropdown.Link href="#">
                                         Procurement Module
                                     </Dropdown.Link>
-
-                                    <Dropdown.Link href="#">
-                                        Duty Meal Module
-                                    </Dropdown.Link>
-                                
+                                    {['admin', 'duty meal custodian'].includes(user.role?.name) && (
+                                        <Dropdown.Link href={route('admin.duty-meals.index')}>
+                                            Duty Meal Module
+                                        </Dropdown.Link>
+                                    )}
                             </Dropdown.Content>
                         </Dropdown>
 
