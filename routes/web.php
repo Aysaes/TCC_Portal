@@ -21,9 +21,25 @@ Route::get('/', function () {
 // Keep this protective wrapper exactly as it is!
 Route::middleware(['auth', 'verified'])->group(function () {
     
+    // --- NEW: Overview Route ---
+    Route::get('/dashboard/overview', function () {
+        // Grab the 3 most recent announcements for the overview
+        $announcements = Announcement::with(['priorityLevel', 'branches'])
+                            ->latest()
+                            ->paginate(6);
+
+        // Grab the Mission & Vision data
+        $contents = CompanyContent::all();
+
+        // Pass both to the new Overview React component
+        return Inertia::render('Overview', [
+            'announcements' => $announcements,
+            'contents' => $contents
+        ]);
+    })->name('dashboard.overview');
+
     // Your main dashboard route stays the same
     Route::get('/dashboard', function () {
-
         // Grab all announcements from the database, newest first
         $announcements = Announcement::with(['priorityLevel', 'branches'])->latest()->paginate(6);
 
@@ -31,14 +47,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Dashboard', [
             'announcements' => $announcements
         ]);
-
     })->name('dashboard');
 
     // ONLY change the inside of the mission-vision route:
     Route::get('/dashboard/mission-vision', function () {
         
-        // Grab the data (Make sure you added 'use App\Models\CompanyContent;' at the top of the file!)
-        $contents = App\Models\CompanyContent::all();
+        // Grab the data
+        $contents = CompanyContent::all();
 
         // Pass it to React
         return Inertia::render('MissionVision', [
@@ -47,8 +62,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     })->name('dashboard.mission-vision');
 
-       Route::get('/admin/documents', [DocumentController::class, 'index'])->name('admin.documents.index');
-       Route::get('/documents/{document}/view/{filename?}', [DocumentController::class, 'show'])->name('documents.show');
+    Route::get('/admin/documents', [DocumentController::class, 'index'])->name('admin.documents.index');
+    Route::get('/documents/{document}/view/{filename?}', [DocumentController::class, 'show'])->name('documents.show');
 });
 
 
