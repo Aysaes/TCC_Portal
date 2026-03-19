@@ -27,7 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
 
         // Grab all announcements from the database, newest first
-        $announcements = Announcement::with(['priorityLevel', 'branches'])->latest()->paginate(3);
+        $announcements = Announcement::with(['priorityLevel', 'branches'])->latest()->paginate(6);
 
         // Pass them to the React component
         return Inertia::render('Dashboard', [
