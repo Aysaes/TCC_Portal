@@ -1,6 +1,12 @@
 // Dashboard Links
 
 export const getDashboardLinks = () => [
+
+    {
+        label: 'Overview',
+        href: '#',
+        active: false,
+    },
     {
         label: 'Announcements',
         href: route('dashboard'),

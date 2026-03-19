@@ -73,6 +73,14 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                     </button>
 
                     <div className="flex flex-1 items-center justify-end space-x-4">
+
+                        <Link 
+                            href='#' 
+                            className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none transition ease-in-out duration-150"
+                        >
+                           <svg className="mr-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12c0-1.657 2.015-3 4.5-3S14 10.343 14 12m0 0c0-1.657 2.015-3 4.5-3S23 10.343 23 12"/><path strokeLinecap="round" strokeLinejoin="round" d="M2 12h20m-18 0c0 3.314 4.03 6 9 6s9-2.686 9-6M1 8l5 3.5" /></svg>
+                            Duty Meal
+                        </Link>
                         
                         {/* --- DOCUMENT REPOSITORY BUTTON --- */}
                         <Link 
@@ -116,6 +124,10 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                                 
                                     <Dropdown.Link href="#">
                                         Procurement Module
+                                    </Dropdown.Link>
+
+                                    <Dropdown.Link href="#">
+                                        Duty Meal Module
                                     </Dropdown.Link>
                                 
                             </Dropdown.Content>
