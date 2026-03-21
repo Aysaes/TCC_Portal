@@ -43,7 +43,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // --- ANNOUNCEMENTS: Moved to its own specific route ---
     Route::get('/dashboard/announcements', function () {
         // Grab all announcements from the database, newest first
-        $announcements = Announcement::with(['priorityLevel', 'branches'])->latest()->paginate(6);
+        $announcements = Announcement::with(['priorityLevel', 'branches'])
+                            ->latest()
+                            ->get();
 
         // Pass them to the React component
         return Inertia::render('Dashboard', [
