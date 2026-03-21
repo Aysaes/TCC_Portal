@@ -1,20 +1,17 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getDashboardLinks } from '@/Config/navigation';
-import { Head, Link } from '@inertiajs/react'; // NEW: Added Link for pagination
+import { Head, Link } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import { useState } from 'react';
 
 export default function Overview({ auth, announcements, contents }) {
     const dashboardLinks = getDashboardLinks();
     
-    // --- Modal State for Announcements ---
+    const announcementList = announcements.data || announcements || [];
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
 
-    // NEW: Handle paginated data (Laravel pagination puts the array inside .data)
-    const announcementList = announcements.data || announcements || [];
-
-    // Color helper for Announcement badges
     const getPastelStyle = (hexColor) => {
         const fallback = '#4F46E5'; 
         let hex = (hexColor || fallback).replace('#', '');
@@ -31,7 +28,6 @@ export default function Overview({ auth, announcements, contents }) {
         };
     };
 
-    // NEW: Helper to render pagination icons (Next/Prev)
     const renderPaginationLabel = (label) => {
         if (label.includes('Previous')) {
             return (
@@ -60,7 +56,6 @@ export default function Overview({ auth, announcements, contents }) {
         setTimeout(() => setSelectedAnnouncement(null), 300);
     };
 
-    // Separate Mission and Vision based on their titles
     const mission = contents.find(c => c.title && c.title.toLowerCase().includes('mission'));
     const vision = contents.find(c => c.title && c.title.toLowerCase().includes('vision'));
 
@@ -82,57 +77,12 @@ export default function Overview({ auth, announcements, contents }) {
                         </div>
                     </div>
 
-                    {/* --- MISSION & VISION SECTION --- */}
-                    <section>
-                        <h3 className="mb-6 text-lg font-bold text-gray-700 uppercase tracking-wide">Company Direction</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            
-                            {/* Mission Card */}
-                            {mission && (
-                                <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                                    {mission.image_path && (
-                                        <div className="h-64 w-full bg-gray-200">
-                                            <img src={`/storage/${mission.image_path}`} alt="Mission" className="w-full h-full object-cover" />
-                                        </div>
-                                    )}
-                                    <div className="p-8">
-                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Mission</p>
-                                        <h4 className="text-2xl font-extrabold text-gray-900 mb-4">{mission.title}</h4>
-                                        <div className="prose text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
-                                            {mission.content}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Vision Card */}
-                            {vision && (
-                                <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                                    {vision.image_path && (
-                                        <div className="h-64 w-full bg-gray-200">
-                                            <img src={`/storage/${vision.image_path}`} alt="Vision" className="w-full h-full object-cover" />
-                                        </div>
-                                    )}
-                                    <div className="p-8">
-                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Vision</p>
-                                        <h4 className="text-2xl font-extrabold text-gray-900 mb-4">{vision.title}</h4>
-                                        <div className="prose text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
-                                            {vision.content}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
-                    </section>
-
-                    {/* --- RECENT ANNOUNCEMENTS SECTION --- */}
+                    {/* --- RECENT ANNOUNCEMENTS SECTION (MOVED TO TOP) --- */}
                     <section>
                         <div className="flex justify-between items-end mb-6">
                             <h3 className="text-lg font-bold text-gray-700 uppercase tracking-wide">Latest Announcements</h3>
                         </div>
 
-                        {/* NEW: Updated to map over announcementList */}
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {announcementList.length === 0 ? (
                                 <div className="col-span-full rounded-lg border border-gray-100 bg-white p-6 text-center text-gray-500 shadow-sm">
@@ -183,7 +133,7 @@ export default function Overview({ auth, announcements, contents }) {
                             )}
                         </div>
 
-                        {/* NEW: Pagination Section added here */}
+                        {/* Pagination Section */}
                         {announcements.links && announcements.links.length > 3 && (
                             <div className="mt-12 flex justify-center">
                                 <nav className="inline-flex items-center space-x-2 rounded-xl bg-white p-2 shadow-sm border border-gray-200">
@@ -214,7 +164,48 @@ export default function Overview({ auth, announcements, contents }) {
                                 </nav>
                             </div>
                         )}
+                    </section>
 
+                    {/* --- MISSION & VISION SECTION (MOVED TO BOTTOM) --- */}
+                    <section>
+                        <h3 className="mb-6 text-lg font-bold text-gray-700 uppercase tracking-wide">Company Direction</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            
+                            {mission && (
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                                    {mission.image_path && (
+                                        <div className="h-64 w-full bg-gray-200">
+                                            <img src={`/storage/${mission.image_path}`} alt="Mission" className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
+                                    <div className="p-8">
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Mission</p>
+                                        <h4 className="text-2xl font-extrabold text-gray-900 mb-4">{mission.title}</h4>
+                                        <div className="prose text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                                            {mission.content}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {vision && (
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                                    {vision.image_path && (
+                                        <div className="h-64 w-full bg-gray-200">
+                                            <img src={`/storage/${vision.image_path}`} alt="Vision" className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
+                                    <div className="p-8">
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Vision</p>
+                                        <h4 className="text-2xl font-extrabold text-gray-900 mb-4">{vision.title}</h4>
+                                        <div className="prose text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                                            {vision.content}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
                     </section>
 
                 </div>

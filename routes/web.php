@@ -23,9 +23,9 @@ Route::get('/', function () {
 // Keep this protective wrapper exactly as it is!
 Route::middleware(['auth', 'verified'])->group(function () {
     
-    // --- NEW: Overview Route ---
-    Route::get('/dashboard/overview', function () {
-        // Grab the 3 most recent announcements for the overview
+    // --- OVERVIEW: Now the main landing page! ---
+    Route::get('/dashboard', function () {
+        // Grab the 6 most recent announcements for the overview
         $announcements = Announcement::with(['priorityLevel', 'branches'])
                             ->latest()
                             ->paginate(6);
@@ -33,15 +33,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Grab the Mission & Vision data
         $contents = CompanyContent::all();
 
-        // Pass both to the new Overview React component
+        // Pass both to the Overview React component
         return Inertia::render('Overview', [
             'announcements' => $announcements,
             'contents' => $contents
         ]);
-    })->name('dashboard.overview');
+    })->name('dashboard'); // Keeps the default 'dashboard' name so logins redirect here
 
-    // Your main dashboard route stays the same
-    Route::get('/dashboard', function () {
+    // --- ANNOUNCEMENTS: Moved to its own specific route ---
+    Route::get('/dashboard/announcements', function () {
         // Grab all announcements from the database, newest first
         $announcements = Announcement::with(['priorityLevel', 'branches'])->latest()->paginate(6);
 
@@ -49,7 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Dashboard', [
             'announcements' => $announcements
         ]);
-    })->name('dashboard');
+    })->name('dashboard.announcements');
 
     // ONLY change the inside of the mission-vision route:
     Route::get('/dashboard/mission-vision', function () {

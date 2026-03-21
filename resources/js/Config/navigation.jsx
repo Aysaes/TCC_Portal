@@ -4,13 +4,13 @@ export const getDashboardLinks = () => [
 
     {
         label: 'Overview',
-        href: route('dashboard.overview'), 
-        active: route().current('dashboard.overview'),
+        href: route('dashboard'), // Overview gets the main dashboard route now
+        active: route().current('dashboard'),
     },
     {
         label: 'Announcements',
-        href: route('dashboard'),
-        active: route().current('dashboard'),
+        href: route('dashboard.announcements'), // Announcements gets its own new route
+        active: route().current('dashboard.announcements'),
     },
     {
         label: 'Mission & Vision',

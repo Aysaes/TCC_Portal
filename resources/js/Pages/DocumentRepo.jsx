@@ -13,8 +13,20 @@ import { useState } from 'react';
 export default function Documents({ auth, documents = [], categories = [], activeCategory }) {
 
     const isAdmin = auth.user?.role?.name === 'admin';
-
     const sidebarLinks = getDocumentSidebarLinks(categories, activeCategory);
+
+    // --- NEW: Document Viewer State ---
+    const [viewingDoc, setViewingDoc] = useState(null);
+
+    // --- NEW: Generate the URL for the Microsoft Cloud Viewer ---
+    const getViewerUrl = (doc) => {
+        // Assuming your files are stored in the public storage disk
+        const appUrl = window.location.origin; 
+        const fullFileUrl = `${appUrl}/storage/${doc.file_path}`; 
+        
+        // Pass the absolute URL to Microsoft's viewer
+        return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullFileUrl)}`;
+    };
 
     // Mini Modal for New Category
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -34,7 +46,6 @@ export default function Documents({ auth, documents = [], categories = [], activ
     const closeUploadModal = () => { setIsUploadModalOpen(false); resetUpload(); clearUploadErrors(); };
     const submitDocument = (e) => {
         e.preventDefault();
-        // Force Inertia to send as multipart/form-data for the file
         postDocument(route('admin.documents.store'), { 
             preserveScroll: true, 
             forceFormData: true,
@@ -42,11 +53,10 @@ export default function Documents({ auth, documents = [], categories = [], activ
         });
     };
 
-    // --- 5. DELETE CONFIRMATION STATE ---
+    // DELETE CONFIRMATION STATE
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [documentToDelete, setDocumentToDelete] = useState(null);
 
-    // This opens the modal and remembers which document they clicked
     const triggerDelete = (doc) => {
         setDocumentToDelete(doc);
         setIsConfirmModalOpen(true);
@@ -57,7 +67,6 @@ export default function Documents({ auth, documents = [], categories = [], activ
         setDocumentToDelete(null);
     };
 
-    // This actually fires the delete request to Laravel
     const executeDelete = () => {
         if (!documentToDelete) return;
         
@@ -75,7 +84,6 @@ export default function Documents({ auth, documents = [], categories = [], activ
             <div className="mb-6 flex items-center justify-between">
                 <h1 className="text-2xl font-semibold text-gray-900">{activeCategory}</h1>
                 
-                {/* 👇 The buttons are hidden from standard users! */}
                 {isAdmin && (
                     <div className="flex gap-3">
                         <SecondaryButton onClick={() => setIsCategoryModalOpen(true)}>
@@ -103,7 +111,6 @@ export default function Documents({ auth, documents = [], categories = [], activ
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="rounded bg-red-50 p-2 text-red-600">
-                                        {/* Simple PDF/Doc Icon */}
                                         <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                                         </svg>
@@ -120,17 +127,18 @@ export default function Documents({ auth, documents = [], categories = [], activ
                             <div className="mt-6 flex items-center justify-between border-t pt-4">
                                 <span className="text-xs text-gray-400">Uploaded {new Date(doc.created_at).toLocaleDateString()}</span>
                                 <div className="flex gap-3">
-                                    <a 
-                                        href={route('documents.show', [doc.id, `${doc.title.replace(/[^a-zA-Z0-9-_\.]/g, '_')}.pdf`])} 
-                                        target="_blank" 
-                                        rel="noreferrer" 
+                                    
+                                    {/* --- NEW: Changed to a button that opens the modal --- */}
+                                    <button 
+                                        onClick={() => setViewingDoc(doc)}
                                         className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
                                     >
                                         View
-                                    </a>
+                                    </button>
+
                                     {isAdmin && (
                                         <button 
-                                            onClick={() => triggerDelete(doc)} // 👈 Updated!
+                                            onClick={() => triggerDelete(doc)}
                                             className="text-sm font-medium text-red-600 hover:text-red-800"
                                         >
                                             Delete
@@ -201,7 +209,6 @@ export default function Documents({ auth, documents = [], categories = [], activ
 
                     <div>
                         <InputLabel htmlFor="file" value="Select File (PDF, DOCX, XLSX)" />
-                        {/* 👇 Notice how we handle the file input array here */}
                         <input 
                             type="file" 
                             id="file" 
@@ -228,6 +235,51 @@ export default function Documents({ auth, documents = [], categories = [], activ
                 message={`Are you sure you want to delete the document "${documentToDelete?.title}"?\n\nThis will permanently remove the file from the server.`}
                 confirmText="Delete Document"
             />
+
+            {/* --- NEW: DOCUMENT VIEWER MODAL --- */}
+            <Modal show={!!viewingDoc} onClose={() => setViewingDoc(null)} maxWidth="4xl">
+                {viewingDoc && (
+                    <div className="flex flex-col bg-white overflow-hidden h-[85vh]">
+                        
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 shrink-0">
+                            <h2 className="text-lg font-bold text-gray-800">{viewingDoc.title}</h2>
+                            <button 
+                                onClick={() => setViewingDoc(null)}
+                                className="text-gray-500 hover:text-red-600 font-bold"
+                            >
+                                ✕ Close
+                            </button>
+                        </div>
+
+                        {/* Localhost Warning Message */}
+                        {window.location.hostname === '127.0.0.1' && (
+                            <div className="bg-yellow-50 p-3 text-sm text-yellow-800 border-b border-yellow-200 shrink-0 text-center">
+                                <strong>Note:</strong> You are on localhost (127.0.0.1). Microsoft Office Viewer cannot access local files. 
+                                <br/>If the document doesn't load below, it is because your site is not live yet!
+                            </div>
+                        )}
+
+                        {/* The Document Iframe */}
+                        <div className="flex-1 w-full bg-gray-100 relative">
+                            {/* If it's a PDF, browsers can read it directly! If not, we use Microsoft's viewer */}
+                            {viewingDoc.file_path?.endsWith('.pdf') ? (
+                                <iframe 
+                                    src={`/storage/${viewingDoc.file_path}`} 
+                                    className="absolute inset-0 w-full h-full" 
+                                    title="PDF Viewer"
+                                ></iframe>
+                            ) : (
+                                <iframe 
+                                    src={getViewerUrl(viewingDoc)} 
+                                    className="absolute inset-0 w-full h-full" 
+                                    title="Office Viewer"
+                                ></iframe>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </Modal>
 
         </SidebarLayout>
     );
