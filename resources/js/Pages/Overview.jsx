@@ -105,7 +105,7 @@ export default function Overview({ auth, announcements, contents }) {
                     {/* Welcome Banner */}
                     <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg border border-gray-100">
                         <div className="p-6 text-gray-900">
-                            Welcome back to The Cat Clinic Portal, <strong>{auth.user.name}</strong>!
+                            Welcome to The Cat Clinic Purrtal, <strong>{auth.user.name}</strong>!
                         </div>
                     </div>
 
@@ -300,9 +300,12 @@ export default function Overview({ auth, announcements, contents }) {
                             <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
                                 {selectedAnnouncement.content}
                             </div>
-                            <div className="mt-8 flex justify-end pt-4 bg-white sticky bottom-0">
-                                <button onClick={closeModal} className="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
-                                    Close Window
+                            <div className="sticky bottom-0 -mx-6 -mb-6 sm:-mx-8 sm:-mb-8 px-6 pb-6 sm:px-8 sm:pb-8 pt-10 flex justify-end bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
+                                <button 
+                                    onClick={closeModal} 
+                                    className="pointer-events-auto rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors shadow-sm"
+                                >
+                                    Close 
                                 </button>
                             </div>
                         </div>
