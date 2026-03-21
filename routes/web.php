@@ -28,7 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Grab the 6 most recent announcements for the overview
         $announcements = Announcement::with(['priorityLevel', 'branches'])
                             ->latest()
-                            ->paginate(6);
+                            ->get();
 
         // Grab the Mission & Vision data
         $contents = CompanyContent::all();
