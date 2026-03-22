@@ -95,7 +95,7 @@ class DutyMealController extends Controller
 
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->errorInfo[1] == 1062) {
-                return back()->withErrors(['error' => 'A duty meal schedule already exists for this branch on this date.']);
+                return back()->with('error', 'A duty meal schedule already exists for this branch on this date.');
             }
             return back()->withErrors(['error' => 'Database error: ' . $e->getMessage()]);
         }
@@ -105,8 +105,13 @@ class DutyMealController extends Controller
     public function defaultParticipantToMain($id)
     {
         $participant = DutyMealParticipant::findOrFail($id);
+
+        if ($participant->choice !== 'none') {
+           return back()->with('error', 'Staff member has already selected a meal.');
+        }
+
         $participant->update(['choice' => 'main']);
-        return back(); // Inertia will automatically refresh the modal data!
+        return back()->with('success', 'Meal choice forced to Main.');
     }
 
 
@@ -114,13 +119,15 @@ class DutyMealController extends Controller
     {
         $participant = DutyMealParticipant::findOrFail($id);
         $participant->update(['is_delivered' => !$participant->is_delivered]);
-        return back();
+
+        $status = $participant->is_delivered ? 'Delivered' : 'Not Delivered';
+        return back()->with('success', "Meal marked as {$status}.");
     }
 
 
     public function removeParticipant($id)
     {
         DutyMealParticipant::findOrFail($id)->delete();
-        return back();
+        return back()->with('success', 'Staff member removed from roster.');
     }
 }

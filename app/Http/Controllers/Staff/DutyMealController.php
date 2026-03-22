@@ -21,6 +21,7 @@ class DutyMealController extends Controller
                 return [
                     'participant_id' => $participant->id,
                     'choice' => $participant->choice,
+                    'custom_request' => $participant->custom_request,
                     'is_delivered' => $participant->is_delivered,
                     'duty_date' => $participant->dutyMeal->duty_date,
                     'main_meal' => $participant->dutyMeal->main_meal,
@@ -41,8 +42,11 @@ class DutyMealController extends Controller
 
     public function updateChoice(Request $request, $participantId)
     {
-        $request->validate(['choice' => 'required|in:main,alt']);
-
+        try{
+            $request->validate([
+            'choice' => 'required|in:main,alt',
+            'custom_request' => 'nullable|string|max:255'
+        ]);
 
         $participant = DutyMealParticipant::where('id', $participantId)
             ->where('user_id', $request->user()->id)
@@ -50,11 +54,22 @@ class DutyMealController extends Controller
 
 
         if ($participant->dutyMeal->is_locked) {
-            return back()->withErrors(['error' => 'This roster is locked by the admin.']);
+            return back()->with('error', 'This roster is locked by the admin.');
         }
 
-        $participant->update(['choice' => $request->choice]);
+        if ($participant->choice !== 'none') {
+            return back()->with('error', 'You have already selected your meal.');
+        }
 
-        return back();
+        $participant->update(['choice' => $request->choice, 'custom_request' => $request->custom_request]);
+
+       return back()->with('success', 'Your meal choice has been successfully locked in!');
+
+        }catch(\Exception $e){
+             return back()->with('error', 'Failed to update choice: ' . $e->getMessage());
+        }
+
+
+        
     }
 }

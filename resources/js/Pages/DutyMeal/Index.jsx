@@ -1,3 +1,4 @@
+import ConfirmModal from '@/Components/ConfirmModal';
 import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { getDutyMealLinks } from '@/Config/navigation';
@@ -8,6 +9,14 @@ import { useState } from 'react';
 export default function Index({ auth, dutymeals = [] }) {
     
     const dutyMealsLinks = getDutyMealLinks();
+
+    // Global Confirm Modal
+        const [confirmDialog, setConfirmDialog] = useState({ 
+        isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
+    });
+    
+        const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false,});
+        
 
     const [selectedRosterId, setSelectedRosterId] = useState(null);
     const [openDropdownId, setOpenDropdownId] = useState(null); // Tracks which settings cog is open
@@ -26,11 +35,22 @@ export default function Index({ auth, dutymeals = [] }) {
         setOpenDropdownId(null); // Close dropdown after clicking
     };
 
-    const handleRemove = (id) => {
-        if (confirm('Are you sure you want to remove this staff member from this duty meal?')) {
-            router.delete(route('admin.participants.remove', id), { preserveScroll: true });
-            setOpenDropdownId(null);
-        }
+   const handleRemove = (employeeName, participantId) => {
+        setOpenDropdownId(null); // Close the settings dropdown first
+        
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Remove Staff from Roster',
+            message: `Are you sure you want to remove ${employeeName} from this duty meal? \n\nThis will delete their meal selection.`,
+            confirmText: 'Remove from Roster',
+            confirmColor: 'bg-red-600 hover:bg-red-500',
+            onConfirm: () => {
+                router.delete(route('admin.participants.remove', participantId), { 
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
+            }
+        });
     };
 
     return (
@@ -101,7 +121,21 @@ export default function Index({ auth, dutymeals = [] }) {
                                                 {p.is_graveyard ? <span className="text-[10px] bg-slate-800 text-white px-2 py-0.5 rounded">GY</span> : <span className="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded">Day</span>}
                                             </td>
                                             <td className="py-3">
-                                                {p.choice === 'none' ? <span className="text-gray-400 italic text-xs">Pending...</span> : <span className="font-bold text-xs uppercase">{p.choice}</span>}
+                                                {p.choice === 'none' ? (
+                                                    <span className="text-gray-400 italic text-xs">Pending...</span>
+                                                ) : (
+                                                    <div>
+                                                        <span className={`font-bold text-xs uppercase ${p.choice === 'main' ? 'text-indigo-600' : 'text-amber-600'}`}>
+                                                            {p.choice}
+                                                        </span>
+                                                        
+                                                        {p.custom_request && (
+                                                            <div className="text-[10px] text-gray-500 italic mt-0.5 leading-tight">
+                                                                Note: {p.custom_request}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                             
                                             <td className="py-3 text-center">
@@ -125,23 +159,30 @@ export default function Index({ auth, dutymeals = [] }) {
 
                                                 {openDropdownId === p.id && (
                                                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1 text-left">
-                                                        <button 
-                                                            onClick={() => handleAction('admin.participants.default-main', p.id)}
-                                                            className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 text-left"
-                                                        >
-                                                            Force 'Main Meal'
-                                                        </button>
+                                                        {p.choice === 'none' && (
+                                                            <button 
+                                                                onClick={() => handleAction('admin.participants.default-main', p.id)}
+                                                                className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 text-left"
+                                                            >
+                                                                Force 'Main Meal'
+                                                            </button>
+                                                        )}
                                                         
                                                         {/* 👇 Updated to explicitly say "Mark as Not Delivered" */}
-                                                        <button 
-                                                            onClick={() => handleAction('admin.participants.toggle-delivery', p.id)}
-                                                            className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 text-left"
-                                                        >
-                                                            {p.is_delivered ? 'Mark as Not Delivered' : 'Mark as Delivered'}
-                                                        </button>
+                                                       {p.choice !== 'none' && (
+                                                            <button 
+                                                                onClick={() => handleAction('admin.participants.toggle-delivery', p.id)}
+                                                                className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 text-left"
+                                                            >
+                                                                {p.is_delivered ? 'Mark as Not Delivered' : 'Mark as Delivered'}
+                                                            </button>
+                                                        )}
 
                                                         <button 
-                                                            onClick={() => handleRemove(p.id)}
+                                                            onClick={(e) => {
+                                                                 e.preventDefault();
+                                                                 e.stopPropagation();
+                                                                handleRemove(p.user?.name, p.id)}}
                                                             className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left border-t border-gray-100 mt-1"
                                                         >
                                                             Remove from Roster
@@ -161,6 +202,17 @@ export default function Index({ auth, dutymeals = [] }) {
                     </div>
                 )}
             </Modal>
+
+             {/* Global Confirmation Modal */}
+                        <ConfirmModal 
+                            show={confirmDialog.isOpen}
+                            onClose={closeConfirmModal}
+                            title={confirmDialog.title}
+                            message={confirmDialog.message}
+                            confirmText={confirmDialog.confirmText}
+                            confirmColor={confirmDialog.confirmColor}
+                            onConfirm={confirmDialog.onConfirm}
+                        />
         </SidebarLayout>
     );
 }
