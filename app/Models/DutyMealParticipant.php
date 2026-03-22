@@ -11,6 +11,7 @@ class DutyMealParticipant extends Model
         'duty_meal_id',
         'user_id',
         'choice',
+        'is_delivered',
         'is_graveyard',
     ];
 

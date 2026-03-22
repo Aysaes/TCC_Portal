@@ -17,7 +17,7 @@ class DutyMealController extends Controller
     // 1. THE DASHBOARD: Shows the list of existing schedules
     public function index()
     {
-        $dutymeals = DutyMeal::with('branch')
+        $dutymeals = DutyMeal::with('branch', 'participants.user:id,name')
             ->withCount('participants')
             ->latest('duty_date')
             ->get();
@@ -99,5 +99,28 @@ class DutyMealController extends Controller
             }
             return back()->withErrors(['error' => 'Database error: ' . $e->getMessage()]);
         }
+    }
+
+   
+    public function defaultParticipantToMain($id)
+    {
+        $participant = DutyMealParticipant::findOrFail($id);
+        $participant->update(['choice' => 'main']);
+        return back(); // Inertia will automatically refresh the modal data!
+    }
+
+
+    public function toggleParticipantDelivery($id)
+    {
+        $participant = DutyMealParticipant::findOrFail($id);
+        $participant->update(['is_delivered' => !$participant->is_delivered]);
+        return back();
+    }
+
+
+    public function removeParticipant($id)
+    {
+        DutyMealParticipant::findOrFail($id)->delete();
+        return back();
     }
 }

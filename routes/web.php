@@ -75,6 +75,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Staff Duty Meal Routes
+    Route::get('/my-duty-meals', [\App\Http\Controllers\Staff\DutyMealController::class, 'index'])->name('staff.duty-meals.index');
+    Route::patch('/my-duty-meals/{participantId}/choice', [\App\Http\Controllers\Staff\DutyMealController::class, 'updateChoice'])->name('staff.duty-meals.choice');
 });
 
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
@@ -121,6 +125,11 @@ Route::middleware(['auth', CheckDutyMealAccess::class])->group(function () {
     Route::get('/admin/duty-meals', [DutyMealController::class, 'index'])->name('admin.duty-meals.index');
     Route::get('/admin/duty-meals/create', [DutyMealController::class, 'create'])->name('admin.duty-meals.create');
     Route::post('/admin/duty-meals', [DutyMealController::class, 'store'])->name('admin.duty-meals.store');
+
+    // Duty Meal Participant Actions
+    Route::patch('/admin/duty-meals/participants/{id}/default-main', [DutyMealController::class, 'defaultParticipantToMain'])->name('admin.participants.default-main');
+    Route::patch('/admin/duty-meals/participants/{id}/toggle-delivery', [DutyMealController::class, 'toggleParticipantDelivery'])->name('admin.participants.toggle-delivery');
+    Route::delete('/admin/duty-meals/participants/{id}', [DutyMealController::class, 'removeParticipant'])->name('admin.participants.remove');
     
 });
 

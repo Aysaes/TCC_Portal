@@ -57,6 +57,7 @@ class EmployeeController extends Controller
             'department_id' => $request->department_id,
             'position_id' => $request->position_id,
             'device_limit'=> $request->device_limit,
+            'branch_id' => $request->branch_ids[0] ?? null,
             'is_rotating'=> count($request->branch_ids) > 1,
         ]);
 
