@@ -13,12 +13,36 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class DutyMealController extends Controller
 {
     
     public function index()
     {
+
+        $today = now()->startOfDay();
+
+
+        
+        if (now()->format('H:i') >= '10:00') {
+            $todayMealIds = DutyMeal::whereDate('duty_date', $today)->pluck('id');
+            
+            if ($todayMealIds->isNotEmpty()) {
+                DutyMealParticipant::whereIn('duty_meal_id', $todayMealIds)
+                    ->where('choice', 'none')
+                    ->update(['choice' => 'main']);
+            }
+        }
+
+
+        $pastMealIds = DutyMeal::whereDate('duty_date', '<', $today)->pluck('id');
+        if ($pastMealIds->isNotEmpty()) {
+            DutyMealParticipant::whereIn('duty_meal_id', $pastMealIds)
+                ->where('choice', 'none')
+                ->update(['choice' => 'main']);
+        }
+
         $user = Auth::user();
         
        
@@ -32,12 +56,40 @@ class DutyMealController extends Controller
         ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
             $query->whereIn('branch_id', $allowedBranchIds);
         })
+        ->whereDate('duty_date', '>=', now()->startOfMonth())
         ->withCount('participants')
         ->latest('duty_date')
         ->get();
 
+        $employees = User::with(['department:id,name', 'position:id,name'])
+            ->select('id', 'name', 'department_id', 'position_id', 'branch_id')
+            ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
+                $query->where(function ($q) use ($allowedBranchIds) {
+                    $q->whereIn('branch_id', $allowedBranchIds)
+                      ->orWhereHas('branches', function ($pivotQuery) use ($allowedBranchIds) {
+                          $pivotQuery->whereIn('branch_id', $allowedBranchIds);
+                      });
+                });
+            })
+            ->orderBy('name')
+            ->get();
+
+        $departments = Department::select('id', 'name')->orderBy('name')->get();
+        $positions = Position::select('id', 'name', 'department_id')->orderBy('name')->get();
+
+        $branches = Branch::select('id', 'name')
+            ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
+                $query->whereIn('id', $allowedBranchIds);
+            })
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('DutyMeal/Index', [
             'dutymeals' => $dutymeals,
+            'employees' => $employees,
+            'departments' => $departments,
+            'positions' => $positions,
+            'branches' => $branches,
         ]);
     }
 
@@ -146,19 +198,104 @@ class DutyMealController extends Controller
     }
 
 
-    public function toggleParticipantDelivery($id)
+    public function removeParticipant($id)
     {
         $participant = DutyMealParticipant::findOrFail($id);
-        $participant->update(['is_delivered' => !$participant->is_delivered]);
 
-        $status = $participant->is_delivered ? 'Delivered' : 'Not Delivered';
-        return back()->with('success', "Meal marked as {$status}.");
+        $meal = DutyMeal::findOrFail($participant->duty_meal_id);
+
+       
+        if ($meal->is_locked) {
+            return back()->with('error', 'This roster is locked and can no longer be edited.');
+        }
+
+        $participant->delete();
+
+        return back()->with('success', 'Staff member removed from roster.');
+    }
+
+    public function addParticipant(Request $request, $id)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $meal = DutyMeal::findOrFail($id);
+
+        if ($meal->is_locked) {
+            return back()->with('error', 'This roster is locked and can no longer be edited.');
+        }
+
+        // Prevent adding them twice
+        if ($meal->participants()->where('user_id', $request->user_id)->exists()) {
+            return back()->with('error', 'Staff member is already on this roster.');
+        }
+
+        $meal->participants()->create([
+            'user_id' => $request->user_id,
+            'choice' => 'none', // Default to none so they can pick their own meal
+            'is_graveyard' => false, 
+            'custom_request' => null,
+        ]);
+
+        return back()->with('success', 'Staff member successfully added to the roster!');
+    }
+
+    public function archive(Request $request)
+    {
+        $user = Auth::user();
+        $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
+
+        // 1. Find all available archived months/years for the dropdown filter
+        $availableDates = DutyMeal::whereDate('duty_date', '<', now()->startOfMonth())
+            ->selectRaw('YEAR(duty_date) as year, MONTH(duty_date) as month')
+            ->distinct()
+            ->orderByDesc('year')
+            ->orderByDesc('month')
+            ->get();
+
+
+        $defaultYear = $availableDates->first()->year ?? now()->subMonth()->year;
+        $defaultMonth = $availableDates->first()->month ?? now()->subMonth()->month;
+
+        $filterYear = $request->input('year', $defaultYear);
+        $filterMonth = $request->input('month', $defaultMonth);
+
+      
+        $archivedMeals = DutyMeal::with('branch')
+            ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
+                $query->whereIn('branch_id', $allowedBranchIds);
+            })
+            ->whereYear('duty_date', $filterYear)
+            ->whereMonth('duty_date', $filterMonth)
+            ->withCount('participants')
+            ->orderBy('duty_date', 'asc')
+            ->get()
+ 
+            ->groupBy(function ($meal) {
+                return 'Week ' . Carbon::parse($meal->duty_date)->weekOfMonth;
+            });
+
+        return Inertia::render('DutyMeal/Archive', [
+            'archivedMealsByWeek' => $archivedMeals,
+            'availableDates' => $availableDates,
+            'currentFilter' => ['year' => $filterYear, 'month' => $filterMonth]
+        ]);
     }
 
 
-    public function removeParticipant($id)
+    public function destroy($id)
     {
-        DutyMealParticipant::findOrFail($id)->delete();
-        return back()->with('success', 'Staff member removed from roster.');
+        DutyMeal::findOrFail($id)->delete();
+        return back()->with('success', 'Roster permanently deleted.');
+    }
+
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate(['ids' => 'required|array']);
+        DutyMeal::whereIn('id', $request->ids)->delete();
+        
+        return back()->with('success', count($request->ids) . ' rosters permanently deleted.');
     }
 }

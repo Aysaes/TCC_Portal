@@ -72,27 +72,6 @@ export default function Index({ auth, myDutyMeals = [] }) {
 
                                     {/* Card Body (The Choices) */}
                                     <div className="p-6 flex-grow flex flex-col gap-4">
-
-                                        {/* Optional Request Input */}
-                                        <div className="mb-2">
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                Optional Request / Add-ons
-                                            </label>
-                                            {isLockedIn ? (
-                                                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-100 italic">
-                                                    {meal.custom_request ? `"${meal.custom_request}"` : "No special requests."}
-                                                </div>
-                                            ) : (
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="e.g., 2 bananas, no onions, extra rice..."
-                                                    className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    value={notes[meal.participant_id] || ''}
-                                                    onChange={(e) => setNotes({...notes, [meal.participant_id]: e.target.value})}
-                                                />
-                                            )}
-                                        </div>
-                                    
                                         {/* Main Meal Button */}
                                         <button 
                                             onClick={() => handleChoice(meal.participant_id, 'main')}
@@ -128,6 +107,26 @@ export default function Index({ auth, myDutyMeals = [] }) {
                                                 <p className="text-sm text-gray-600 mt-1">{meal.alt_meal}</p>
                                             </button>
                                         )}
+
+                                         {/* Optional Request Input */}
+                                        <div className="mb-2">
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                Optional Request / Add-ons
+                                            </label>
+                                            {isLockedIn ? (
+                                                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-100 italic">
+                                                    {meal.custom_request ? `"${meal.custom_request}"` : "No special requests."}
+                                                </div>
+                                            ) : (
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="e.g., 2 bananas, no onions, extra rice..."
+                                                    className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                    value={notes[meal.participant_id] || ''}
+                                                    onChange={(e) => setNotes({...notes, [meal.participant_id]: e.target.value})}
+                                                />
+                                            )}
+                                        </div>
                                         
                                         {/* Small helper text at the bottom */}
                                         {meal.choice !== 'none' && !meal.is_locked && (

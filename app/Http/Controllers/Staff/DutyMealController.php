@@ -10,19 +10,19 @@ use Inertia\Inertia;
 class DutyMealController extends Controller
 {
 
-    public function index(Request $request)
+   public function index(Request $request)
     {
-
         $myDutyMeals = DutyMealParticipant::with('dutyMeal.branch')
             ->where('user_id', $request->user()->id)
-            ->get()
-
+            ->whereHas('dutyMeal', function ($query) {
+                $query->whereDate('duty_date', '>=', now()->startOfWeek());
+            })
+            ->get() 
             ->map(function ($participant) {
                 return [
                     'participant_id' => $participant->id,
                     'choice' => $participant->choice,
                     'custom_request' => $participant->custom_request,
-                    'is_delivered' => $participant->is_delivered,
                     'duty_date' => $participant->dutyMeal->duty_date,
                     'main_meal' => $participant->dutyMeal->main_meal,
                     'alt_meal' => $participant->dutyMeal->alt_meal,
@@ -30,7 +30,7 @@ class DutyMealController extends Controller
                     'branch_name' => $participant->dutyMeal->branch->name ?? 'Unknown',
                 ];
             })
-
+            // 3. Sort the final collection
             ->sortByDesc('duty_date')
             ->values();
 

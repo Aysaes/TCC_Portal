@@ -128,8 +128,13 @@ Route::middleware(['auth', CheckDutyMealAccess::class])->group(function () {
 
     // Duty Meal Participant Actions
     Route::patch('/admin/duty-meals/participants/{id}/default-main', [DutyMealController::class, 'defaultParticipantToMain'])->name('admin.participants.default-main');
-    Route::patch('/admin/duty-meals/participants/{id}/toggle-delivery', [DutyMealController::class, 'toggleParticipantDelivery'])->name('admin.participants.toggle-delivery');
     Route::delete('/admin/duty-meals/participants/{id}', [DutyMealController::class, 'removeParticipant'])->name('admin.participants.remove');
+    Route::post('/duty-meals/{id}/add-participant', [DutyMealController::class, 'addParticipant'])->name('admin.duty-meals.add-participant');
+
+    //Duty Meal Archives
+    Route::get('/duty-meals/archive', [DutyMealController::class, 'archive'])->name('admin.duty-meals.archive');
+    Route::delete('/duty-meals/{id}', [DutyMealController::class, 'destroy'])->name('admin.duty-meals.destroy');
+    Route::post('/duty-meals/bulk-delete', [DutyMealController::class, 'bulkDelete'])->name('admin.duty-meals.bulk-delete');
     
 });
 

@@ -92,6 +92,11 @@ export const getDutyMealLinks = () => [
         href: route('admin.duty-meals.create'),
         active: route().current('admin.duty-meals.create'),
     },
+    {
+        label: 'Duty Meal Archive',
+        href: route('admin.duty-meals.archive'),
+        active:  route().current('admin.duty-meals.archive'),
+    },
 ];
 
 export const getStaffDutyMealLinks = () => [
