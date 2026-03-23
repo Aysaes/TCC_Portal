@@ -68,8 +68,5 @@ class DutyMealController extends Controller
         }catch(\Exception $e){
              return back()->with('error', 'Failed to update choice: ' . $e->getMessage());
         }
-
-
-        
     }
 }

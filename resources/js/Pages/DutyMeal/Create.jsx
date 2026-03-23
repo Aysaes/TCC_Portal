@@ -8,7 +8,7 @@ import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function CreateDutyMeal({ auth, employees = [], branches = [], departments = [] }) {
+export default function CreateDutyMeal({ auth, employees = [], branches = [], departments = [], positions = [] }) {
 
     const dutyMealsLinks = getDutyMealLinks();
     
@@ -25,6 +25,29 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
     const [departmentFilter, setDepartmentFilter] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
 
+    const [filterPosition, setFilterPosition] = useState('');
+
+    const availablePositions = (departmentFilter === 'All') 
+        ? positions 
+        : positions.filter(pos => String(pos.department_id) === String(departmentFilter));
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const minDate = tomorrow.toISOString().split('T')[0];
+
+    // --- LOOKUP HELPERS ---
+    const getDepartmentName = (deptId) => {
+        if (!deptId) return 'Unassigned';
+        const found = departments.find(d => d.id == deptId); // Using == to avoid type mismatch
+        return found ? found.name : 'Unassigned';
+    };
+
+    const getPositionName = (posId) => {
+        if (!posId) return 'No Position';
+        const found = positions.find(pos => pos.id == posId); // Using == to avoid type mismatch
+        return found ? found.name : 'No Position';
+    };
+
     // --- HANDLERS ---
     const toggleStaff = (employee) => {
         const isAlreadySelected = data.participants.some(p => p.id === employee.id);
@@ -34,7 +57,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
             setData('participants', data.participants.filter(p => p.id !== employee.id));
         } else {
             // Add them, default graveyard to false
-            setData('participants', [...data.participants, { id: employee.id, name: employee.name, department: employee.department_id, is_graveyard: false }]);
+            setData('participants', [...data.participants, { id: employee.id, name: employee.name, department: employee.department_id, position: employee.position_id,is_graveyard: false }]);
         }
     };
 
@@ -59,13 +82,15 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
             (emp.assigned_branch_ids && emp.assigned_branch_ids.includes(selectedBranchId));
 
         const matchesDept = departmentFilter === 'All' || String(emp.department_id) === String(departmentFilter);
+
+        const matchesPosition = filterPosition === '' || emp.position_id === parseInt(filterPosition);
         
         
         const name = emp.name ? emp.name.toLowerCase() : '';
         const search = searchQuery.trim().toLowerCase();
         const matchesSearch = name.includes(search);
 
-        return matchesBranch && matchesDept && matchesSearch;
+        return matchesBranch && matchesDept && matchesSearch && matchesPosition;
     });
 
     return (
@@ -100,7 +125,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                     <div>
                         <InputLabel htmlFor="duty_date" value="Duty Date" />
                         <TextInput id="duty_date" type="date" className="mt-1 block w-full" 
-                            value={data.duty_date} onChange={e => setData('duty_date', e.target.value)} required />
+                            value={data.duty_date} onChange={e => setData('duty_date', e.target.value)} min={minDate} required />
                         <InputError message={errors.duty_date} className="mt-2" />
                     </div>
                     
@@ -139,13 +164,21 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                         {/* Filters */}
                         <div className="flex gap-2 mb-4">
                             <TextInput placeholder="Search name..." className="w-full text-sm"
-                                value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                value={searchQuery} onChange={e => {setSearchQuery(e.target.value);
+                                                                    setFilterPosition('');
+                                }} />
                             <select className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
                                 value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
                                 <option value="All">All Depts</option>
                                 {departments.map(dept => (
                                     <option key={dept.id} value={dept.id}>{dept.name}</option>
                                     ))}
+                            </select>
+
+                            <select value={filterPosition} onChange={(e) => setFilterPosition(e.target.value)}
+                            className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
+                                <option value="">All Positions</option>
+                                {availablePositions.map((pos) => (<option key={pos.id} value={pos.id}>{pos.name}</option>))}
                             </select>
                         </div>
 
@@ -162,8 +195,14 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                                                 ${isSelected ? 'bg-indigo-50 border-indigo-200 shadow-inner' : 'bg-white border-gray-200 hover:border-indigo-300 hover:shadow-sm'}`}
                                         >
                                             <div>
-                                                <p className={`text-sm font-medium ${isSelected ? 'text-indigo-900' : 'text-gray-900'}`}>{emp.name}</p>
-                                                <p className={`text-xs ${isSelected ? 'text-indigo-600' : 'text-gray-500'}`}>{emp.department || 'Unassigned'}</p>
+                                                <p className={`text-sm font-medium ${isSelected ? 'text-indigo-900' : 'text-gray-900'}`}>
+                                                    {emp.name}
+                                                </p>
+                                                <p className={`text-xs ${isSelected ? 'text-indigo-600' : 'text-gray-500'} mt-0.5`}>
+                                                    {getDepartmentName(emp.department_id)} 
+                                                    <span className="mx-1 text-gray-300">•</span> 
+                                                    {getPositionName(emp.position_id)}
+                                                </p>
                                             </div>
                                             {isSelected ? (
                                                 <svg className="h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
@@ -208,7 +247,11 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                                             <tr key={p.id} className="hover:bg-gray-50">
                                                 <td className="px-5 py-3 whitespace-nowrap">
                                                     <div className="text-sm font-medium text-gray-900">{p.name}</div>
-                                                    <div className="text-xs text-gray-500">{p.department}</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {getDepartmentName(p.department)} 
+                                                        <span className="mx-1 text-gray-300">•</span> 
+                                                        {getPositionName(p.position)}
+                                                    </div>
                                                 </td>
                                                 <td className="px-5 py-3 whitespace-nowrap text-center">
                                                     <button type="button" onClick={() => toggleGraveyard(p.id)}

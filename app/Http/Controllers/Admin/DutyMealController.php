@@ -8,19 +8,33 @@ use App\Models\DutyMealParticipant;
 use App\Models\Branch;
 use App\Models\User;
 use App\Models\Department;
+use App\Models\Position;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class DutyMealController extends Controller
 {
-    // 1. THE DASHBOARD: Shows the list of existing schedules
+    
     public function index()
     {
-        $dutymeals = DutyMeal::with('branch', 'participants.user:id,name')
-            ->withCount('participants')
-            ->latest('duty_date')
-            ->get();
+        $user = Auth::user();
+        
+       
+        $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
+
+        $dutymeals = DutyMeal::with([
+            'branch', 
+            'participants.user:id,name' 
+        ])
+        
+        ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
+            $query->whereIn('branch_id', $allowedBranchIds);
+        })
+        ->withCount('participants')
+        ->latest('duty_date')
+        ->get();
 
         return Inertia::render('DutyMeal/Index', [
             'dutymeals' => $dutymeals,
@@ -29,28 +43,45 @@ class DutyMealController extends Controller
 
     public function create()
     {
+        $user = Auth::user();
+        $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
+
+        
+        $branches = Branch::select('id', 'name')
+            ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
+                $query->whereIn('id', $allowedBranchIds);
+            })
+            ->orderBy('name')
+            ->get();
+
        
-        $employees = User::with('branches') 
-            ->select('id', 'name', 'department_id', 'branch_id')
+        $employees = User::with(['branches', 'department:id,name'])
+            ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
+                $query->where(function ($q) use ($allowedBranchIds) {
+                    $q->whereIn('branch_id', $allowedBranchIds)
+                      ->orWhereHas('branches', function ($pivotQuery) use ($allowedBranchIds) {
+                          $pivotQuery->whereIn('branch_id', $allowedBranchIds);
+                      });
+                });
+            })
+            ->select('id', 'name', 'department_id', 'position_id','branch_id')
             ->orderBy('name')
             ->get()
-            ->map(function ($user) {
-              
-                $user->assigned_branch_ids = $user->branches->pluck('id')->toArray();
-                
-                
-                unset($user->branches); 
-                
-                return $user;
+            ->map(function ($emp) {
+                $emp->assigned_branch_ids = $emp->branches->pluck('id')->toArray();
+                unset($emp->branches); 
+                return $emp;
             });
 
-        $branches = Branch::select('id', 'name')->get();
-        $departments = Department::select('id', 'name')->get();
+        $departments = Department::select('id', 'name')->orderBy('name')->get();
+
+        $positions = Position::select('id', 'name', 'department_id')->orderBy('name')->get();
 
         return Inertia::render('DutyMeal/Create', [
             'employees' => $employees,
             'branches' => $branches,
             'departments' => $departments,
+            'positions' => $positions,
         ]);
     }
 
