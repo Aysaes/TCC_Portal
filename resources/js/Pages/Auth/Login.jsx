@@ -5,7 +5,8 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import fpPromise from '@fingerprintjs/fingerprintjs';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import ApplicationLogo from '@/Components/ApplicationLogo';
 
 
 export default function Login({ status}) {
@@ -61,10 +62,20 @@ export default function Login({ status}) {
                     {status}
                 </div>
             )}
-
-            <form onSubmit={submit}>
+                    
+                    
+              <div>
+                 
+            <form onSubmit={submit} className="font-sans"> 
+                <div className="text-center mb-6">
+                    <h1 className="font-sans text-3xl font-bold text-black drop-shadow-lg shadow-lg">The Cat Clinic Purrtal</h1>
+                    <Link href="/" className="inline-block">
+                        <ApplicationLogo className="h-40 w-30 fill-current text-gray-100" />
+                    </Link>
+                </div>
+                
                 <div>
-                    <InputLabel htmlFor="email" value="Email" />
+                    <InputLabel htmlFor="email" value="email" />
 
                     <TextInput
                         id="email"
@@ -72,6 +83,7 @@ export default function Login({ status}) {
                         name="email"
                         value={data.email}
                         className="mt-1 block w-full"
+                        placeholder="email"
                         autoComplete="username"
                         isFocused={true}
                         onChange={(e) => setData('email', e.target.value)}
@@ -89,6 +101,7 @@ export default function Login({ status}) {
                         name="password"
                         value={data.password}
                         className="mt-1 block w-full"
+                        placeholder="password"
                         autoComplete="current-password"
                         onChange={(e) => setData('password', e.target.value)}
                     />
@@ -105,19 +118,20 @@ export default function Login({ status}) {
                                 setData('remember', e.target.checked)
                             }
                         />
-                        <span className="ms-2 text-sm text-gray-600">
+                        <span className="ms-2 text-sm font-bold text-gray-600">
                             Remember me
                         </span>
                     </label>
                 </div>
 
-                <div className="mt-4 flex items-center justify-end">
+                <div className="mt-4 flex items-center justify-center mb-8">
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
+                    <PrimaryButton disabled={processing}>
                         Log in
                     </PrimaryButton>
                 </div>
             </form>
+            </div>  
         </GuestLayout>
     );
 }
