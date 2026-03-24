@@ -110,3 +110,26 @@ export const getStaffDutyMealLinks = () => [
         active: route().current('staff.duty-meals.index'),
     },
 ];
+
+export const getHRLinks = () =>[
+    {
+        label: 'Overview',
+        href: '#',
+        active: false, 
+    },
+    {
+        label: 'HR Admin Overview',
+        href: '#',
+        active: false, 
+    },
+    {
+        label: 'Manpower Request',
+        href: '#',
+        active: false,
+    },
+     {
+        label: 'Feedback Form',
+        href: '#',
+        active: false,
+    }
+];
