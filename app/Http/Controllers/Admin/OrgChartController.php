@@ -61,6 +61,32 @@ class OrgChartController extends Controller
 
         return back()->with('success', 'Member added to Organizational Chart successfully!');
     }
+    // Save changes to an existing member (including photo replacement)
+    public function update(Request $request, OrgChartMember $member)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'position' => 'required|string|max:255',
+            'branch' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Image optional on update
+        ]);
+
+        $data = $request->only(['name', 'position', 'branch']);
+
+        // Handle photo replacement if a new one is uploaded
+        if ($request->hasFile('image')) {
+            // 1. Delete the old photo if it exists
+            if ($member->image_path) {
+                Storage::disk('public')->delete($member->image_path);
+            }
+            // 2. Store the new photo
+            $data['image_path'] = $request->file('image')->store('org_chart', 'public');
+        }
+
+        $member->update($data);
+
+        return back()->with('success', 'Member updated successfully.');
+    }
 
     // Delete a member
     public function destroy(OrgChartMember $member)

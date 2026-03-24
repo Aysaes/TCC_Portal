@@ -114,8 +114,8 @@ export const getStaffDutyMealLinks = () => [
 export const getHRLinks = () =>[
     {
         label: 'Overview',
-        href: '#',
-        active: false, 
+        href: route('hr.index'),
+        active: route().current('hr.index'), 
     },
     {
         label: 'HR Admin Overview',

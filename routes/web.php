@@ -116,7 +116,8 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     // --- Organizational Chart Management ---
     Route::get('/org-chart', [OrgChartController::class, 'index'])->name('.org-chart.index');
     Route::post('/org-chart', [OrgChartController::class, 'store'])->name('.org-chart.store');
-    Route::post('/org-chart/reorder', [OrgChartController::class, 'reorder'])->name('.org-chart.reorder'); // <-- NEW REORDER ROUTE
+    Route::put('/org-chart/{member}', [OrgChartController::class, 'update'])->name('.org-chart.update');
+    Route::post('/org-chart/reorder', [OrgChartController::class, 'reorder'])->name('.org-chart.reorder'); 
     Route::delete('/org-chart/{member}', [OrgChartController::class, 'destroy'])->name('.org-chart.destroy');
 
     // Document Repository Routes
