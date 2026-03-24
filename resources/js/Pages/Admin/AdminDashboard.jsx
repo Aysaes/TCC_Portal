@@ -12,7 +12,7 @@ export default function AdminDashboard() {
             sidebarLinks={adminLinks}
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Admin Control Panel
+                    Admin Control Panels
                 </h2>
             }
         >
