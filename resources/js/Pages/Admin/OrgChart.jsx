@@ -275,4 +275,4 @@ export default function OrgChartAdmin({ auth, members }) {
             </Modal>
         </SidebarLayout>
     );
-}
+} 
