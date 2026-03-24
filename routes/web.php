@@ -85,10 +85,16 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::get('/employees', [EmployeeController::class, 'index'])->name('.employees');
     Route::post('/positions', [EmployeeController::class, 'storePosition'])->name('.positions.store');
     Route::post('/branches', [EmployeeController::class, 'storeBranch'])->name('.branches.store');
+    Route::post('/departments', [EmployeeController::class, 'storeDepartment'])->name('.departments.store');
+    Route::post('/roles', [EmployeeController::class, 'storeRole'])->name('.roles.store');
     Route::post('/users', [EmployeeController::class, 'storeUser'])->name('.users.store');
     Route::put('/users/{user}', [EmployeeController::class, 'updateUser'])->name('.users.update');
     Route::patch('/users/{user}/reset-device', [EmployeeController::class, 'resetDevice'])->name('.users.reset-device');
     Route::delete('/users/{user}', [EmployeeController::class, 'destroy'])->name('.users.destroy');
+    Route::delete('/departments/{department}', [EmployeeController::class, 'destroyDepartment'])->name('.departments.destroy');
+    Route::delete('/roles/{role}', [EmployeeController::class, 'destroyRole'])->name('.roles.destroy');
+    
+
 
     // --- Company Content Management ---
     Route::get('/company-content', [CompanyContentController::class, 'index'])->name('.company-content.index');
