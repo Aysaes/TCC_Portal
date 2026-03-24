@@ -14,7 +14,7 @@ const COE_REASONS = [
 ];
 
 export default function StaffOverview({ auth, requests }) {
-    const HRLinks = getHRLinks();
+    const HRLinks = getHRLinks(auth);
     
     // Safety check for requests
     const requestList = requests || [];

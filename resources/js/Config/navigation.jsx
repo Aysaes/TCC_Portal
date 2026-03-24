@@ -87,14 +87,14 @@ export const getDocumentSidebarLinks = (categories = [], activeCategory = 'Overv
 
 export const getDutyMealLinks = () => [
     {
-        label: 'Duty Meal Overview',
-        href: route('admin.duty-meals.index'),
-        active: route().current('admin.duty-meals.index'),
-    },
-    {
         label: 'Set Up Roster',
         href: route('admin.duty-meals.create'),
         active: route().current('admin.duty-meals.create'),
+    },
+    {
+        label: 'Duty Meal Overview',
+        href: route('admin.duty-meals.index'),
+        active: route().current('admin.duty-meals.index'),
     },
     {
         label: 'Duty Meal Archive',
@@ -111,25 +111,39 @@ export const getStaffDutyMealLinks = () => [
     },
 ];
 
-export const getHRLinks = () =>[
-    {
-        label: 'Overview',
-        href: route('hr.index'),
-        active: route().current('hr.index'), 
-    },
-    {
-        label: 'HR Admin Overview',
-        href: '#',
-        active: false, 
-    },
-    {
-        label: 'Manpower Request',
-        href: route('hr.manpower-requests.create'),
-        active: route().current('hr.manpower-requests.create'),
-    },
-     {
-        label: 'Feedback Form',
-        href: '#',
-        active: false,
-    }
-];
+export const getHRLinks = (auth) => {
+    // Safely grab the text NAMES from the relationships we just loaded in Laravel
+    const userRole = (auth?.user?.role?.name || '').toLowerCase();
+    const userPosition = (auth?.user?.position?.name || '').toLowerCase();
+
+    // Check if they are an admin, HR role, or Human Resources position
+    const isHRAdmin = userRole === 'admin' || userRole === 'hr' || userPosition === 'human resources';
+
+    return [
+        {
+            label: 'Overview',
+            href: route('hr.index'),
+            active: route().current('hr.index'), 
+        },
+        
+        // Only show if the check passed!
+        ...(isHRAdmin ? [
+            { 
+                label: 'HR Admin Overview', 
+                href: route('hr.admin.index'), 
+                active: route().current('hr.admin.index') 
+            }
+        ] : []),
+        
+        {
+            label: 'Manpower Request',
+            href: route('hr.manpower-requests.create'),
+            active: route().current('hr.manpower-requests.create'),
+        },
+        {
+            label: 'Feedback Form',
+            href: '#',
+            active: false,
+        }
+    ];
+};
