@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Models\DutyMealParticipant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DutyMealController extends Controller
@@ -68,5 +69,33 @@ class DutyMealController extends Controller
         }catch(\Exception $e){
              return back()->with('error', 'Failed to update choice: ' . $e->getMessage());
         }
+    }
+
+    public function lockIn(Request $request, $id)
+    {
+        $request->validate([
+            'choice' => 'required|in:main,alt',
+            'custom_request' => 'nullable|string|max:255',
+        ]);
+
+        $participant = DutyMealParticipant::with('dutyMeal')->findOrFail($id);
+
+        // 1. Security: Make sure they own this record
+        if ($participant->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // 2. Security: Respect the 6:00 AM lockdown!
+        if ($participant->dutyMeal->is_locked) {
+            return back()->with('error', 'This roster is locked and choices cannot be changed.');
+        }
+
+        // 3. Save the choice
+        $participant->update([
+            'choice' => $request->choice,
+            'custom_request' => $request->custom_request,
+        ]);
+
+        return back()->with('success', 'Your meal choice has been locked in!');
     }
 }

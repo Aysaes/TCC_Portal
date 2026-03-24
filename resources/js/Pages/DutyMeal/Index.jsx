@@ -16,6 +16,10 @@ export default function Index({ auth, dutymeals = [], employees = [], department
 
     const [overviewBranch, setOverviewBranch] = useState('All');
 
+    const [dateFilterType, setDateFilterType] = useState('this_month'); 
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
+
     // Global Confirm Modal
         const [confirmDialog, setConfirmDialog] = useState({ 
         isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
@@ -105,12 +109,52 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         });
     };
 
-    const filteredDutyMeals = useMemo(() => {
-        return overviewBranch === 'All' 
-            ? dutymeals 
-            : dutymeals.filter(m => String(m.branch_id) === String(overviewBranch));
-    }, [dutymeals, overviewBranch]);
+   const filteredDutyMeals = useMemo(() => {
+        let filtered = dutymeals;
 
+        // A. Filter by Branch
+        if (overviewBranch !== 'All') {
+            filtered = filtered.filter(m => String(m.branch_id) === String(overviewBranch));
+        }
+
+        // B. Setup Date Math Helpers
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; 
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - dayOfWeek);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+        // C. Filter by Date
+        filtered = filtered.filter(m => {
+            const mealDate = new Date(m.duty_date);
+            mealDate.setHours(0, 0, 0, 0);
+
+            if (dateFilterType === 'today') {
+                return mealDate.getTime() === today.getTime();
+            }
+            if (dateFilterType === 'this_week') {
+                return mealDate >= startOfWeek && mealDate <= endOfWeek;
+            }
+            if (dateFilterType === 'this_month') {
+                return mealDate.getMonth() === today.getMonth() && mealDate.getFullYear() === today.getFullYear();
+            }
+            if (dateFilterType === 'custom') {
+                const start = customStartDate ? new Date(customStartDate).setHours(0,0,0,0) : -Infinity;
+                const end = customEndDate ? new Date(customEndDate).setHours(0,0,0,0) : Infinity;
+                return mealDate.getTime() >= start && mealDate.getTime() <= end;
+            }
+            
+            return true;
+        });
+
+        return filtered;
+    }, [dutymeals, overviewBranch, dateFilterType, customStartDate, customEndDate]);
+
+    // 👇 2. STATS CRUNCHER: Calculate the numbers based ONLY on the filtered list above!
     const stats = useMemo(() => {
         let totalMeals = 0;
         let totalMain = 0;
@@ -127,7 +171,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         });
 
         return { totalMeals, totalMain, totalAlt, totalSpecial };
-    }, [filteredDutyMeals]);
+    }, [filteredDutyMeals]); // This watches the block above it
 
     return (
         <SidebarLayout activeModule="Duty Meals"
@@ -142,20 +186,57 @@ export default function Index({ auth, dutymeals = [], employees = [], department
             <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-medium text-gray-900">Overview Statistics</h2>
-                    
-                    {/* 👇 Only show filter if they have access to more than 1 branch */}
-                    {branches.length > 1 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        {/* 👇 The Date Quick-Filter Dropdown */}
                         <select
-                            value={overviewBranch}
-                            onChange={(e) => setOverviewBranch(e.target.value)}
+                            value={dateFilterType}
+                            onChange={(e) => {
+                                setDateFilterType(e.target.value);
+                                setCustomStartDate(''); // Reset custom dates when switching modes
+                                setCustomEndDate('');
+                            }}
                             className="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-medium text-gray-700 bg-white"
                         >
-                            <option value="All">All Branches</option>
-                            {branches.map(b => (
-                                <option key={b.id} value={b.id}>{b.name}</option>
-                            ))}
+                            <option value="today">Today</option>
+                            <option value="this_week">This Week</option>
+                            <option value="this_month">This Month</option>
+                            <option value="all">All Active</option>
+                            <option value="custom">Custom Range...</option>
                         </select>
-                    )}
+
+                        {/* 👇 Show Date Pickers ONLY if "Custom Range" is selected */}
+                        {dateFilterType === 'custom' && (
+                            <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-md border border-gray-200">
+                                <input 
+                                    type="date" 
+                                    value={customStartDate}
+                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                    className="text-sm border-gray-300 rounded-md shadow-sm py-1.5 focus:border-indigo-500 focus:ring-indigo-500"
+                                />
+                                <span className="text-xs text-gray-500 font-medium">to</span>
+                                <input 
+                                    type="date" 
+                                    value={customEndDate}
+                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                    className="text-sm border-gray-300 rounded-md shadow-sm py-1.5 focus:border-indigo-500 focus:ring-indigo-500"
+                                />
+                            </div>
+                        )}
+
+                        {/* Your Existing Branch Filter */}
+                        {branches.length > 1 && (
+                            <select
+                                value={overviewBranch}
+                                onChange={(e) => setOverviewBranch(e.target.value)}
+                                className="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-medium text-gray-700 bg-white"
+                            >
+                                <option value="All">All Branches</option>
+                                {branches.map(b => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
