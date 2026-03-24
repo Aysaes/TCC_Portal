@@ -106,6 +106,65 @@ class EmployeeController extends Controller
         }
     }
 
+    public function storeDepartment (Request $request){
+        try{
+            $request->validate([
+            'name' => 'required|string|max:255|unique:departments,name',]);
+            Department::create([
+            'name' => $request->name,]);
+            return back()->with('success', 'Department added successfully.');
+        }catch(\Exception $e){
+            return back()->with('error', 'An error occured while adding the department: ' . $e->getMessage());
+        }
+    }
+
+    public function destroyDepartment (Department $department){
+        try{
+            if($department->user()->exists()){
+                return back()->with('error', 'Cannot delete a department that has active employees.');
+            }
+
+            $department->delete();
+            return back()->with('success', 'Department deleted successfully.');
+        }catch(\Exception $e){
+            return back()->with('error', 'An error occured while deleting the department: ' . $e->getMessage());
+        }
+    }
+
+    public function storeRole (Request $request){
+        try{
+            $request->validate([
+            'name' => 'required|string|max:255|unique:roles,name',
+        ]);
+
+        Role::create([
+            'name' => $request->name,
+        ]);
+
+        return back()->with('success', 'System role added successfully.');
+        }catch(\Exception $e){
+            return back()->with('error', 'An error occured while adding the role: ' . $e->getMessage());
+        }
+    }
+
+    public function destroyRole (Role $role){
+        try{
+            if (strtolower($role->name) === 'admin' || strtolower($role->name) === 'super admin') {
+            return back()->withErrors(['name' => 'Cannot delete core system roles.']);
+        }
+
+        if ($role->users()->exists()) {
+             return back()->withErrors(['name' => 'Cannot delete a role that is currently assigned to employees.']);
+        }
+
+        $role->delete();
+
+        return back()->with('success', 'Role deleted successfully.');
+        }catch(\Exception $e){
+            return back()->with('error', 'An error occured while deleting the department: ' . $e->getMessage());
+        }
+    }
+
     // ----------------Edit, Device Reset, and Delete functions ----------------
 
     public function updateUser(Request $request, User $user)

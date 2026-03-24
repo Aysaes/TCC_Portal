@@ -10,61 +10,58 @@ use App\Http\Middleware\CheckDutyMealAccess;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\DutyMealController;
+use App\Http\Controllers\Admin\OrgChartController;
+use App\Http\Controllers\HrRequestController;
+use App\Http\Controllers\HR\ManpowerRequestController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Auth/Login', [
-
-    ]);
+    return Inertia::render('Auth/Login', []);
 });
 
 // Keep this protective wrapper exactly as it is!
-Route::middleware(['auth', 'verified'])->group(function () {
+    Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
+    Route::post('/hr-module/request', [HrRequestController::class, 'store'])->name('hr.store');
     
     // --- OVERVIEW: Now the main landing page! ---
     Route::get('/dashboard', function () {
-        // Grab the 6 most recent announcements for the overview
         $announcements = Announcement::with(['priorityLevel', 'branches'])
                             ->latest()
                             ->get();
 
-        // Grab the Mission & Vision data
         $contents = CompanyContent::all();
 
-        // Pass both to the Overview React component
         return Inertia::render('Overview', [
             'announcements' => $announcements,
             'contents' => $contents
         ]);
-    })->name('dashboard'); // Keeps the default 'dashboard' name so logins redirect here
+    })->name('dashboard'); 
 
-    // --- ANNOUNCEMENTS: Moved to its own specific route ---
+    // --- ANNOUNCEMENTS ---
     Route::get('/dashboard/announcements', function () {
-        // Grab all announcements from the database, newest first
         $announcements = Announcement::with(['priorityLevel', 'branches'])
                             ->latest()
                             ->get();
 
-        // Pass them to the React component
         return Inertia::render('Dashboard', [
             'announcements' => $announcements
         ]);
     })->name('dashboard.announcements');
 
-    // ONLY change the inside of the mission-vision route:
+    // --- MISSION & VISION ---
     Route::get('/dashboard/mission-vision', function () {
-        
-        // Grab the data
         $contents = CompanyContent::all();
 
-        // Pass it to React
         return Inertia::render('MissionVision', [
             'contents' => $contents
         ]);
-
     })->name('dashboard.mission-vision');
+
+    // --- ORGANIZATIONAL CHART (USER VIEW) ---
+    Route::get('/dashboard/org-chart', [OrgChartController::class, 'userIndex'])->name('dashboard.org-chart');
 
     Route::get('/admin/documents', [DocumentController::class, 'index'])->name('admin.documents.index');
     Route::get('/documents/{document}/view/{filename?}', [DocumentController::class, 'show'])->name('documents.show');
@@ -80,6 +77,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-duty-meals', [\App\Http\Controllers\Staff\DutyMealController::class, 'index'])->name('staff.duty-meals.index');
     Route::patch('/my-duty-meals/{participantId}/choice', [\App\Http\Controllers\Staff\DutyMealController::class, 'updateChoice'])->name('staff.duty-meals.choice');
     Route::patch('/staff/duty-meals/{id}/lock-in', [\App\Http\Controllers\Staff\DutyMealController::class, 'lockIn'])->name('staff.duty-meals.lock-in');
+
+    // 1. The Form (Create & Submit)
+    Route::get('/hr/manpower-requests/create', [ManpowerRequestController::class, 'create'])->name('hr.manpower-requests.create');
+    Route::post('/hr/manpower-requests', [ManpowerRequestController::class, 'store'])->name('hr.manpower-requests.store');
+
+    // 2. The Dashboard (Acts as both "My Requests" and "Approval Board")
+    Route::get('/hr/manpower-requests', [ManpowerRequestController::class, 'index'])->name('hr.manpower-requests.index');
+
+    // 3. The Status Updater (For Managers, HR, and Directors)
+    Route::patch('/hr/manpower-requests/{manpowerRequest}/status', [ManpowerRequestController::class, 'updateStatus'])->name('hr.manpower-requests.update-status');
 });
 
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
@@ -89,14 +96,19 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     })->name('.dashboard');
 
     // Employee Management
-
     Route::get('/employees', [EmployeeController::class, 'index'])->name('.employees');
     Route::post('/positions', [EmployeeController::class, 'storePosition'])->name('.positions.store');
     Route::post('/branches', [EmployeeController::class, 'storeBranch'])->name('.branches.store');
+    Route::post('/departments', [EmployeeController::class, 'storeDepartment'])->name('.departments.store');
+    Route::post('/roles', [EmployeeController::class, 'storeRole'])->name('.roles.store');
     Route::post('/users', [EmployeeController::class, 'storeUser'])->name('.users.store');
     Route::put('/users/{user}', [EmployeeController::class, 'updateUser'])->name('.users.update');
     Route::patch('/users/{user}/reset-device', [EmployeeController::class, 'resetDevice'])->name('.users.reset-device');
     Route::delete('/users/{user}', [EmployeeController::class, 'destroy'])->name('.users.destroy');
+    Route::delete('/departments/{department}', [EmployeeController::class, 'destroyDepartment'])->name('.departments.destroy');
+    Route::delete('/roles/{role}', [EmployeeController::class, 'destroyRole'])->name('.roles.destroy');
+    
+
 
     // --- Company Content Management ---
     Route::get('/company-content', [CompanyContentController::class, 'index'])->name('.company-content.index');
@@ -112,6 +124,13 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('.announcements.destroy');
     Route::post('/announcements/priority', [AnnouncementController::class, 'storePriority'])->name('.announcements.priority.store');
 
+    // --- Organizational Chart Management ---
+    Route::get('/org-chart', [OrgChartController::class, 'index'])->name('.org-chart.index');
+    Route::post('/org-chart', [OrgChartController::class, 'store'])->name('.org-chart.store');
+    Route::put('/org-chart/{member}', [OrgChartController::class, 'update'])->name('.org-chart.update');
+    Route::post('/org-chart/reorder', [OrgChartController::class, 'reorder'])->name('.org-chart.reorder'); 
+    Route::delete('/org-chart/{member}', [OrgChartController::class, 'destroy'])->name('.org-chart.destroy');
+
     // Document Repository Routes
     Route::post('/documents', [DocumentController::class, 'store'])->name('.documents.store');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
@@ -120,7 +139,6 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
 
 
 // DUTY MEAL MODULE (Admins & Custodians)
-
 Route::middleware(['auth', CheckDutyMealAccess::class])->group(function () {
     
     Route::get('/admin/duty-meals', [DutyMealController::class, 'index'])->name('admin.duty-meals.index');

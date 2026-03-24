@@ -18,9 +18,9 @@ export const getDashboardLinks = () => [
         active: route().current('dashboard.mission-vision'),
     },
     {
-        label: 'Organizational Chart',
-        href: '#',
-        active: false,
+        label: 'Organizational Chart', 
+        href: route('dashboard.org-chart'), 
+        active: route().current('dashboard.org-chart')
     },
 
 ];
@@ -49,7 +49,11 @@ export const getAdminLinks = () => [
         href: route('admin.company-content.index'),
         active: route().current('admin.company-content.*'),
     },
-
+    { 
+        label: 'Organizational Chart', 
+        href: route('admin.org-chart.index'), 
+        active: route().current('admin.org-chart.index') 
+    },
     {
         label: 'System Logs & Security',
         href: '#',
@@ -105,4 +109,27 @@ export const getStaffDutyMealLinks = () => [
         href: route('staff.duty-meals.index'),
         active: route().current('staff.duty-meals.index'),
     },
+];
+
+export const getHRLinks = () =>[
+    {
+        label: 'Overview',
+        href: route('hr.index'),
+        active: route().current('hr.index'), 
+    },
+    {
+        label: 'HR Admin Overview',
+        href: '#',
+        active: false, 
+    },
+    {
+        label: 'Manpower Request',
+        href: route('hr.manpower-requests.create'),
+        active: route().current('hr.manpower-requests.create'),
+    },
+     {
+        label: 'Feedback Form',
+        href: '#',
+        active: false,
+    }
 ];

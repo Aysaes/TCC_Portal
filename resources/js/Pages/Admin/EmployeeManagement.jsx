@@ -22,6 +22,64 @@ export default function EmployeeManagement({ users = [], departments = [], posit
     });
 
     const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false,});
+
+    // ==========================================
+    // For Edit Departments
+    // ==========================================
+    const [isDepartmentModalOpen, setDepartmentModalOpen] = useState(false);
+
+    const {
+        data: deptData,
+        setData: setDeptData,
+        post: postDept,
+        processing: deptProcessing,
+        errors: deptErrors,
+        reset: resetDept,
+        clearErrors: clearDeptErrors
+    } = useForm({ name: '' });
+
+    const closeDepartmentModal = () => {
+        setDepartmentModalOpen(false);
+        clearDeptErrors();
+        resetDept();
+    };
+
+    const submitDepartment = (e) => {
+        e.preventDefault();
+        postDept(route('admin.departments.store'), {
+            preserveScroll: true,
+            onSuccess: () => resetDept(), // Keep modal open to show the new addition
+        });
+    };
+
+    // ==========================================
+    // For Edit Roles
+    // ==========================================
+    const [isRoleModalOpen, setRoleModalOpen] = useState(false);
+
+    const {
+        data: roleData,
+        setData: setRoleData,
+        post: postRole,
+        processing: roleProcessing,
+        errors: roleErrors,
+        reset: resetRole,
+        clearErrors: clearRoleErrors
+    } = useForm({ name: '' });
+
+    const closeRoleModal = () => {
+        setRoleModalOpen(false);
+        clearRoleErrors();
+        resetRole();
+    };
+
+    const submitRole = (e) => {
+        e.preventDefault();
+        postRole(route('admin.roles.store'), {
+            preserveScroll: true,
+            onSuccess: () => resetRole(),
+        });
+    };
     
     // For Position
     const [activeDropdown, setActiveDropdown] = useState(null);
@@ -250,6 +308,39 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         });
     };
 
+    
+    const confirmDeleteRole = (role) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete System Role',
+            message: `Are you sure you want to permanently delete the ${role.name} role?\n\nThis may strip access from users currently holding this role.`,
+            confirmText: 'Delete Role',
+            confirmColor: 'bg-red-600 hover:bg-red-500',
+            onConfirm: () => {
+                router.delete(route('admin.roles.destroy', role.id), {
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
+            }
+        });
+    };
+
+        const confirmDeleteDepartment = (department) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Department',
+            message: `Are you sure you want to permanently delete the ${department.name} department?\n\nThis may affect employees currently assigned to it.`,
+            confirmText: 'Delete Department',
+            confirmColor: 'bg-red-600 hover:bg-red-500',
+            onConfirm: () => {
+                router.delete(route('admin.departments.destroy', department.id), {
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
+            }
+        });
+    };
+
     return (
         <SidebarLayout
             activeModule="Admin"
@@ -274,6 +365,12 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                         </button>
                         <button className="rounded-md border border-gray-300 bg-yellow-500 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-yellow-600" onClick={() => setBranchModalOpen(true)}>
                             + Add Branch
+                        </button>
+                        <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-gray-50" onClick={() => setDepartmentModalOpen(true)}>
+                            Edit Departments
+                        </button>
+                        <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-gray-50" onClick={() => setRoleModalOpen(true)}>
+                            Edit Roles
                         </button>
                     </div>
 
@@ -629,6 +726,79 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                     </div>
                 </form>
             </Modal>
+
+            <Modal show={isDepartmentModalOpen} onClose={closeDepartmentModal}>
+    <div className="p-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Manage Departments</h2>
+        
+        <form onSubmit={submitDepartment} className="mb-6 flex items-end gap-3 rounded-md bg-gray-50 p-4 border border-gray-100">
+            <div className="flex-grow">
+                <InputLabel htmlFor="dept_name" value="New Department Name" />
+                <TextInput id="dept_name" className="mt-1 block w-full" value={deptData.name} onChange={(e) => setDeptData('name', e.target.value)} required placeholder="e.g. Grooming, Surgery" />
+                <InputError message={deptErrors.name} className="mt-2" />
+            </div>
+            <PrimaryButton disabled={deptProcessing}>Add</PrimaryButton>
+        </form>
+
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">Existing Departments</h3>
+        <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
+            <ul className="divide-y divide-gray-200">
+                {departments.map((dept) => (
+                    <li key={dept.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                        <span className="text-sm text-gray-800">{dept.name}</span>
+                        <button onClick={() => confirmDeleteDepartment(dept)} className="text-xs font-medium text-red-600 hover:text-red-900">
+                            Delete
+                        </button>
+                    </li>
+                ))}
+                {departments.length === 0 && (
+                    <li className="p-4 text-sm text-gray-500 text-center">No departments found.</li>
+                )}
+            </ul>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+            <SecondaryButton onClick={closeDepartmentModal}>Close</SecondaryButton>
+        </div>
+    </div>
+</Modal>
+
+{/* Edit Roles Modal */}
+<Modal show={isRoleModalOpen} onClose={closeRoleModal}>
+    <div className="p-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Manage Roles</h2>
+        
+        <form onSubmit={submitRole} className="mb-6 flex items-end gap-3 rounded-md bg-gray-50 p-4 border border-gray-100">
+            <div className="flex-grow">
+                <InputLabel htmlFor="role_name" value="New Role Name" />
+                <TextInput id="role_name" className="mt-1 block w-full" value={roleData.name} onChange={(e) => setRoleData('name', e.target.value)} required placeholder="e.g. Admin, Staff" />
+                <InputError message={roleErrors.name} className="mt-2" />
+            </div>
+            <PrimaryButton disabled={roleProcessing}>Add</PrimaryButton>
+        </form>
+
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">Existing System Roles</h3>
+        <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
+            <ul className="divide-y divide-gray-200">
+                {roles.map((role) => (
+                    <li key={role.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                        <span className="text-sm text-gray-800 capitalize">{role.name}</span>
+                        <button onClick={() => confirmDeleteRole(role)} className="text-xs font-medium text-red-600 hover:text-red-900">
+                            Delete
+                        </button>
+                    </li>
+                ))}
+                {roles.length === 0 && (
+                    <li className="p-4 text-sm text-gray-500 text-center">No roles found.</li>
+                )}
+            </ul>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+            <SecondaryButton onClick={closeRoleModal}>Close</SecondaryButton>
+        </div>
+    </div>
+</Modal>
 
             {/* Global Confirmation Modal */}
             <ConfirmModal 
