@@ -12,7 +12,7 @@ class HrRequestController extends Controller
     public function index()
     {
         $requests = HrRequest::where('user_id', auth()->id())->latest()->get();
-        return Inertia::render('HR/Dashboard', ['requests' => $requests]);
+        return Inertia::render('HR/Staff/StaffOverview', ['requests' => $requests]);
     }
 
     // Save a new 2316 or COE request
