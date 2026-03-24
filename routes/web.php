@@ -10,7 +10,8 @@ use App\Http\Middleware\CheckDutyMealAccess;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\DutyMealController;
-use App\Http\Controllers\Admin\OrgChartController; // Ensure this is imported!
+use App\Http\Controllers\Admin\OrgChartController;
+use App\Http\Controllers\HrRequestController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -20,7 +21,9 @@ Route::get('/', function () {
 });
 
 // Keep this protective wrapper exactly as it is!
-Route::middleware(['auth', 'verified'])->group(function () {
+    Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
+    Route::post('/hr-module/request', [HrRequestController::class, 'store'])->name('hr.store');
     
     // --- OVERVIEW: Now the main landing page! ---
     Route::get('/dashboard', function () {

@@ -112,8 +112,8 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                                     </Dropdown.Link>
                                 )}
                                 
-                                    <Dropdown.Link href="#">
-                                        HR Module
+                                    <Dropdown.Link href={route('hr.index')}>
+                                    HR Module
                                     </Dropdown.Link>
                                 
                                 
