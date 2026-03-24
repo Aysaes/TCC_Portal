@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\DutyMealController;
 use App\Http\Controllers\Admin\OrgChartController;
 use App\Http\Controllers\HrRequestController;
+use App\Http\Controllers\HR\ManpowerRequestController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -76,6 +77,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-duty-meals', [\App\Http\Controllers\Staff\DutyMealController::class, 'index'])->name('staff.duty-meals.index');
     Route::patch('/my-duty-meals/{participantId}/choice', [\App\Http\Controllers\Staff\DutyMealController::class, 'updateChoice'])->name('staff.duty-meals.choice');
     Route::patch('/staff/duty-meals/{id}/lock-in', [\App\Http\Controllers\Staff\DutyMealController::class, 'lockIn'])->name('staff.duty-meals.lock-in');
+
+    // 1. The Form (Create & Submit)
+    Route::get('/hr/manpower-requests/create', [ManpowerRequestController::class, 'create'])->name('hr.manpower-requests.create');
+    Route::post('/hr/manpower-requests', [ManpowerRequestController::class, 'store'])->name('hr.manpower-requests.store');
+
+    // 2. The Dashboard (Acts as both "My Requests" and "Approval Board")
+    Route::get('/hr/manpower-requests', [ManpowerRequestController::class, 'index'])->name('hr.manpower-requests.index');
+
+    // 3. The Status Updater (For Managers, HR, and Directors)
+    Route::patch('/hr/manpower-requests/{manpowerRequest}/status', [ManpowerRequestController::class, 'updateStatus'])->name('hr.manpower-requests.update-status');
 });
 
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){

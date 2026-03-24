@@ -124,8 +124,8 @@ export const getHRLinks = () =>[
     },
     {
         label: 'Manpower Request',
-        href: '#',
-        active: false,
+        href: route('hr.manpower-requests.create'),
+        active: route().current('hr.manpower-requests.create'),
     },
      {
         label: 'Feedback Form',
