@@ -10,14 +10,13 @@ use App\Http\Middleware\CheckDutyMealAccess;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\DutyMealController;
+use App\Http\Controllers\Admin\OrgChartController; // Ensure this is imported!
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Auth/Login', [
-
-    ]);
+    return Inertia::render('Auth/Login', []);
 });
 
 // Keep this protective wrapper exactly as it is!
@@ -25,46 +24,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // --- OVERVIEW: Now the main landing page! ---
     Route::get('/dashboard', function () {
-        // Grab the 6 most recent announcements for the overview
         $announcements = Announcement::with(['priorityLevel', 'branches'])
                             ->latest()
                             ->get();
 
-        // Grab the Mission & Vision data
         $contents = CompanyContent::all();
 
-        // Pass both to the Overview React component
         return Inertia::render('Overview', [
             'announcements' => $announcements,
             'contents' => $contents
         ]);
-    })->name('dashboard'); // Keeps the default 'dashboard' name so logins redirect here
+    })->name('dashboard'); 
 
-    // --- ANNOUNCEMENTS: Moved to its own specific route ---
+    // --- ANNOUNCEMENTS ---
     Route::get('/dashboard/announcements', function () {
-        // Grab all announcements from the database, newest first
         $announcements = Announcement::with(['priorityLevel', 'branches'])
                             ->latest()
                             ->get();
 
-        // Pass them to the React component
         return Inertia::render('Dashboard', [
             'announcements' => $announcements
         ]);
     })->name('dashboard.announcements');
 
-    // ONLY change the inside of the mission-vision route:
+    // --- MISSION & VISION ---
     Route::get('/dashboard/mission-vision', function () {
-        
-        // Grab the data
         $contents = CompanyContent::all();
 
-        // Pass it to React
         return Inertia::render('MissionVision', [
             'contents' => $contents
         ]);
-
     })->name('dashboard.mission-vision');
+
+    // --- ORGANIZATIONAL CHART (USER VIEW) ---
+    Route::get('/dashboard/org-chart', [OrgChartController::class, 'userIndex'])->name('dashboard.org-chart');
 
     Route::get('/admin/documents', [DocumentController::class, 'index'])->name('admin.documents.index');
     Route::get('/documents/{document}/view/{filename?}', [DocumentController::class, 'show'])->name('documents.show');
@@ -89,7 +82,6 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     })->name('.dashboard');
 
     // Employee Management
-
     Route::get('/employees', [EmployeeController::class, 'index'])->name('.employees');
     Route::post('/positions', [EmployeeController::class, 'storePosition'])->name('.positions.store');
     Route::post('/branches', [EmployeeController::class, 'storeBranch'])->name('.branches.store');
@@ -112,6 +104,12 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('.announcements.destroy');
     Route::post('/announcements/priority', [AnnouncementController::class, 'storePriority'])->name('.announcements.priority.store');
 
+    // --- Organizational Chart Management ---
+    Route::get('/org-chart', [OrgChartController::class, 'index'])->name('.org-chart.index');
+    Route::post('/org-chart', [OrgChartController::class, 'store'])->name('.org-chart.store');
+    Route::post('/org-chart/reorder', [OrgChartController::class, 'reorder'])->name('.org-chart.reorder'); // <-- NEW REORDER ROUTE
+    Route::delete('/org-chart/{member}', [OrgChartController::class, 'destroy'])->name('.org-chart.destroy');
+
     // Document Repository Routes
     Route::post('/documents', [DocumentController::class, 'store'])->name('.documents.store');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
@@ -120,7 +118,6 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
 
 
 // DUTY MEAL MODULE (Admins & Custodians)
-
 Route::middleware(['auth', CheckDutyMealAccess::class])->group(function () {
     
     Route::get('/admin/duty-meals', [DutyMealController::class, 'index'])->name('admin.duty-meals.index');
