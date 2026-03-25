@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use PhpParser\Node\Expr\Cast;
 
 class ManpowerRequest extends Model
 {
@@ -16,7 +17,12 @@ class ManpowerRequest extends Model
         'employment_status', 'reliever_info', 'purpose', 
         'is_new_position', 'job_description', 'is_replacement', 'replaced_employee_name', 
         'poc_name', 'requesting_manager_id',
-        'manager_approval_status', 'hr_approval_status', 'director_approval_status', 'status'
+        'manager_approval_status', 'hr_approval_status', 'director_approval_status', 'status',
+        'workflow_path', 'current_step'
+    ];
+
+    protected $casts = [
+        'workflow_path' => 'array'
     ];
 
     // Relationships

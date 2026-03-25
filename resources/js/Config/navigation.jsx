@@ -135,7 +135,7 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     const normalizedRole = String(UserRole).toLowerCase().trim();
 
     // 3. The Math
-    const isTeamLeader = normalizedRole.includes('team leader');
+    const isTeamLeader = normalizedRole.includes('tl');
     const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr';
     const isApprover = [
         'director of corporate services and operations', 

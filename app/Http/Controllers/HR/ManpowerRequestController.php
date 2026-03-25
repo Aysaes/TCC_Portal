@@ -61,42 +61,46 @@ class ManpowerRequestController extends Controller
                 'poc_name' => 'required|string',
             ]);
 
-            $department = Department::findOrFail($request->department_id);
+            // 2. 🟢 THE NEW DYNAMIC WORKFLOW ROUTING 🟢
+            $userRole = Auth::user()->role->name;
 
-            $targetRoleName = match($department->name) {
-                'Medical', 'Veterinary' => 'Chief Vet',
-                'Operations', 'Logistics' => 'Operations Manager',
-                'Front Desk', 'Admin' => 'Clinic Manager',
-                default => 'Operations Manager',
+            // Map the exact Requester Role to their specific approval path
+            // IMPORTANT: Ensure these strings exactly match your database role names!
+            $workflowPath = match($userRole) {
+                // Medical Paths (4 Steps)
+                'Clinic Assistant TL', 'Vet Tech TL' 
+                    => ['Chief Vet', 'Operations Manager', 'Director of Corporate Services and Operations', 'HR'],
+                
+                // Medical & Ops Level 2 Paths (3 Steps)
+                'Chief Veterinarian', 'Cashier TL', 'Housekeeping TL', 'Inventory TL' 
+                    => ['Operations Manager', 'Director of Corporate Services and Operations', 'HR'],
+                
+                // Direct to DCSO Paths (2 Steps)
+                'IT TL', 'HRBP', 'Marketing Manager', 'Operations Manager', 'Procurement TL', 'Auditor TL' 
+                    => ['Director of Corporate Services and Operations', 'HR'],
+                
+                // Fallback (Safe Default)
+                default => ['Director of Corporate Services and Operations', 'HR'],
             };
 
-            $manager = User::whereHas('role', function ($query) use ($targetRoleName) {
-                $query->where('name', $targetRoleName);
-            })->first();
-
-            if (!$manager) {
-                throw new \Exception("No user found with the role of '{$targetRoleName}'.");
-            }
-
             // 3. Finalize data
-            $validated['requesting_manager_id'] = $manager->id;
+            // We no longer need 'requesting_manager_id' because the workflow path dictates who sees it!
             $validated['user_id'] = Auth::id();
             $validated['status'] = 'Pending';
+            $validated['workflow_path'] = $workflowPath;
+            $validated['current_step'] = 0; // Starts at the first role in the array
 
-            // 4. Attempt to save to the database
+            // 4. Save to database
             ManpowerRequest::create($validated);
 
+            $firstApprover = $workflowPath[0];
+
             return redirect()->route('hr.manpower-requests.index')
-                ->with('success', "Manpower Request submitted and routed to the {$targetRoleName} for approval.");
+                ->with('success', "Manpower Request submitted and routed to the {$firstApprover} for approval.");
 
         } catch (\Throwable $e) { 
-            // 🚨 THE ULTIMATE X-RAY 🚨
-            // This catches EVERYTHING and halts the system to show you the error.
-            dd([
-                'CRASH REASON' => $e->getMessage(),
-                'FILE' => $e->getFile(),
-                'LINE' => $e->getLine()
-            ]);
+            Log::error('MRF SUBMISSION CRASH: ' . $e->getMessage());
+            return back()->withErrors(['form_error' => 'Submission failed. Check logs.']);
         }
     }
 
@@ -113,78 +117,63 @@ class ManpowerRequestController extends Controller
             'branch:id,name', 
             'department:id,name', 
             'position:id,name',
-            'requestingManager:id,name'
+            // Notice we removed 'requestingManager' because it is obsolete!
         ]);
 
-        // APPLY STRICT ROLE-BASED VISIBILITY
-        if (str_contains($userRole, 'Team Leader')) {
-            // Team Leaders only see their own submissions
+        // 🟢 NEW DYNAMIC ROLE-BASED VISIBILITY 🟢
+        if (str_contains($userRole, 'TL')) {
+            // Team Leaders only see what they submitted
             $query->where('user_id', $user->id);
             
-        } elseif (in_array($userRole, ['Chief Vet', 'Operations Manager'])) {
-            // Managers see requests routed to them OR their own submissions
-            $query->where('requesting_manager_id', $user->id)
-                  ->orWhere('user_id', $user->id);
-                  
-        } elseif ($userRole === 'HR') {
-            // HR sees requests that passed the Manager stage (for their action), plus all others for monitoring
-            // No strict where() clause needed for general viewing, React will filter the "Action Required" tab
+        } elseif (in_array($userRole, ['admin', 'HR', 'Director of Corporate Services and Operations'])) {
+            // High-level roles pull everything. React will filter their specific "Action Required" tab.
             
-        } elseif ($userRole === 'Director of Corporate Services and Operations') {
-            // Director sees requests that passed both Manager and HR
-            $query->where('hr_approval_status', 'Approved')
-                  ->orWhere('user_id', $user->id);
+        } else {
+            // Middle Managers see their own submissions OR requests where their role is in the workflow path
+            $query->where('user_id', $user->id)
+                  ->orWhereJsonContains('workflow_path', $userRole);
         }
 
         return Inertia::render('HR/Admin/ApprovalRequest', [
             'requests' => $query->latest()->get(),
-            'userRole' => $userRole,
+            'userRole' => $userRole, 
         ]);
     }
 
     // ----------------------------------------------------------------------
     // 3. THE 3-STAGE APPROVAL WORKFLOW
     // ----------------------------------------------------------------------
-    public function updateStatus(Request $request, ManpowerRequest $manpowerRequest)
+   public function updateStatus(Request $request, ManpowerRequest $manpowerRequest)
     {
         $request->validate([
-            'level' => 'required|in:manager,hr,director',
-            'status' => 'required|in:Pending,Approved,Rejected,Fulfilled'
+            'status' => 'required|in:Approved,Rejected'
         ]);
 
-        // Stage 1: Manager
-        if ($request->level === 'manager') {
-            $manpowerRequest->update(['manager_approval_status' => $request->status]);
-            if ($request->status === 'Rejected') {
-                $manpowerRequest->update(['status' => 'Rejected']);
-            }
+        if ($request->status === 'Rejected') {
+            // Instant rejection kills the request
+            $manpowerRequest->update(['status' => 'Rejected']);
+            return back()->with('success', "Request has been officially rejected.");
         } 
         
-        // Stage 2: HR
-        elseif ($request->level === 'hr') {
-            // Ensure Manager approved first
-            abort_if($manpowerRequest->manager_approval_status !== 'Approved', 403, 'Manager must approve first.');
-            
-            $manpowerRequest->update(['hr_approval_status' => $request->status]);
-            if ($request->status === 'Rejected') {
-                $manpowerRequest->update(['status' => 'Rejected']);
-            }
-        } 
-        
-        // Stage 3: Director (Final)
-        elseif ($request->level === 'director') {
-            // Ensure HR approved first
-            abort_if($manpowerRequest->hr_approval_status !== 'Approved', 403, 'HR must endorse first.');
-            
-            $manpowerRequest->update(['director_approval_status' => $request->status]);
-            
-            if ($request->status === 'Approved') {
-                $manpowerRequest->update(['status' => 'Approved']); // Officially approved!
-            } elseif ($request->status === 'Rejected') {
-                $manpowerRequest->update(['status' => 'Rejected']);
+        if ($request->status === 'Approved') {
+            // Move to the next step in the array
+            $nextStep = $manpowerRequest->current_step + 1;
+            $workflowPath = $manpowerRequest->workflow_path;
+
+            // Check if the NEXT step is HR
+            if (isset($workflowPath[$nextStep]) && $workflowPath[$nextStep] === 'HR') {
+                // DCSO just approved it. It moves to HR for safekeeping.
+                $manpowerRequest->update([
+                    'current_step' => $nextStep,
+                    'status' => 'Approved' // The master status is now officially complete!
+                ]);
+                return back()->with('success', "Final approval granted. Forwarded to HR for reference.");
+            } else {
+                // Just pass the baton to the next manager
+                $manpowerRequest->update(['current_step' => $nextStep]);
+                $nextRole = $workflowPath[$nextStep];
+                return back()->with('success', "Endorsed and forwarded to the {$nextRole}.");
             }
         }
-
-        return back()->with('success', "Approval status updated.");
     }
 }

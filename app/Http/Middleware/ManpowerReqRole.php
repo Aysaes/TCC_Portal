@@ -24,7 +24,7 @@ class ManpowerReqRole
         }
 
         // 2. Special Check: If 'Team Leader' is required, allow anyone whose role contains that string
-        if (in_array('Team Leader', $allowedRoles) && str_contains($userRole, 'Team Leader')) {
+        if (in_array('TL', $allowedRoles) && str_contains($userRole, 'TL')) {
             return $next($request);
         }
 
