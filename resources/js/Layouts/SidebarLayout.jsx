@@ -29,43 +29,62 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
             >
                 <div className="flex h-16 items-center justify-center border-b border-gray-100 px-6">
                     <Link href={route('dashboard')} className="inline-flex items-center gap-2">
-                        <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
+                        <ApplicationLogo className="block h-12 w-auto fill-current text-gray-800" />
                         <span className="text-lg font-semibold text-gray-800">The Cat Clinic</span>
                     </Link>
                 </div>
 
                 <div className="overflow-y-auto px-4 py-6 text-sm font-medium">
-                    <div className="mb-4 block sm:hidden">
-                        <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                            Quick Links
+                    {/* Home Button - only show on Duty Meal and Document Repository modules */}
+                    {activeModule !== 'General' && (
+                        <div className="mb-4">
+                            <Link
+                                href={route('dashboard')}
+                                className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition ease-in-out duration-150"
+                            >
+                                <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
+                                </svg>
+                                Home
+                            </Link>
                         </div>
-                        <ul className="space-y-2">
-                            <li>
-                                <Link
-                                    href={route('staff.duty-meals.index')}
-                                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                                >
-                                    <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l7 7-7 7" />
-                                    </svg>
-                                    Duty Meal
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    href={route('admin.documents.index')}
-                                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                                >
-                                    <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v4h8" />
-                                    </svg>
-                                    Document Repository
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
+                    )}
+
+                    {/* Quick Links - only show on Dashboard */}
+                    {activeModule === 'General' && (
+                        <div className="mb-4">
+                            <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                Quick Links
+                            </div>
+                            <ul className="space-y-2">
+                                <li>
+                                    <Link
+                                        href={route('staff.duty-meals.index')}
+                                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                    >
+                                        <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l7 7-7 7" />
+                                        </svg>
+                                        Duty Meal
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link
+                                        href={route('admin.documents.index')}
+                                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                    >
+                                        <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 2h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v4h8" />
+                                        </svg>
+                                        Document Repository
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+                    )}
 
                     <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
                         {activeModule} Menu
@@ -74,6 +93,7 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                     <ul className="space-y-2">
                         {sidebarLinks.map((link, index) => {
                             const iconSvg = {
+                                
                                 Overview: (
                                     <svg className="h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
@@ -96,6 +116,76 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                                     <svg className="h-4 w-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M8 6h8M8 12h8M8 18h8" />
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12" />
+                                    </svg>
+                                ),
+                                'Duty Meals': (
+                                    <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l7 7-7 7" />
+                                    </svg>
+                                ),
+                                'Duty Meal Overview': (
+                                    <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l7 7-7 7" />
+                                    </svg>
+                                ),
+                                'Set Up Roster': (
+                                    <svg className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                ),
+                                'Duty Meal Archive': (
+                                    <svg className="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9-4v4m4-4v4" />
+                                    </svg>
+                                ),
+                                'Document Overview': (
+                                    <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v4h8" />
+                                    </svg>
+                                ),
+                                'Admin Overview': (
+                                    <svg className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                ),
+                                'Employee Management': (
+                                    <svg className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM16 16a5 5 0 10-10 0" />
+                                    </svg>
+                                ),
+                                'Announcements & Notices': (
+                                    <svg className="h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 8a3 3 0 00-6 0v7a3 3 0 006 0V8z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h1m14 0h1" />
+                                        <path strokeLineCap="round" strokeLinejoin="round" d="M9 17h6" />
+                                    </svg>
+                                ),
+                                'Company Content Management': (
+                                    <svg className="h-4 w-4 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4m0 0l-4-4m4 4H3" />
+                                    </svg>
+                                ),
+                                'System Logs & Security': (
+                                    <svg className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v2h8z" />
+                                    </svg>
+                                ),
+                                'HR Admin Overview': (
+                                    <svg className="h-4 w-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                ),
+                                'Manpower Request': (
+                                    <svg className="h-4 w-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                    </svg>
+                                ),
+                                'Feedback Form': (
+                                    <svg className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 ),
                             };
@@ -135,25 +225,6 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                     </button>
 
                     <div className="flex flex-1 items-center justify-end space-x-4">
-
-                        <Link 
-                            href={route('staff.duty-meals.index')} 
-                            className="hidden sm:inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none transition ease-in-out duration-150"
-                        >
-                           <svg className="mr-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12c0-1.657 2.015-3 4.5-3S14 10.343 14 12m0 0c0-1.657 2.015-3 4.5-3S23 10.343 23 12"/><path strokeLinecap="round" strokeLinejoin="round" d="M2 12h20m-18 0c0 3.314 4.03 6 9 6s9-2.686 9-6M1 8l5 3.5" /></svg>
-                            Duty Meal
-                        </Link>
-                        
-                        {/* --- DOCUMENT REPOSITORY BUTTON --- */}
-                        <Link 
-                            href={route('admin.documents.index')} 
-                            className="hidden sm:inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none transition ease-in-out duration-150"
-                        >
-                            <svg className="mr-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Document Repository
-                        </Link>
 
                         {/* THE MAIN MODULE SWITCHER */}
                         <Dropdown>

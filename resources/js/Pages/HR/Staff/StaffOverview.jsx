@@ -1,7 +1,7 @@
-import SidebarLayout from '@/Layouts/SidebarLayout';
-import { getHRLinks } from '@/Config/navigation';
-import { Head, useForm } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
+import { getHRLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 const COE_REASONS = [
@@ -14,7 +14,15 @@ const COE_REASONS = [
 ];
 
 export default function StaffOverview({ auth, requests }) {
-    const HRLinks = getHRLinks();
+
+    // Extract the role from the now-updated auth object
+    const currentRole = auth.user?.role?.name || 'Guest';
+    
+    // Check the browser console to see exactly what React sees!
+    console.log("React sees this user as:", currentRole);
+    const HRLinks = getHRLinks(currentRole, auth);
+
+    console.log("Generated HR Links Array:", HRLinks);
     
     // Safety check for requests
     const requestList = requests || [];

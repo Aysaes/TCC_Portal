@@ -87,14 +87,14 @@ export const getDocumentSidebarLinks = (categories = [], activeCategory = 'Overv
 
 export const getDutyMealLinks = () => [
     {
-        label: 'Duty Meal Overview',
-        href: route('admin.duty-meals.index'),
-        active: route().current('admin.duty-meals.index'),
-    },
-    {
         label: 'Set Up Roster',
         href: route('admin.duty-meals.create'),
         active: route().current('admin.duty-meals.create'),
+    },
+    {
+        label: 'Duty Meal Overview',
+        href: route('admin.duty-meals.index'),
+        active: route().current('admin.duty-meals.index'),
     },
     {
         label: 'Duty Meal Archive',
@@ -111,25 +111,57 @@ export const getStaffDutyMealLinks = () => [
     },
 ];
 
-export const getHRLinks = () =>[
-    {
-        label: 'Overview',
-        href: route('hr.index'),
-        active: route().current('hr.index'), 
-    },
-    {
-        label: 'HR Admin Overview',
-        href: '#',
-        active: false, 
-    },
-    {
-        label: 'Manpower Request',
-        href: route('hr.manpower-requests.create'),
-        active: route().current('hr.manpower-requests.create'),
-    },
-     {
-        label: 'Feedback Form',
-        href: '#',
-        active: false,
+export const getHRLinks = (UserRole = 'Employee', auth) => {
+    
+    const userRole = (auth?.user?.role?.name || '').toLowerCase();
+    const userPosition = (auth?.user?.position?.name || '').toLowerCase();
+
+    // Kurudapya merge
+    const isHRAdmin = userRole === 'admin' || userRole === 'hr' || userPosition === 'human resources';
+
+    // 1. Base links
+    const links = [
+        { label: 'Overview', href: route('hr.index'), active: route().current('hr.index') },
+        ...(isHRAdmin ? [
+            { 
+                label: 'HR Admin Overview', 
+                href: route('hr.admin.index'), 
+                active: route().current('hr.admin.index') 
+            }
+        ] : []),
+    ];
+
+    // 2. DEFENSIVE STRIPPING: Force string, lowercase it, and trim hidden spaces
+    const normalizedRole = String(UserRole).toLowerCase().trim();
+
+    // 3. The Math
+    const isTeamLeader = normalizedRole.includes('team leader');
+    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr';
+    const isApprover = [
+        'director of corporate services and operations', 
+        'chief vet', 
+        'operations manager', 
+    ].includes(normalizedRole);
+
+    // 4. Push the links based on the math
+    if (isTeamLeader || isAdminOrHR || isApprover) {
+        links.push({
+            label: 'Manpower Request',
+            href: route('hr.manpower-requests.create'),
+            active: route().current('hr.manpower-requests.create'),
+        });
     }
-];
+
+    if (isTeamLeader || isAdminOrHR || isApprover) {
+        links.push({
+            label: isTeamLeader && !isAdminOrHR ? 'My Requests' : 'Approval Board',
+            href: route('hr.manpower-requests.index'),
+            active: route().current('hr.manpower-requests.index'),
+        });
+    }
+
+    // 5. Final link
+    links.push({ label: 'Feedback Form', href: '#', active: false });
+
+    return links;
+};

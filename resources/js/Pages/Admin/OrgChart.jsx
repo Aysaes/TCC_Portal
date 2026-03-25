@@ -257,7 +257,7 @@ export default function OrgChartAdmin({ auth, members }) {
                                     className="flex items-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-600 shadow-inner hover:bg-red-100 transition-colors disabled:opacity-50"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478 48.567 48.567 0 01-3.622-.472v13.064c0 1.725-1.4 3.125-3.125 3.125H10.875c-1.725 0-3.125-1.4-3.125-3.125V6.16c-1.248.06-2.492.16-3.722.299a.75.75 0 01-.256-1.478 48.84 48.84 0 013.878-.512V4.478c0-1.326 1.057-2.382 2.382-2.382h2.236c1.326 0 2.382 1.056 2.382 2.382zm-9.431 3.524a.75.75 0 018.802 0 .75.75 0 01-.65 1.35 1.125 1.125 0 00-.918 0 .75.75 0 01-.65-1.35zM9 10.875a.75.75 0 01.75-.75h4.5a.75.75 0 01.75.75v6.75a.75.75 0 01-.75.75h-4.5a.75.75 0 01-.75-.75v-6.75z" clipRule="evenodd" /></svg>
-                                    DELETE MEMBE
+                                    DELETE MEMBER
                                 </button>
                             )}
 
