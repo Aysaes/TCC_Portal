@@ -162,13 +162,13 @@ Route::middleware(['auth'])->group(function(){
     Route::prefix('hr')->name('hr.')->group(function(){
 
         
-        Route::middleware(['role:admin,HR,Team Leader,Chief Vet,Operations Manager,TL'])->group(function(){
+        Route::middleware(['role:admin,HR,HRBP,Chief Vet,Operations Manager,TL,Marketing Manager,Director of Corporate Services and Operations'])->group(function(){
             Route::get('/manpower-requests/create', [ManpowerRequestController::class, 'create'])->name('manpower-requests.create');
             Route::post('/manpower-requests', [ManpowerRequestController::class, 'store'])->name('manpower-requests.store');
         });
 
         
-        Route::middleware(['role:admin,HR,Director of Corporate Services and Operations,Chief Vet,Operations Manager,TL'])->group(function () {
+        Route::middleware(['role:admin,HR,Director of Corporate Services and Operations,Chief Vet,Operations Manager,TL,HRBP,Marketing Manager'])->group(function () {
             Route::get('/manpower-requests', [ManpowerRequestController::class, 'index'])->name('manpower-requests.index');
             Route::patch('/manpower-requests/{manpowerRequest}/status', [ManpowerRequestController::class, 'updateStatus'])->name('manpower-requests.update-status');
         });

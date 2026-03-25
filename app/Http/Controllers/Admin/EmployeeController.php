@@ -118,16 +118,25 @@ class EmployeeController extends Controller
         }
     }
 
-    public function destroyDepartment (Department $department){
-        try{
-            if($department->user()->exists()){
+    public function destroyDepartment(Department $department)
+    {
+        try {
+            // 1. Check if the department has active employees
+            if ($department->users()->exists()) {
                 return back()->with('error', 'Cannot delete a department that has active employees.');
             }
 
+            // 2. Check if the department still has positions assigned to it
+            if ($department->positions()->exists()) {
+                return back()->with('error', 'Cannot delete a department that has existing positions. Please reassign or delete the positions first.');
+            }
+
+            // 3. Safe to delete
             $department->delete();
             return back()->with('success', 'Department deleted successfully.');
-        }catch(\Exception $e){
-            return back()->with('error', 'An error occured while deleting the department: ' . $e->getMessage());
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'An error occurred while deleting the department: ' . $e->getMessage());
         }
     }
 

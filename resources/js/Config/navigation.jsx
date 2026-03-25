@@ -135,8 +135,8 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     const normalizedRole = String(UserRole).toLowerCase().trim();
 
     // 3. The Math
-    const isTeamLeader = normalizedRole.includes('tl');
-    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr';
+    const isRequesterOnly = ['vet tech tl', 'marketing manager'].includes(normalizedRole);
+    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr' || normalizedRole === 'hrbp';
     const isApprover = [
         'director of corporate services and operations', 
         'chief vet', 
@@ -144,7 +144,7 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     ].includes(normalizedRole);
 
     // 4. Push the links based on the math
-    if (isTeamLeader || isAdminOrHR || isApprover) {
+    if (isRequesterOnly || isAdminOrHR || isApprover) {
         links.push({
             label: 'Manpower Request',
             href: route('hr.manpower-requests.create'),
@@ -152,9 +152,9 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
         });
     }
 
-    if (isTeamLeader || isAdminOrHR || isApprover) {
+    if (isRequesterOnly || isAdminOrHR || isApprover) {
         links.push({
-            label: isTeamLeader && !isAdminOrHR ? 'My Requests' : 'Approval Board',
+            label: isRequesterOnly && !isAdminOrHR ? 'My Requests' : 'Approval Board',
             href: route('hr.manpower-requests.index'),
             active: route().current('hr.manpower-requests.index'),
         });

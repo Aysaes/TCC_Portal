@@ -37,7 +37,9 @@ class ManpowerRequestController extends Controller
 
     public function store(Request $request)
     {
-        // 👇 We wrap EVERYTHING in the Throwable catch now
+        
+        Log::info('--- NEW MRF SUBMISSION STARTED ---', ['user' => Auth::user()->name, 'role' => Auth::user()->role->name]);
+
         try {
             // 1. Validate the incoming data
             $validated = $request->validate([
@@ -61,46 +63,66 @@ class ManpowerRequestController extends Controller
                 'poc_name' => 'required|string',
             ]);
 
+            Log::info('MARKER 2: Form validation passed successfully!');
+
             // 2. 🟢 THE NEW DYNAMIC WORKFLOW ROUTING 🟢
             $userRole = Auth::user()->role->name;
 
-            // Map the exact Requester Role to their specific approval path
-            // IMPORTANT: Ensure these strings exactly match your database role names!
             $workflowPath = match($userRole) {
-                // Medical Paths (4 Steps)
                 'Clinic Assistant TL', 'Vet Tech TL' 
                     => ['Chief Vet', 'Operations Manager', 'Director of Corporate Services and Operations', 'HR'],
-                
-                // Medical & Ops Level 2 Paths (3 Steps)
                 'Chief Veterinarian', 'Cashier TL', 'Housekeeping TL', 'Inventory TL' 
                     => ['Operations Manager', 'Director of Corporate Services and Operations', 'HR'],
-                
-                // Direct to DCSO Paths (2 Steps)
                 'IT TL', 'HRBP', 'Marketing Manager', 'Operations Manager', 'Procurement TL', 'Auditor TL' 
                     => ['Director of Corporate Services and Operations', 'HR'],
-                
-                // Fallback (Safe Default)
+                'Director of Corporate Services and Operations' 
+                    => ['HR'],
                 default => ['Director of Corporate Services and Operations', 'HR'],
             };
 
+            Log::info('MARKER 3: Calculated Workflow Path', ['path' => $workflowPath]);
+
             // 3. Finalize data
-            // We no longer need 'requesting_manager_id' because the workflow path dictates who sees it!
             $validated['user_id'] = Auth::id();
-            $validated['status'] = 'Pending';
             $validated['workflow_path'] = $workflowPath;
-            $validated['current_step'] = 0; // Starts at the first role in the array
+            $validated['current_step'] = 0; 
+
+            // 🟢 AUTO-APPROVE DCSO REQUESTS 🟢
+            if (isset($workflowPath[0]) && $workflowPath[0] === 'HR') {
+                $validated['status'] = 'Approved'; 
+                $successMessage = "Request auto-approved and forwarded to HR for reference.";
+            } else {
+                $validated['status'] = 'Pending';
+                $firstApprover = $workflowPath[0] ?? 'Unknown';
+                $successMessage = "Manpower Request submitted and routed to the {$firstApprover} for approval.";
+            }
+
+            Log::info('MARKER 4: Attempting to save to database...');
 
             // 4. Save to database
             ManpowerRequest::create($validated);
 
-            $firstApprover = $workflowPath[0];
+            Log::info('MARKER 5: Successfully saved to database! Redirecting...');
 
             return redirect()->route('hr.manpower-requests.index')
-                ->with('success', "Manpower Request submitted and routed to the {$firstApprover} for approval.");
+                ->with('success', $successMessage);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            
+            Log::warning('MRF VALIDATION FAILED: User missed a required field.', $e->errors());
+            throw $e; // Re-throw so Laravel safely returns the user to the form
+            
         } catch (\Throwable $e) { 
+            
             Log::error('MRF SUBMISSION CRASH: ' . $e->getMessage());
-            return back()->withErrors(['form_error' => 'Submission failed. Check logs.']);
+            Log::error('FILE: ' . $e->getFile() . ' on line ' . $e->getLine());
+            
+            
+            dd([
+                'CRASH REASON' => $e->getMessage(),
+                'FILE' => $e->getFile(),
+                'LINE' => $e->getLine()
+            ]);
         }
     }
 
@@ -121,11 +143,11 @@ class ManpowerRequestController extends Controller
         ]);
 
         // 🟢 NEW DYNAMIC ROLE-BASED VISIBILITY 🟢
-        if (str_contains($userRole, 'TL')) {
+        if (in_array($userRole, ['TL', 'Marketing Manager'])) {
             // Team Leaders only see what they submitted
             $query->where('user_id', $user->id);
             
-        } elseif (in_array($userRole, ['admin', 'HR', 'Director of Corporate Services and Operations'])) {
+        } elseif (in_array($userRole, ['admin', 'HR','HRBP' ,'Director of Corporate Services and Operations'])) {
             // High-level roles pull everything. React will filter their specific "Action Required" tab.
             
         } else {
