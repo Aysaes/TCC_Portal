@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Feedback extends Model
 {
-    protected $fillable = ['user_id', 'type', 'subject', 'message', 'is_anonymous'];
+    // Added 'image_path' to the array!
+    protected $fillable = ['user_id', 'type', 'subject', 'message', 'image_path'];
 
     public function user()
     {

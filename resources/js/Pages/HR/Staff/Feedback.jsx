@@ -8,21 +8,22 @@ import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 export default function Feedback({ auth }) {
-    // Note: Adjust the parameters here if your getHRLinks requires specific variables!
     const hrLinks = getHRLinks(auth?.user?.role?.name || 'Employee', auth);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         type: '',
         subject: '',
         message: '',
-        is_anonymous: false,
+        image: null, // NEW: Added image to the form state
     });
 
     const submit = (e) => {
         e.preventDefault();
         post(route('hr.feedback.store'), {
             preserveScroll: true,
-            onSuccess: () => reset(), // Clears the form after success
+            // We use forceFormData because we are sending an actual file (multipart/form-data)
+            forceFormData: true, 
+            onSuccess: () => reset(), 
         });
     };
 
@@ -89,26 +90,23 @@ export default function Feedback({ auth }) {
                             <InputError message={errors.message} className="mt-2" />
                         </div>
 
-                        {/* Anonymous Toggle */}
-                        <div className="flex items-start bg-gray-50 p-4 rounded-lg border border-gray-100">
-                            <div className="flex items-center h-5">
-                                <input
-                                    id="is_anonymous"
-                                    type="checkbox"
-                                    className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
-                                    checked={data.is_anonymous}
-                                    onChange={(e) => setData('is_anonymous', e.target.checked)}
-                                />
-                            </div>
-                            <div className="ml-3 text-sm">
-                                <label htmlFor="is_anonymous" className="font-bold text-gray-900">Submit Anonymously</label>
-                                <p className="text-gray-500">If checked, your name and email will be hidden from HR. We will not be able to reply to you directly regarding this submission.</p>
-                            </div>
+                        {/* NEW: Optional Image Upload */}
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <InputLabel htmlFor="image" value="Attach an Image (Optional)" className="font-bold mb-1" />
+                            <p className="text-xs text-gray-500 mb-3">Include a screenshot or photo to provide more context (JPG, PNG - Max 5MB).</p>
+                            <input 
+                                type="file" 
+                                id="image" 
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors" 
+                                accept="image/*"
+                                onChange={(e) => setData('image', e.target.files[0])} 
+                            />
+                            <InputError message={errors.image} className="mt-2" />
                         </div>
 
                         {/* Submit Button */}
-                        <div className="flex items-center justify-end pt-4 border-t border-gray-100">
-                            <PrimaryButton disabled={processing} className="px-6 py-3">
+                        <div className="flex items-center justify-end pt-4 border-t border-gray-100 mt-8">
+                            <PrimaryButton disabled={processing} className="px-6 py-3 shadow-sm">
                                 Submit Feedback
                             </PrimaryButton>
                         </div>

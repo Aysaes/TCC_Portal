@@ -9,29 +9,32 @@ use Inertia\Inertia;
 
 class FeedbackController extends Controller
 {
-    // Show the form
     public function create()
     {
-        return Inertia::render('HR/Feedback');
+        return Inertia::render('HR/Staff/Feedback');
     }
 
-    // Save the submission
     public function store(Request $request)
     {
         $request->validate([
             'type' => 'required|string|max:50',
             'subject' => 'required|string|max:255',
             'message' => 'required|string',
-            'is_anonymous' => 'boolean',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // Up to 5MB images allowed
         ]);
 
+        // Handle the image upload if one is provided
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('feedback_images', 'public');
+        }
+
         Feedback::create([
-            // If they check anonymous, save 'null' instead of their ID
-            'user_id' => $request->is_anonymous ? null : auth()->id(),
+            'user_id' => auth()->id(), 
             'type' => $request->type,
             'subject' => $request->subject,
             'message' => $request->message,
-            'is_anonymous' => $request->is_anonymous,
+            'image_path' => $imagePath, // Save the path to the database
         ]);
 
         return back()->with('success', 'Thank you! Your feedback has been securely submitted to HR.');
