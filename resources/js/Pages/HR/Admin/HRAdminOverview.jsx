@@ -34,7 +34,6 @@ export default function HRAdminOverview({ auth, requests }) {
         <SidebarLayout
             activeModule="HR ADMIN"
             sidebarLinks={hrLinks}
-            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">HR Admin Control Panel</h2>}
         >
             <Head title="HR Admin Overview" />
 
@@ -42,8 +41,8 @@ export default function HRAdminOverview({ auth, requests }) {
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     
                     <div className="mb-8">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">Pending Document Requests</h3>
-                        <p className="text-gray-600">Review, approve, or reject employee document requests.</p>
+                        <h1 className="text-2xl font-semibold text-gray-900">Pending Document Requests</h1>
+                            <p className="text-gray-500 text-sm mt-1">Review, approve, or reject employee document requests.</p>
                     </div>
 
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

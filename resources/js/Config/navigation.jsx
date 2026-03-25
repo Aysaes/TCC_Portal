@@ -172,14 +172,14 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
 
 export const getHRAdminLinks = (auth) => {
     return [
-        { label: 'Overview',
-            href: route('hr.admin.index'),
-            active: route().current('hr.admin.index') 
-        },
         { 
             label: 'HR Module', 
             href: route('hr.index'),
             active: route().current('hr.index') 
+        },
+        { label: 'Pending Document Requests',
+            href: route('hr.admin.index'),
+            active: route().current('hr.admin.index') 
         },
         { label: 'Feedback Form Submissions', 
             href: route('hr.feedback.index'),

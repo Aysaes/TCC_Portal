@@ -1,6 +1,8 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+// 1. IMPORT YOUR DYNAMIC LINKS GENERATOR
+import { getHRLinks } from '@/Config/navigation';
 
 export default function ApprovalsRequest({ auth, requests = [], userRole = '' }) {
     // 1. DEFINE ROLES FIRST
@@ -9,7 +11,10 @@ export default function ApprovalsRequest({ auth, requests = [], userRole = '' })
     const isAdmin = roleLower === 'admin';
     const isTeamLeader = roleLower.includes('tl');
 
-    // 2. DYNAMIC DEFAULT TAB
+    // 2. GENERATE THE LINKS FOR THIS SPECIFIC USER
+    const hrLinks = getHRLinks(auth.user.role?.name || 'Employee', auth);
+
+    // 3. DYNAMIC DEFAULT TAB
     // If they are a TL, open 'in-progress' by default. Otherwise, open 'action-required'.
     const [activeTab, setActiveTab] = useState(
         (isTeamLeader && !isAdmin) ? 'in-progress' : 'action-required'
@@ -58,7 +63,8 @@ export default function ApprovalsRequest({ auth, requests = [], userRole = '' })
     };
 
     return (
-        <SidebarLayout user={auth.user} activeModule="HR">
+        // 4. PASS THE LINKS INTO THE LAYOUT HERE!
+        <SidebarLayout user={auth.user} activeModule="HR MENU" sidebarLinks={hrLinks}>
             <Head title={isTeamLeader && !isAdmin ? "My Requests" : "Approval Board"} />
 
             <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">

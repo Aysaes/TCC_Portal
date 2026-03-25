@@ -66,7 +66,7 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
 
     return (
         // 3. PASS THE LINKS INTO THE LAYOUT!
-        <SidebarLayout user={auth.user} activeModule="HR MENU" sidebarLinks={hrLinks}>
+        <SidebarLayout user={auth.user} activeModule="HR" sidebarLinks={hrLinks}>
             <Head title="Manpower Request" />
 
             <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
