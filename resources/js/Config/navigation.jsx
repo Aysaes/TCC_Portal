@@ -122,13 +122,16 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
 
     // 1. Base links
     const links = [
-        { label: 'Overview', href: route('hr.index'), active: route().current('hr.index') },
-        ...(isHRAdmin ? [
-            { 
+                    { 
                 label: 'HR Admin Overview', 
                 href: route('hr.admin.index'), 
                 active: route().current('hr.admin.index') 
-            }
+            },
+            {   label: 'Document Requests', 
+                href: route('hr.index'), 
+                active: route().current('hr.index') },
+            ...(isHRAdmin ? [
+
         ] : []),
     ];
 
