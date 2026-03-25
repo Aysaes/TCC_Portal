@@ -161,7 +161,10 @@ Route::middleware(['auth'])->group(function(){
 
     Route::prefix('hr')->name('hr.')->group(function(){
 
-        
+        Route::middleware(['role:admin,HR'])->group(function () {
+            Route::get('/feedback-submissions', [\App\Http\Controllers\HR\FeedbackController::class, 'index'])->name('feedback.index');
+        });
+
         Route::middleware(['role:admin,HR,Team Leader,Chief Vet,Operations Manager,TL'])->group(function(){
             Route::get('/manpower-requests/create', [ManpowerRequestController::class, 'create'])->name('manpower-requests.create');
             Route::post('/manpower-requests', [ManpowerRequestController::class, 'store'])->name('manpower-requests.store');

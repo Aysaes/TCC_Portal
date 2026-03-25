@@ -32,7 +32,7 @@ export default function HRAdminOverview({ auth, requests }) {
 
     return (
         <SidebarLayout
-            activeModule="HR MENU"
+            activeModule="HR ADMIN"
             sidebarLinks={hrLinks}
             header={<h2 className="text-xl font-semibold leading-tight text-gray-800">HR Admin Control Panel</h2>}
         >

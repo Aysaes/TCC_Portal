@@ -174,10 +174,11 @@ export const getHRAdminLinks = (auth) => {
     return [
         { label: 'Overview',
             href: route('hr.admin.index'),
-            active: route().current('hr.admin.index') },
+            active: route().current('hr.admin.index') 
+        },
         { label: 'Feedback Form Submissions', 
-            href: '#', 
-            active: false,
+            href: route('hr.feedback.index'),
+            active: route().current('hr.feedback.index')
         }
     ];
 };
