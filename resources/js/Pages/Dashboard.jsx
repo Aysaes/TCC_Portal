@@ -114,7 +114,7 @@ export default function Dashboard({ auth, announcements }) {
                         {chunkedAnnouncements.length > 1 && (
                             <button 
                                 onClick={scrollLeft} 
-                                className="hidden lg:flex shrink-0 h-12 w-12 items-center justify-center rounded-full bg-white text-gray-600 shadow-sm border border-gray-200 transition-all focus:outline-none hover:text-indigo-600 hover:scale-105 hover:shadow-md"
+                                className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-black shadow-sm transition-all focus:outline-none hover:scale-105 hover:shadow-md lg:flex"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -191,7 +191,7 @@ export default function Dashboard({ auth, announcements }) {
                         {chunkedAnnouncements.length > 1 && (
                             <button 
                                 onClick={scrollRight} 
-                                className="hidden lg:flex shrink-0 h-12 w-12 items-center justify-center rounded-full bg-white text-gray-600 shadow-sm border border-gray-200 transition-all focus:outline-none hover:text-indigo-600 hover:scale-105 hover:shadow-md"
+                                className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-black shadow-sm transition-all focus:outline-none hover:scale-105 hover:shadow-md lg:flex"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
