@@ -173,7 +173,7 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
 export const getHRAdminLinks = (auth) => {
     return [
         { 
-            label: 'HR Module', 
+            label: 'HR Module Overview', 
             href: route('hr.index'),
             active: route().current('hr.index') 
         },
