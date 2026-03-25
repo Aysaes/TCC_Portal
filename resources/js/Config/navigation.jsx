@@ -168,3 +168,15 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     });
     return links;
 };
+
+export const getHRAdminLinks = (auth) => {
+    return [
+        { label: 'Overview',
+            href: route('hr.admin.index'),
+            active: route().current('hr.admin.index') },
+        { label: 'Feedback Form Submissions', 
+            href: '#', 
+            active: false,
+        }
+    ];
+};

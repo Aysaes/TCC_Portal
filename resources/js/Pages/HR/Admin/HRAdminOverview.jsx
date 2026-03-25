@@ -1,10 +1,10 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { getHRLinks } from '@/Config/navigation';
+import { getHRAdminLinks } from '@/Config/navigation';
 import { Head, router } from '@inertiajs/react';
 
 export default function HRAdminOverview({ auth, requests }) {
     // Bring in the dynamically generated HR links, passing 'auth' to prevent errors!
-    const hrLinks = getHRLinks(auth);
+    const hrLinks = getHRAdminLinks(auth);
 
     const requestList = requests || [];
 
