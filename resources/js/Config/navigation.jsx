@@ -135,20 +135,24 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
         ] : []),
     ];
 
-    // 2. DEFENSIVE STRIPPING: Force string, lowercase it, and trim hidden spaces
-    const normalizedRole = String(UserRole).toLowerCase().trim();
-
-    // 3. The Math
-    const isRequesterOnly = ['vet tech tl', 'marketing manager'].includes(normalizedRole);
-    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr' || normalizedRole === 'hrbp';
+    const normalizedRole = String(userRole).toLowerCase().trim();
+    
+    const isAdmin = normalizedRole === 'admin';
+    const isHR = normalizedRole === 'hr';
+    const isHRBP = normalizedRole === 'hrbp';
+    
+    // 🟢 DYNAMIC TL CHECK: If it contains 'tl', they are a requester
+    const isRequesterOnly = normalizedRole.includes('tl') || normalizedRole === 'marketing manager';
+    
+    // Approvers who can also request
     const isApprover = [
         'director of corporate services and operations', 
         'chief vet', 
         'operations manager', 
     ].includes(normalizedRole);
 
-    // 4. Push the links based on the math
-    if (isRequesterOnly || isAdminOrHR || isApprover) {
+    // CREATE LINK: Everyone EXCEPT HR
+    if (isAdmin || isHRBP || isRequesterOnly || isApprover) {
         links.push({
             label: 'Manpower Request',
             href: route('hr.manpower-requests.create'),
@@ -156,9 +160,10 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
         });
     }
 
-    if (isRequesterOnly || isAdminOrHR || isApprover) {
+    // DASHBOARD LINK: Everyone
+    if (isAdmin || isHR || isHRBP || isRequesterOnly || isApprover) {
         links.push({
-            label: isRequesterOnly && !isAdminOrHR ? 'My Requests' : 'Approval Board',
+            label: isRequesterOnly ? 'My Requests' : 'Approval Board',
             href: route('hr.manpower-requests.index'),
             active: route().current('hr.manpower-requests.index'),
         });
