@@ -155,6 +155,9 @@ Route::middleware(['auth', CheckDutyMealAccess::class])->group(function () {
 });
 
 Route::middleware(['auth'])->group(function(){
+    // --- HR Feedback Form ---
+    Route::get('/hr/feedback', [\App\Http\Controllers\HR\FeedbackController::class, 'create'])->name('hr.feedback.create');
+    Route::post('/hr/feedback', [\App\Http\Controllers\HR\FeedbackController::class, 'store'])->name('hr.feedback.store');
 
     Route::prefix('hr')->name('hr.')->group(function(){
 

@@ -161,7 +161,10 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     }
 
     // 5. Final link
-    links.push({ label: 'Feedback Form', href: '#', active: false });
-
+    links.push({ 
+        label: 'Feedback Form', 
+        href: route('hr.feedback.create'), 
+        active: route().current('hr.feedback.create') 
+    });
     return links;
 };
