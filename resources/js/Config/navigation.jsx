@@ -78,7 +78,8 @@ export const getDocumentSidebarLinks = (categories = [], activeCategory = 'Overv
         ...categories.map(cat => ({
             label: cat.name,
             href: route('admin.documents.index', { category: cat.name }),
-            active: activeCategory === cat.name
+            active: activeCategory === cat.name,
+            icon: 'document-category',
         }))
     ];
 };

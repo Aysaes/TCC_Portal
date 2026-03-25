@@ -162,7 +162,7 @@ export default function OrgChartAdmin({ auth, members }) {
                                             className="group relative flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-xl hover:border-indigo-300 cursor-grab active:cursor-grabbing">
                                             
                                             {/* Drag Handle Icon */}
-                                            <div className="absolute top-4 left-4 text-gray-300 group-hover:text-indigo-400 transition-colors pointer-events-none">
+                                            <div className="pointer-events-none absolute left-4 top-4 text-black transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
                                                 </svg>
@@ -171,7 +171,7 @@ export default function OrgChartAdmin({ auth, members }) {
                                             {/* Edit Icon */}
                                             <button 
                                                 onClick={() => openModal(member)} 
-                                                className="absolute top-4 right-4 text-gray-300 group-hover:text-indigo-600 transition-colors z-20 bg-white/70 p-1.5 rounded-full" 
+                                                className="absolute right-4 top-4 z-20 rounded-full bg-white/70 p-1.5 text-black transition-colors" 
                                                 title="Edit Member"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -183,7 +183,7 @@ export default function OrgChartAdmin({ auth, members }) {
                                                 {member.image_path ? (
                                                     <img src={`/storage/${member.image_path}`} alt={member.name} className="h-full w-full object-cover" />
                                                 ) : (
-                                                    <svg className="h-full w-full text-gray-300 p-6 bg-gray-50" fill="currentColor" viewBox="0 0 24 24">
+                                                    <svg className="h-full w-full bg-gray-50 p-6 text-black" fill="currentColor" viewBox="0 0 24 24">
                                                         <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
                                                     </svg>
                                                 )}
@@ -254,7 +254,7 @@ export default function OrgChartAdmin({ auth, members }) {
                                     type="button"
                                     onClick={() => deleteMemberAction(editingMember.id)}
                                     disabled={processing}
-                                    className="flex items-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-600 shadow-inner hover:bg-red-100 transition-colors disabled:opacity-50"
+                                    className="flex items-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-xs font-bold text-black shadow-inner transition-colors hover:bg-red-100 disabled:opacity-50"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478 48.567 48.567 0 01-3.622-.472v13.064c0 1.725-1.4 3.125-3.125 3.125H10.875c-1.725 0-3.125-1.4-3.125-3.125V6.16c-1.248.06-2.492.16-3.722.299a.75.75 0 01-.256-1.478 48.84 48.84 0 013.878-.512V4.478c0-1.326 1.057-2.382 2.382-2.382h2.236c1.326 0 2.382 1.056 2.382 2.382zm-9.431 3.524a.75.75 0 018.802 0 .75.75 0 01-.65 1.35 1.125 1.125 0 00-.918 0 .75.75 0 01-.65-1.35zM9 10.875a.75.75 0 01.75-.75h4.5a.75.75 0 01.75.75v6.75a.75.75 0 01-.75.75h-4.5a.75.75 0 01-.75-.75v-6.75z" clipRule="evenodd" /></svg>
                                     DELETE MEMBER

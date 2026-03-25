@@ -242,7 +242,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Card 1: Total Meals */}
                     <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm flex items-center">
-                        <div className="p-3 rounded-full bg-blue-50 text-blue-600 mr-4">
+                        <div className="mr-4 rounded-full bg-blue-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
@@ -255,7 +255,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
 
                     {/* Card 2: Main Meals */}
                     <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm flex items-center">
-                        <div className="p-3 rounded-full bg-indigo-50 text-indigo-600 mr-4">
+                        <div className="mr-4 rounded-full bg-indigo-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z" />
                             </svg>
@@ -268,7 +268,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
 
                     {/* Card 3: Alt Meals */}
                     <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm flex items-center">
-                        <div className="p-3 rounded-full bg-amber-50 text-amber-600 mr-4">
+                        <div className="mr-4 rounded-full bg-amber-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                             </svg>
@@ -281,7 +281,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
 
                     {/* Card 4: Special Requests */}
                     <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm flex items-center">
-                        <div className="p-3 rounded-full bg-rose-50 text-rose-600 mr-4">
+                        <div className="mr-4 rounded-full bg-rose-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
@@ -341,7 +341,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                     
                                     {selectedRoster.is_locked && (
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            <svg className="mr-1 h-3 w-3 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg className="mr-1 h-3 w-3 text-black" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                                             </svg>
                                             Locked
@@ -393,7 +393,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                 {!selectedRoster.is_locked && (
                                                 <button 
                                                     onClick={() => setOpenDropdownId(openDropdownId === p.id ? null : p.id)}
-                                                    className="p-1 text-gray-400 hover:text-indigo-600 transition-colors rounded-full hover:bg-gray-100"
+                                                    className="rounded-full p-1 text-black transition-colors hover:bg-gray-100 hover:text-black"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />

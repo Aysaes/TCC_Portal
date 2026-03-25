@@ -6,7 +6,7 @@ export default function ApplicationLogo(props) {
         {...props}
         src={logo} 
         alt="The Cat Clinic Logo" 
-        className={`h-50 w-auto object-contain ${props.className || ''}`} 
+        className={`w-auto object-contain ${props.className || ''}`} 
         />
     );
 }

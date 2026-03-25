@@ -205,7 +205,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                                                 </p>
                                             </div>
                                             {isSelected ? (
-                                                <svg className="h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg className="h-5 w-5 text-black" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                                 </svg>
                                             ) : (
@@ -228,7 +228,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                         <div className="flex-1 overflow-y-auto">
                             {data.participants.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                    <svg className="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="mb-3 h-12 w-12 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                     </svg>
                                     <p>Select staff from the left to add them to the roster.</p>

@@ -98,7 +98,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
                         {/* --- NEW: Gear Icon for Manage Categories --- */}
                         <button 
                             onClick={() => setIsCategoryModalOpen(true)}
-                            className="flex items-center justify-center p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                            className="flex items-center justify-center rounded-lg border border-transparent p-2 text-black transition-colors hover:bg-gray-100 hover:text-black"
                             title="Manage Categories"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -117,7 +117,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {documents.length === 0 ? (
                     <div className="col-span-full rounded-lg bg-white p-12 text-center text-gray-500 shadow-sm border border-gray-100">
-                        <svg className="mx-auto h-12 w-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="mx-auto mb-3 h-12 w-12 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         No documents found in this category.
@@ -127,7 +127,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
                         <div key={doc.id} className="flex flex-col rounded-lg bg-white p-5 shadow-sm border border-gray-100 transition hover:shadow-md">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="rounded bg-red-50 p-2 text-red-600">
+                                    <div className="rounded bg-red-50 p-2 text-black">
                                         <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                                         </svg>
