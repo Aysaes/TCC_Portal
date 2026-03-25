@@ -20,7 +20,7 @@ export default function StaffOverview({ auth, requests }) {
     
     // Check the browser console to see exactly what React sees!
     console.log("React sees this user as:", currentRole);
-    const HRLinks = getHRLinks(currentRole);
+    const HRLinks = getHRLinks(currentRole, auth);
 
     console.log("Generated HR Links Array:", HRLinks);
     

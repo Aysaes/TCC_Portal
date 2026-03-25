@@ -23,8 +23,14 @@ Route::get('/', function () {
 
 // Keep this protective wrapper exactly as it is!
     Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
-    Route::post('/hr-module/request', [HrRequestController::class, 'store'])->name('hr.store');
+        
+        // --- HR MODULE (User Requests) ---
+        Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
+        Route::post('/hr-module/request', [HrRequestController::class, 'store'])->name('hr.store');
+        
+        // --- HR MODULE (Admin Management) --- Add these two lines!
+        Route::get('/hr-module/admin', [HrRequestController::class, 'adminIndex'])->name('hr.admin.index');
+        Route::patch('/hr-module/admin/{hrRequest}/status', [HrRequestController::class, 'updateStatus'])->name('hr.admin.update-status');
     
     // --- OVERVIEW: Now the main landing page! ---
     Route::get('/dashboard', function () {
@@ -79,7 +85,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/staff/duty-meals/{id}/lock-in', [\App\Http\Controllers\Staff\DutyMealController::class, 'lockIn'])->name('staff.duty-meals.lock-in');
 });
 
-Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
+    Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
 
     Route::get('/dashboard', function(){
         return Inertia::render('Admin/AdminDashboard');

@@ -87,14 +87,14 @@ export const getDocumentSidebarLinks = (categories = [], activeCategory = 'Overv
 
 export const getDutyMealLinks = () => [
     {
-        label: 'Duty Meal Overview',
-        href: route('admin.duty-meals.index'),
-        active: route().current('admin.duty-meals.index'),
-    },
-    {
         label: 'Set Up Roster',
         href: route('admin.duty-meals.create'),
         active: route().current('admin.duty-meals.create'),
+    },
+    {
+        label: 'Duty Meal Overview',
+        href: route('admin.duty-meals.index'),
+        active: route().current('admin.duty-meals.index'),
     },
     {
         label: 'Duty Meal Archive',
@@ -111,16 +111,28 @@ export const getStaffDutyMealLinks = () => [
     },
 ];
 
-export const getHRLinks = (userRole = 'Guest') => {
+export const getHRLinks = (UserRole = 'Employee', auth) => {
     
+    const userRole = (auth?.user?.role?.name || '').toLowerCase();
+    const userPosition = (auth?.user?.position?.name || '').toLowerCase();
+
+    // Kurudapya merge
+    const isHRAdmin = userRole === 'admin' || userRole === 'hr' || userPosition === 'human resources';
+
     // 1. Base links
     const links = [
         { label: 'Overview', href: route('hr.index'), active: route().current('hr.index') },
-        { label: 'HR Admin Overview', href: '#', active: false }
+        ...(isHRAdmin ? [
+            { 
+                label: 'HR Admin Overview', 
+                href: route('hr.admin.index'), 
+                active: route().current('hr.admin.index') 
+            }
+        ] : []),
     ];
 
     // 2. DEFENSIVE STRIPPING: Force string, lowercase it, and trim hidden spaces
-    const normalizedRole = String(userRole).toLowerCase().trim();
+    const normalizedRole = String(UserRole).toLowerCase().trim();
 
     // 3. The Math
     const isTeamLeader = normalizedRole.includes('team leader');

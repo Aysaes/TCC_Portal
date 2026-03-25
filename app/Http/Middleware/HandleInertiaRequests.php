@@ -29,22 +29,34 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
+        // If the user is logged in, load their role and position names from the database!
+        if ($user) {
+            $user->load(['role', 'position', 'department']);
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
-                    'role' => $request->user()->role,
-                    'is_rotating' => $request->user()->is_rotating,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    
+                    // Now we send the FULL role, position, and department objects to React!
+                    'role' => $user->role, 
+                    'position' => $user->position,
+                    'department' => $user->department,
+                    
+                    'is_rotating' => $user->is_rotating,
                 ] : null,
             ],
 
             'flash' => [
-                    'success' => fn() => $request->session()->get('success'),
-                    'error' => fn() => $request->session()->get('error'),
-                ],
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
+            ],
         ];
     }
 }
