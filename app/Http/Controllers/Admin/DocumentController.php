@@ -83,19 +83,37 @@ class DocumentController extends Controller
         return back()->with('success', 'New document category added!');
     }
 
+    // --- NEW FUNCTION: Delete a Category ---
+    public function destroyCategory($id)
+    {
+        try {
+            $category = DocumentCategory::findOrFail($id);
+
+            // Safety Check: Prevent deleting categories that currently have documents assigned to them
+            $documentCount = Document::where('category', $category->name)->count();
+            
+            if ($documentCount > 0) {
+                return back()->with('error', 'Cannot delete this category because it contains ' . $documentCount . ' documents. Please move or delete the documents first.');
+            }
+
+            $category->delete();
+
+            return back()->with('success', 'Category deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete category: ' . $e->getMessage());
+        }
+    }
+
     public function show($id, $filename = null)
     {
         $document = Document::findOrFail($id);
 
-        // 1. Check the secure 'local' (private) disk first
         if (Storage::disk('local')->exists($document->file_path)) {
             $path = Storage::disk('local')->path($document->file_path);
         } 
-        // 2. Fallback: Check the 'public' disk just in case
         elseif (Storage::disk('public')->exists($document->file_path)) {
             $path = Storage::disk('public')->path($document->file_path);
         } 
-        // 3. If it's truly gone, throw the 404
         else {
             abort(404, 'Document file could not be found in the secure vault.');
         }
@@ -104,7 +122,6 @@ class DocumentController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="' . $document->title . '.pdf"'
         ];
-        // 4. Securely stream the file directly to the browser
         return response()->file($path, $headers);
     }
 }

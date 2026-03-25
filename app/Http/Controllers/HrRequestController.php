@@ -88,4 +88,4 @@ class HrRequestController extends Controller
             return back()->with('success', 'COE Request marked as Released.');
         }
     }
-}
+} 

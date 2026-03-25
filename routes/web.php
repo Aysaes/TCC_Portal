@@ -21,8 +21,8 @@ Route::get('/', function () {
     return Inertia::render('Auth/Login', []);
 });
 
-// Keep this protective wrapper exactly as it is!
-    Route::middleware(['auth', 'verified'])->group(function () {
+    // Keep this protective wrapper exactly as it is!
+        Route::middleware(['auth', 'verified'])->group(function () {
         
         // --- HR MODULE (User Requests) ---
         Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
@@ -32,8 +32,8 @@ Route::get('/', function () {
         Route::get('/hr-module/admin', [HrRequestController::class, 'adminIndex'])->name('hr.admin.index');
         Route::patch('/hr-module/admin/{hrRequest}/status', [HrRequestController::class, 'updateStatus'])->name('hr.admin.update-status');
     
-    // --- OVERVIEW: Now the main landing page! ---
-    Route::get('/dashboard', function () {
+        // --- OVERVIEW: Now the main landing page! ---
+        Route::get('/dashboard', function () {
         $announcements = Announcement::with(['priorityLevel', 'branches'])
                             ->latest()
                             ->get();
@@ -141,7 +141,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/documents', [DocumentController::class, 'store'])->name('.documents.store');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
-});
+    Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
+    });
 
 
 // DUTY MEAL MODULE (Admins & Custodians)
