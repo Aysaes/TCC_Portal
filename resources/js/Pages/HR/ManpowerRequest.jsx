@@ -3,13 +3,14 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 
 export default function ManpowerRequest({ auth, branches = [], departments = [], positions = [], managers = [] }) {
+    const { system } = usePage().props;
     
     // Auto-calculate the minimum date (30 calendar days notice)
-    const thirtyDaysFromNow = new Date();
+    const thirtyDaysFromNow = new Date(`${system?.serverDate || '1970-01-01'}T00:00:00`);
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     const minDateNeeded = thirtyDaysFromNow.toISOString().split('T')[0];
 

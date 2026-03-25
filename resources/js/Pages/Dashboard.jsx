@@ -1,11 +1,13 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getDashboardLinks } from '@/Config/navigation';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import { useState, useRef } from 'react';
+import { formatAppDate } from '@/Utils/date';
 
 export default function Dashboard({ auth, announcements }) {
     const dashboardLinks = getDashboardLinks();
+    const { system } = usePage().props;
     
     // 1. Safely grab the list
     const announcementList = announcements.data || announcements || [];
@@ -171,7 +173,7 @@ export default function Dashboard({ auth, announcements }) {
                                                         <div className="flex flex-1 flex-col p-5">
                                                             <h4 className="mb-1 pr-12 text-lg font-bold text-gray-900 leading-tight">{item.title}</h4>
                                                             <p className="mb-3 text-[11px] font-medium text-gray-500 uppercase tracking-tighter">
-                                                                By {item.author} • {new Date(item.created_at).toLocaleDateString()}
+                                                                By {item.author} • {formatAppDate(item.created_at, system?.timezone)}
                                                             </p>
                                                             
                                                             <p className="mb-4 flex-1 whitespace-pre-wrap text-sm text-gray-600 leading-relaxed italic border-l-2 border-gray-100 pl-3 line-clamp-3">
@@ -240,7 +242,7 @@ export default function Dashboard({ auth, announcements }) {
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedAnnouncement.title}</h2>
                                     <p className="text-sm font-medium text-gray-500">
-                                        Posted by {selectedAnnouncement.author} on {new Date(selectedAnnouncement.created_at).toLocaleDateString()}
+                                        Posted by {selectedAnnouncement.author} on {formatAppDate(selectedAnnouncement.created_at, system?.timezone)}
                                     </p>
                                 </div>
                                 <span className="rounded-md border px-3 py-1 text-xs font-black uppercase tracking-wider shrink-0" style={getPastelStyle(selectedAnnouncement.priority_level?.color)}>

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Illuminate\Support\Carbon;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -56,6 +57,11 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),
+            ],
+            'system' => [
+                'serverDate' => fn() => Carbon::now()->toDateString(),
+                'serverNow' => fn() => Carbon::now()->toIso8601String(),
+                'timezone' => config('app.timezone'),
             ],
         ];
     }

@@ -58,7 +58,7 @@ export default function FeedbackSubmissions({ auth, submissions, filters }) {
                                         submissions.data.map((item) => (
                                             <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {item.created_at_display}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTypeColor(item.type)}`}>
@@ -108,7 +108,7 @@ export default function FeedbackSubmissions({ auth, submissions, filters }) {
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900">{viewingFeedback.subject}</h2>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    Submitted by <span className="font-semibold text-gray-700">{viewingFeedback.user?.name || 'Unknown'}</span> on {new Date(viewingFeedback.created_at).toLocaleDateString()}
+                                    Submitted by <span className="font-semibold text-gray-700">{viewingFeedback.user?.name || 'Unknown'}</span> on {viewingFeedback.created_at_display}
                                 </p>
                             </div>
                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${getTypeColor(viewingFeedback.type)}`}>

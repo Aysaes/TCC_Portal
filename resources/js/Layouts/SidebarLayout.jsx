@@ -232,14 +232,14 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                         </svg>
                     </button>
 
-                    <div className="flex flex-1 items-center justify-end space-x-4">
+                    <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
 
                         {/* THE MAIN MODULE SWITCHER */}
                         <Dropdown>
                             <Dropdown.Trigger>
-                                <button className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-bold text-gray-700 hover:text-gray-900 focus:outline-none">
+                                <button className="inline-flex min-h-[42px] items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none sm:px-4">
                                     Select Module
-                                    <svg className="-me-0.5 ms-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
                                 </button>
@@ -277,9 +277,9 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                         {/* PROFILE DROPDOWN */}
                         <Dropdown>
                             <Dropdown.Trigger>
-                                <button className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-bold text-gray-700 hover:text-gray-900 focus:outline-none">
+                                <button className="inline-flex min-h-[42px] items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none sm:px-4">
                                     {user.name}
-                                    <svg className="-me-0.5 ms-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
                                 </button>

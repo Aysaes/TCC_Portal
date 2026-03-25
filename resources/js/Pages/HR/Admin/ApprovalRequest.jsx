@@ -1,8 +1,10 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { formatAppDate } from '@/Utils/date';
 
 export default function ApprovalsRequest({ auth, requests = [], userRole = '' }) {
+    const { system } = usePage().props;
     // 1. DEFINE ROLES FIRST
     const exactUserRole = userRole; 
     const roleLower = String(userRole).toLowerCase();
@@ -111,7 +113,7 @@ export default function ApprovalsRequest({ auth, requests = [], userRole = '' })
                                             
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-gray-900">{req.requester?.name || 'Unknown'}</div>
-                                                <div className="text-xs text-gray-500 mt-1">{new Date(req.created_at).toLocaleDateString()}</div>
+                                                <div className="text-xs text-gray-500 mt-1">{formatAppDate(req.created_at, system?.timezone)}</div>
                                             </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap">
