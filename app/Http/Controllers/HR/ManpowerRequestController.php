@@ -61,9 +61,6 @@ class ManpowerRequestController extends Controller
                 'poc_name' => 'required|string',
             ]);
 
-            // 2. AUTOMATIC ROUTING LOGIC
-            // 2. AUTOMATIC ROUTING LOGIC (Based on Logged-In User)
-            // 2. AUTOMATIC ROUTING LOGIC (Based on Department)
             $department = Department::findOrFail($request->department_id);
 
             $targetRoleName = match($department->name) {
