@@ -1,6 +1,8 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+// 1. IMPORT YOUR DYNAMIC LINKS GENERATOR
+import { getHRLinks } from '@/Config/navigation';
 
 export default function ApprovalRequest({ auth, requests = [], userRole = '' }) {
     
@@ -8,15 +10,16 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
     const exactUserRole = userRole; 
     const roleLower = String(userRole).toLowerCase();
     const isAdmin = roleLower === 'admin';
-    const isRequesterOnly = ['vet tech tl', 'marketing manager'].includes(roleLower);
-
+    const isRequesterOnly = ['tl', 'marketing manager'].includes(roleLower);
+    const hrLinks = getHRLinks(auth.user.role?.name || 'Employee', auth);
+    // 2. DYNAMIC DEFAULT TAB
     const [activeTab, setActiveTab] = useState((isRequesterOnly && !isAdmin) ? 'in-progress' : 'action-required');
     
     // Modal State
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // --- ACTION HANDLERS ---
+    // --- NEW SIMPLIFIED ACTION HELPER ---
+    // Notice we no longer need to pass the 'level', just the status!
     const handleAction = (requestId, status) => {
         const actionWord = status === 'Approved' ? 'Approve' : 'Reject';
         if (!confirm(`Are you sure you want to ${actionWord} this request?`)) return;
@@ -63,7 +66,7 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
     };
 
     return (
-        <SidebarLayout user={auth.user} activeModule="HR">
+        <SidebarLayout user={auth.user} activeModule="HR MENU" sidebarLinks={hrLinks}>
             <Head title={isRequesterOnly && !isAdmin ? "My Requests" : "Approval Board"} />
 
             <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative">

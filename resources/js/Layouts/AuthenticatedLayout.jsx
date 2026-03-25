@@ -45,7 +45,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 {user.name}
 
                                                 <svg
-                                                    className="-me-0.5 ms-2 h-4 w-4"
+                                                    className="-me-0.5 ms-2 h-4 w-4 text-black"
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     viewBox="0 0 20 20"
                                                     fill="currentColor"
@@ -88,7 +88,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
                             >
                                 <svg
-                                    className="h-6 w-6"
+                                    className="h-6 w-6 text-black"
                                     stroke="currentColor"
                                     fill="none"
                                     viewBox="0 0 24 24"

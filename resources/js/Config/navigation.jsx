@@ -78,7 +78,8 @@ export const getDocumentSidebarLinks = (categories = [], activeCategory = 'Overv
         ...categories.map(cat => ({
             label: cat.name,
             href: route('admin.documents.index', { category: cat.name }),
-            active: activeCategory === cat.name
+            active: activeCategory === cat.name,
+            icon: 'document-category',
         }))
     ];
 };
@@ -121,13 +122,16 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
 
     // 1. Base links
     const links = [
-        { label: 'Overview', href: route('hr.index'), active: route().current('hr.index') },
-        ...(isHRAdmin ? [
-            { 
+                    { 
                 label: 'HR Admin Overview', 
                 href: route('hr.admin.index'), 
                 active: route().current('hr.admin.index') 
-            }
+            },
+            {   label: 'Document Requests', 
+                href: route('hr.index'), 
+                active: route().current('hr.index') },
+            ...(isHRAdmin ? [
+
         ] : []),
     ];
 
@@ -167,4 +171,22 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
         active: route().current('hr.feedback.create') 
     });
     return links;
+};
+
+export const getHRAdminLinks = (auth) => {
+    return [
+        { 
+            label: 'HR Module Overview', 
+            href: route('hr.index'),
+            active: route().current('hr.index') 
+        },
+        { label: 'Pending Document Requests',
+            href: route('hr.admin.index'),
+            active: route().current('hr.admin.index') 
+        },
+        { label: 'Feedback Form Submissions', 
+            href: route('hr.feedback.index'),
+            active: route().current('hr.feedback.index')
+        }
+    ];
 };

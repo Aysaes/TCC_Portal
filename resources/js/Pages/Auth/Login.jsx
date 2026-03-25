@@ -75,7 +75,7 @@ export default function Login({ status}) {
                 </div>
                 
                 <div>
-                    <InputLabel htmlFor="email" value="email" />
+                    <InputLabel htmlFor="email" value="Email" className="font-semibold text-gray-900" />
 
                     <TextInput
                         id="email"
@@ -93,7 +93,7 @@ export default function Login({ status}) {
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
+                    <InputLabel htmlFor="password" value="Password" className="font-semibold text-gray-900" />
 
                     <TextInput
                         id="password"
@@ -118,7 +118,7 @@ export default function Login({ status}) {
                                 setData('remember', e.target.checked)
                             }
                         />
-                        <span className="ms-2 text-sm font-bold text-gray-600">
+                        <span className="ms-2 text-sm font-bold text-black drop-shadow-sm">
                             Remember me
                         </span>
                     </label>

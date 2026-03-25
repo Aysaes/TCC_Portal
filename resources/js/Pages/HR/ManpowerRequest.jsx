@@ -5,9 +5,14 @@ import TextInput from '@/Components/TextInput';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
+// 1. IMPORT YOUR DYNAMIC LINKS GENERATOR
+import { getHRLinks } from '@/Config/navigation';
 
 export default function ManpowerRequest({ auth, branches = [], departments = [], positions = [], managers = [] }) {
     
+    // 2. GENERATE THE LINKS FOR THIS SPECIFIC USER
+    const hrLinks = getHRLinks(auth.user.role?.name || 'Employee', auth);
+
     // Auto-calculate the minimum date (30 calendar days notice)
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
@@ -60,7 +65,8 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
 
 
     return (
-        <SidebarLayout user={auth.user} activeModule="HR">
+        // 3. PASS THE LINKS INTO THE LAYOUT!
+        <SidebarLayout user={auth.user} activeModule="HR" sidebarLinks={hrLinks}>
             <Head title="Manpower Request" />
 
             <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
