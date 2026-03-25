@@ -111,22 +111,17 @@ export const getStaffDutyMealLinks = () => [
     },
 ];
 
-export const getHRLinks = (auth) => {
-    // Safely grab the text NAMES from the relationships we just loaded in Laravel
+export const getHRLinks = (UserRole = 'Employee', auth) => {
+    
     const userRole = (auth?.user?.role?.name || '').toLowerCase();
     const userPosition = (auth?.user?.position?.name || '').toLowerCase();
 
-    // Check if they are an admin, HR role, or Human Resources position
+    // Kurudapya merge
     const isHRAdmin = userRole === 'admin' || userRole === 'hr' || userPosition === 'human resources';
 
-    return [
-        {
-            label: 'Overview',
-            href: route('hr.index'),
-            active: route().current('hr.index'), 
-        },
-        
-        // Only show if the check passed!
+    // 1. Base links
+    const links = [
+        { label: 'Overview', href: route('hr.index'), active: route().current('hr.index') },
         ...(isHRAdmin ? [
             { 
                 label: 'HR Admin Overview', 
@@ -134,16 +129,39 @@ export const getHRLinks = (auth) => {
                 active: route().current('hr.admin.index') 
             }
         ] : []),
-        
-        {
+    ];
+
+    // 2. DEFENSIVE STRIPPING: Force string, lowercase it, and trim hidden spaces
+    const normalizedRole = String(UserRole).toLowerCase().trim();
+
+    // 3. The Math
+    const isTeamLeader = normalizedRole.includes('team leader');
+    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr';
+    const isApprover = [
+        'director of corporate services and operations', 
+        'chief vet', 
+        'operations manager', 
+    ].includes(normalizedRole);
+
+    // 4. Push the links based on the math
+    if (isTeamLeader || isAdminOrHR || isApprover) {
+        links.push({
             label: 'Manpower Request',
             href: route('hr.manpower-requests.create'),
             active: route().current('hr.manpower-requests.create'),
-        },
-        {
-            label: 'Feedback Form',
-            href: '#',
-            active: false,
-        }
-    ];
+        });
+    }
+
+    if (isTeamLeader || isAdminOrHR || isApprover) {
+        links.push({
+            label: isTeamLeader && !isAdminOrHR ? 'My Requests' : 'Approval Board',
+            href: route('hr.manpower-requests.index'),
+            active: route().current('hr.manpower-requests.index'),
+        });
+    }
+
+    // 5. Final link
+    links.push({ label: 'Feedback Form', href: '#', active: false });
+
+    return links;
 };
