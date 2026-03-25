@@ -77,16 +77,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-duty-meals', [\App\Http\Controllers\Staff\DutyMealController::class, 'index'])->name('staff.duty-meals.index');
     Route::patch('/my-duty-meals/{participantId}/choice', [\App\Http\Controllers\Staff\DutyMealController::class, 'updateChoice'])->name('staff.duty-meals.choice');
     Route::patch('/staff/duty-meals/{id}/lock-in', [\App\Http\Controllers\Staff\DutyMealController::class, 'lockIn'])->name('staff.duty-meals.lock-in');
-
-    // 1. The Form (Create & Submit)
-    Route::get('/hr/manpower-requests/create', [ManpowerRequestController::class, 'create'])->name('hr.manpower-requests.create');
-    Route::post('/hr/manpower-requests', [ManpowerRequestController::class, 'store'])->name('hr.manpower-requests.store');
-
-    // 2. The Dashboard (Acts as both "My Requests" and "Approval Board")
-    Route::get('/hr/manpower-requests', [ManpowerRequestController::class, 'index'])->name('hr.manpower-requests.index');
-
-    // 3. The Status Updater (For Managers, HR, and Directors)
-    Route::patch('/hr/manpower-requests/{manpowerRequest}/status', [ManpowerRequestController::class, 'updateStatus'])->name('hr.manpower-requests.update-status');
 });
 
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
@@ -155,6 +145,26 @@ Route::middleware(['auth', CheckDutyMealAccess::class])->group(function () {
     Route::delete('/duty-meals/{id}', [DutyMealController::class, 'destroy'])->name('admin.duty-meals.destroy');
     Route::post('/duty-meals/bulk-delete', [DutyMealController::class, 'bulkDelete'])->name('admin.duty-meals.bulk-delete');
     
+});
+
+Route::middleware(['auth'])->group(function(){
+
+    Route::prefix('hr')->name('hr.')->group(function(){
+
+        
+        Route::middleware(['role:admin,HR,Team Leader,Chief Vet,Operations Manager'])->group(function(){
+            Route::get('/manpower-requests/create', [ManpowerRequestController::class, 'create'])->name('manpower-requests.create');
+            Route::post('/manpower-requests', [ManpowerRequestController::class, 'store'])->name('manpower-requests.store');
+        });
+
+        
+        Route::middleware(['role:admin,HR,Director of Corporate Services and Operations,Chief Vet,Operations Manager,Team Leader'])->group(function () {
+            Route::get('/manpower-requests', [ManpowerRequestController::class, 'index'])->name('manpower-requests.index');
+            Route::patch('/manpower-requests/{manpowerRequest}/status', [ManpowerRequestController::class, 'updateStatus'])->name('manpower-requests.update-status');
+        });
+
+    });
+
 });
 
 require __DIR__.'/auth.php';

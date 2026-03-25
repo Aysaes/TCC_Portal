@@ -58,6 +58,7 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
         });
     };
 
+
     return (
         <SidebarLayout user={auth.user} activeModule="HR">
             <Head title="Manpower Request" />

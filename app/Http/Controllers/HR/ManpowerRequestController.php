@@ -12,22 +12,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Exception;
 
 class ManpowerRequestController extends Controller
 {
     // ----------------------------------------------------------------------
     // 1. THE CREATION FORM
     // ----------------------------------------------------------------------
-    public function create()
+   public function create()
     {
-        $userRole = Auth::user()->role->name ?? '';
-
-        // SECURITY: Only Team Leaders, Admins, and HR can access the form
-        abort_if(
-            !str_contains($userRole, 'Team Leader') && !in_array($userRole, ['admin', 'HR']), 
-            403, 
-            'Unauthorized. Only Team Leaders can submit Manpower Requests.'
-        );
+        // Because of our web.php middleware, we already know the user is authorized by the time they reach this line!
 
         return Inertia::render('HR/ManpowerRequest', [
             'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
@@ -43,73 +37,70 @@ class ManpowerRequestController extends Controller
 
     public function store(Request $request)
     {
-        $userRole = Auth::user()->role->name ?? '';
+        // 👇 We wrap EVERYTHING in the Throwable catch now
+        try {
+            // 1. Validate the incoming data
+            $validated = $request->validate([
+                'branch_id' => 'required|exists:branches,id',
+                'department_id' => 'required|exists:departments,id',
+                'position_id' => 'required|exists:positions,id',
+                'is_budgeted' => 'required|boolean',
+                'unbudgeted_purpose' => 'nullable|string',
+                'headcount' => 'required|integer|min:1',
+                'date_needed' => 'required|date',
+                'educational_background' => 'required|string',
+                'years_experience' => 'required|string',
+                'skills_required' => 'required|string',
+                'employment_status' => 'required|string',
+                'reliever_info' => 'nullable|string',
+                'purpose' => 'required|string',
+                'is_new_position' => 'required|boolean',
+                'job_description' => 'nullable|string',
+                'is_replacement' => 'required|boolean',
+                'replaced_employee_name' => 'nullable|string',
+                'poc_name' => 'required|string',
+            ]);
 
-        abort_if(
-            !str_contains($userRole, 'Team Leader') && !in_array($userRole, ['Admin', 'HR Manager']), 
-            403, 
-            'Unauthorized action.'
-        );
+            // 2. AUTOMATIC ROUTING LOGIC
+            // 2. AUTOMATIC ROUTING LOGIC (Based on Logged-In User)
+            // 2. AUTOMATIC ROUTING LOGIC (Based on Department)
+            $department = Department::findOrFail($request->department_id);
 
-        // 1. Validate the incoming data (Notice we removed requesting_manager_id)
-        $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'department_id' => 'required|exists:departments,id',
-            'position_id' => 'required|exists:positions,id',
-            'is_budgeted' => 'required|boolean',
-            'unbudgeted_purpose' => 'nullable|string',
-            'headcount' => 'required|integer|min:1',
-            'date_needed' => 'required|date',
-            'educational_background' => 'required|string',
-            'years_experience' => 'required|string',
-            'skills_required' => 'required|string',
-            'employment_status' => 'required|string',
-            'reliever_info' => 'nullable|string',
-            'purpose' => 'required|string',
-            'is_new_position' => 'required|boolean',
-            'job_description' => 'nullable|string',
-            'is_replacement' => 'required|boolean',
-            'replaced_employee_name' => 'nullable|string',
-            'poc_name' => 'required|string',
-        ]);
+            $targetRoleName = match($department->name) {
+                'Medical', 'Veterinary' => 'Chief Vet',
+                'Operations', 'Logistics' => 'Operations Manager',
+                'Front Desk', 'Admin' => 'Clinic Manager',
+                default => 'Operations Manager',
+            };
 
-        // 2. 🟢 AUTOMATIC ROUTING LOGIC (Based on Position) 🟢
-        
-        // Fetch the actual Position they are requesting to hire
-        $position = Position::findOrFail($request->position_id);
+            $manager = User::whereHas('role', function ($query) use ($targetRoleName) {
+                $query->where('name', $targetRoleName);
+            })->first();
 
-        // Map the exact Position Name to the correct Manager's Role Name
-        // (Update these strings to match the exact names in your 'positions' table!)
-        $targetRoleName = match($position->name) {
-            'Junior Veterinarian', 'Senior Veterinarian', 'Veterinary Technician' => 'Chief Vet',
-            'Inventory Clerk', 'Logistics Assistant' => 'Operations Manager',
-            'Clinic Assistant', 'Front Desk Receptionist' => 'Clinic Manager',
-            default => 'Operations Manager', // Fallback
-        };
+            if (!$manager) {
+                throw new \Exception("No user found with the role of '{$targetRoleName}'.");
+            }
 
-        Log::info('MRF Routing Attempt:', [
-            'position_id' => $request->position_id,
-            'position_name' => $position->name, // Logging the position now!
-            'target_role_needed' => $targetRoleName
-        ]);
+            // 3. Finalize data
+            $validated['requesting_manager_id'] = $manager->id;
+            $validated['user_id'] = Auth::id();
+            $validated['status'] = 'Pending';
 
-        $manager = User::whereHas('role', function ($query) use ($targetRoleName) {
-            $query->where('name', $targetRoleName);
-        })->first();
+            // 4. Attempt to save to the database
+            ManpowerRequest::create($validated);
 
-        if (!$manager) {
-            Log::error("MRF Routing Failed: Could not find any user assigned to the role of '{$targetRoleName}'.");
-            abort(500, "System Error: No user with the role of '{$targetRoleName}' was found to approve this request.");
+            return redirect()->route('hr.manpower-requests.index')
+                ->with('success', "Manpower Request submitted and routed to the {$targetRoleName} for approval.");
+
+        } catch (\Throwable $e) { 
+            // 🚨 THE ULTIMATE X-RAY 🚨
+            // This catches EVERYTHING and halts the system to show you the error.
+            dd([
+                'CRASH REASON' => $e->getMessage(),
+                'FILE' => $e->getFile(),
+                'LINE' => $e->getLine()
+            ]);
         }
-
-        // 3. Finalize the data and create the request
-        $validated['requesting_manager_id'] = $manager->id;
-        $validated['user_id'] = Auth::id();
-        $validated['status'] = 'Pending';
-
-        ManpowerRequest::create($validated);
-
-        return redirect()->route('hr.manpower-requests.index')->with('success', 'Manpower Request submitted and routed to the ' . $targetRoleName . ' for approval.');
     }
 
     // ----------------------------------------------------------------------
@@ -133,12 +124,12 @@ class ManpowerRequestController extends Controller
             // Team Leaders only see their own submissions
             $query->where('user_id', $user->id);
             
-        } elseif (in_array($userRole, ['Chief Vet', 'Operations Manager', 'Clinic Manager'])) {
+        } elseif (in_array($userRole, ['Chief Vet', 'Operations Manager'])) {
             // Managers see requests routed to them OR their own submissions
             $query->where('requesting_manager_id', $user->id)
                   ->orWhere('user_id', $user->id);
                   
-        } elseif ($userRole === 'HR Manager') {
+        } elseif ($userRole === 'HR') {
             // HR sees requests that passed the Manager stage (for their action), plus all others for monitoring
             // No strict where() clause needed for general viewing, React will filter the "Action Required" tab
             
@@ -148,7 +139,7 @@ class ManpowerRequestController extends Controller
                   ->orWhere('user_id', $user->id);
         }
 
-        return Inertia::render('HR/ManpowerRequest', [
+        return Inertia::render('HR/Admin/ApprovalRequest', [
             'requests' => $query->latest()->get(),
             'userRole' => $userRole,
         ]);

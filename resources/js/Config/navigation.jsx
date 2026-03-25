@@ -111,25 +111,45 @@ export const getStaffDutyMealLinks = () => [
     },
 ];
 
-export const getHRLinks = () =>[
-    {
-        label: 'Overview',
-        href: route('hr.index'),
-        active: route().current('hr.index'), 
-    },
-    {
-        label: 'HR Admin Overview',
-        href: '#',
-        active: false, 
-    },
-    {
-        label: 'Manpower Request',
-        href: route('hr.manpower-requests.create'),
-        active: route().current('hr.manpower-requests.create'),
-    },
-     {
-        label: 'Feedback Form',
-        href: '#',
-        active: false,
+export const getHRLinks = (userRole = 'Guest') => {
+    
+    // 1. Base links
+    const links = [
+        { label: 'Overview', href: route('hr.index'), active: route().current('hr.index') },
+        { label: 'HR Admin Overview', href: '#', active: false }
+    ];
+
+    // 2. DEFENSIVE STRIPPING: Force string, lowercase it, and trim hidden spaces
+    const normalizedRole = String(userRole).toLowerCase().trim();
+
+    // 3. The Math
+    const isTeamLeader = normalizedRole.includes('team leader');
+    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr';
+    const isApprover = [
+        'director of corporate services and operations', 
+        'chief vet', 
+        'operations manager', 
+    ].includes(normalizedRole);
+
+    // 4. Push the links based on the math
+    if (isTeamLeader || isAdminOrHR || isApprover) {
+        links.push({
+            label: 'Manpower Request',
+            href: route('hr.manpower-requests.create'),
+            active: route().current('hr.manpower-requests.create'),
+        });
     }
-];
+
+    if (isTeamLeader || isAdminOrHR || isApprover) {
+        links.push({
+            label: isTeamLeader && !isAdminOrHR ? 'My Requests' : 'Approval Board',
+            href: route('hr.manpower-requests.index'),
+            active: route().current('hr.manpower-requests.index'),
+        });
+    }
+
+    // 5. Final link
+    links.push({ label: 'Feedback Form', href: '#', active: false });
+
+    return links;
+};
