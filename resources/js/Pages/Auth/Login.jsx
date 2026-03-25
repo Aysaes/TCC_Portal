@@ -75,7 +75,7 @@ export default function Login({ status}) {
                 </div>
                 
                 <div>
-                    <InputLabel htmlFor="email" value="email" className="font-semibold text-gray-900" />
+                    <InputLabel htmlFor="email" value="Email" className="font-semibold text-gray-900" />
 
                     <TextInput
                         id="email"
