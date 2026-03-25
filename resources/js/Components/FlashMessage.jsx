@@ -39,21 +39,21 @@ export default function FlashMessage() {
         >
             {toast.message && (
                 <div 
-                    className={`flex items-center gap-3 rounded-lg px-6 py-4 text-white shadow-xl ${
+                    className={`flex items-center gap-3 rounded-lg px-6 py-4 shadow-xl ${
                         toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
                     }`}
                 >
                     {toast.type === 'success' ? (
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-6 w-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                         </svg>
                     ) : (
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-6 w-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     )}
                     
-                    <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
+                    <span className="text-sm font-semibold tracking-wide text-white">{toast.message}</span>
                 </div>
             )}
         </div>
