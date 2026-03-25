@@ -122,16 +122,19 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
 
     // 1. Base links
     const links = [
-                    { 
+        // This link is visible to ALL users
+        {   
+            label: 'Pending Document Requests', 
+            href: route('hr.index'), 
+            active: route().current('hr.index') 
+        },
+        // This link is restricted to Admin/HR only
+        ...(isHRAdmin ? [
+            { 
                 label: 'HR Admin Overview', 
                 href: route('hr.admin.index'), 
                 active: route().current('hr.admin.index') 
-            },
-            {   label: 'Document Requests', 
-                href: route('hr.index'), 
-                active: route().current('hr.index') },
-            ...(isHRAdmin ? [
-
+            }
         ] : []),
     ];
 
@@ -169,12 +172,13 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
         });
     }
 
-    // 5. Final link
+    // 5. Final link (Visible to everyone)
     links.push({ 
         label: 'Feedback Form', 
         href: route('hr.feedback.create'), 
         active: route().current('hr.feedback.create') 
     });
+    
     return links;
 };
 
