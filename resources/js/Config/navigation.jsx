@@ -123,11 +123,7 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     // 1. Base links
     const links = [
         // This link is visible to ALL users
-        {   
-            label: 'Pending Document Requests', 
-            href: route('hr.index'), 
-            active: route().current('hr.index') 
-        },
+
         // This link is restricted to Admin/HR only
         ...(isHRAdmin ? [
             { 
@@ -136,6 +132,11 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
                 active: route().current('hr.admin.index') 
             }
         ] : []),
+                {   
+            label: 'Pending Document Requests', 
+            href: route('hr.index'), 
+            active: route().current('hr.index') 
+        },
     ];
 
     const normalizedRole = String(userRole).toLowerCase().trim();
