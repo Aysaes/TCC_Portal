@@ -105,7 +105,7 @@ export default function Overview({ auth, announcements, contents }) {
                     {/* Welcome Banner */}
                     <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg border border-gray-100">
                         <div className="p-6 text-gray-900">
-                            Welcome to The Cat Clinic Purrtal, <strong>{auth.user.name}</strong>!
+                            <span className="mr-2">🐾</span>Welcome to The Cat Clinic Purrtal, <strong>{auth.user.name}</strong>!
                         </div>
                     </div>
 
