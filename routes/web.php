@@ -162,7 +162,7 @@ Route::middleware(['auth'])->group(function(){
     Route::prefix('hr')->name('hr.')->group(function(){
     
 
-        Route::middleware(['role:admin,HR,Team Leader,Chief Vet,Operations Manager,TL'])->group(function(){
+        Route::middleware(['role:admin,HRBP,Chief Vet,Operations Manager,Director of Corporate Services and Operations,Marketing Manager,Vet Tech TL,IT TL,Cashier TL,Housekeeping TL,Inventory TL,Clinic Assistant TL,Procurement TL,Auditor TL'])->group(function(){
             Route::get('/manpower-requests/create', [ManpowerRequestController::class, 'create'])->name('manpower-requests.create');
             Route::post('/manpower-requests', [ManpowerRequestController::class, 'store'])->name('manpower-requests.store');
         });
@@ -171,7 +171,7 @@ Route::middleware(['auth'])->group(function(){
             Route::get('/feedback-submissions', [\App\Http\Controllers\HR\FeedbackController::class, 'index'])->name('feedback.index');
         });
         
-        Route::middleware(['role:admin,HR,Director of Corporate Services and Operations,Chief Vet,Operations Manager,TL,HRBP,Marketing Manager'])->group(function () {
+        Route::middleware(['role:admin,HR,HRBP,Director of Corporate Services and Operations,Chief Vet,Operations Manager,Marketing Manager,Vet Tech TL,IT TL,Cashier TL,Housekeeping TL,Inventory TL,Clinic Assistant TL,Procurement TL,Auditor TL'])->group(function () {
             Route::get('/manpower-requests', [ManpowerRequestController::class, 'index'])->name('manpower-requests.index');
             Route::patch('/manpower-requests/{manpowerRequest}/status', [ManpowerRequestController::class, 'updateStatus'])->name('manpower-requests.update-status');
         });
