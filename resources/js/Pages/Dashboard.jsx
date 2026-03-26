@@ -90,6 +90,7 @@ export default function Dashboard({ auth, announcements }) {
         <SidebarLayout
             activeModule="General"
             sidebarLinks={dashboardLinks}
+            headerClassName="mx-auto mb-1 w-full max-w-[96rem] sm:mb-6 2xl:max-w-[112rem]"
             header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Announcements</h2>}
         >
             <Head title="Announcements" />
@@ -100,8 +101,8 @@ export default function Dashboard({ auth, announcements }) {
                 .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div className="py-0 sm:py-12">
+                <div className="mx-auto w-full max-w-[96rem] sm:px-2 lg:px-4 2xl:max-w-[112rem]">
                     
                     {/* Header */}
                     <div className="mb-6 flex items-center justify-between">
@@ -141,7 +142,7 @@ export default function Dashboard({ auth, announcements }) {
                                     <div key={pageIndex} className="w-full shrink-0 snap-center px-1">
                                         
                                         {/* The 3x2 Grid inside the slide */}
-                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                                             {pageOfSix.map((item) => {
                                                 const priorityName = item.priority_level?.name || 'Notice';
                                                 const badgeColor = item.priority_level?.color || '#4F46E5';

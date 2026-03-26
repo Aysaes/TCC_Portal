@@ -92,6 +92,7 @@ export default function Overview({ auth, announcements, contents }) {
         <SidebarLayout
             activeModule="General"
             sidebarLinks={dashboardLinks}
+            headerClassName="mx-auto mb-1 w-full max-w-[96rem] sm:mb-6 2xl:max-w-[112rem]"
             header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Overview</h2>}
         >
             <Head title="Overview" />
@@ -101,12 +102,12 @@ export default function Overview({ auth, announcements, contents }) {
                 .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-12">
+            <div className="py-0 sm:py-12">
+                <div className="mx-auto w-full max-w-[96rem] space-y-0 sm:px-2 sm:space-y-6 lg:px-4 2xl:max-w-[112rem]">
                     
                     {/* Welcome Banner */}
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg border border-gray-100">
-                        <div className="p-6 text-gray-900">
+                    <div className="w-full overflow-hidden border border-gray-100 bg-white shadow-sm sm:rounded-lg">
+                        <div className="p-4 text-gray-900 sm:p-6">
                             <span className="mr-2">🐾</span>Welcome to The Cat Clinic Purrtal, <strong>{auth.user.name}</strong>!
                         </div>
                     </div>
@@ -147,7 +148,7 @@ export default function Overview({ auth, announcements, contents }) {
                                         
                                         <div key={pageIndex} className="w-full shrink-0 snap-center px-1">
                                             
-                                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                                                 {pageOfSix.map((item) => {
                                                     const priorityName = item.priority_level?.name || 'Notice';
                                                     const badgeColor = item.priority_level?.color || '#4F46E5';
@@ -231,7 +232,7 @@ export default function Overview({ auth, announcements, contents }) {
                     {/* --- MISSION & VISION SECTION --- */}
                     <section>
                         <h3 className="mb-6 text-lg font-bold text-gray-700 uppercase tracking-wide">Company Direction</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                             
                             {mission && (
                                 <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex flex-col">

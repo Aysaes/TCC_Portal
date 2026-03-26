@@ -1,20 +1,12 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-<<<<<<< HEAD
-import { formatAppDate } from '@/Utils/date';
-
-export default function ApprovalsRequest({ auth, requests = [], userRole = '' }) {
-    const { system } = usePage().props;
-    // 1. DEFINE ROLES FIRST
-=======
 // 1. IMPORT YOUR DYNAMIC LINKS GENERATOR
 import { getHRLinks } from '@/Config/navigation';
 
 export default function ApprovalRequest({ auth, requests = [], userRole = '' }) {
     
     // --- STATE MANAGEMENT ---
->>>>>>> upstream/main
     const exactUserRole = userRole; 
     const roleLower = String(userRole).toLowerCase();
     const isAdmin = roleLower === 'admin';
@@ -125,7 +117,7 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
                                         <tr key={req.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-gray-900">{req.requester?.name || 'Unknown'}</div>
-                                                <div className="text-xs text-gray-500 mt-1">{formatAppDate(req.created_at, system?.timezone)}</div>
+
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-indigo-700">{req.position?.name || 'N/A'}</div>

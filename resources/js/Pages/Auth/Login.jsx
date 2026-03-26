@@ -65,24 +65,23 @@ export default function Login({ status}) {
                     
                     
               <div>
-                 
             <form onSubmit={submit} className="font-sans"> 
-                <div className="text-center mb-6">
-                    <h1 className="font-sans text-3xl font-bold text-black drop-shadow-lg shadow-lg">The Cat Clinic Purrtal</h1>
+                <div className="mb-0 text-center">
+                    <h1 className="whitespace-nowrap font-sans text-[2rem] font-bold text-white [text-shadow:0_4px_16px_rgba(0,0,0,0.72),0_2px_8px_rgba(0,0,0,0.48)] sm:text-black sm:[text-shadow:0_4px_14px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.45)]">The Cat Clinic Purrtal</h1>
                     <Link href="/" className="inline-block">
                         <ApplicationLogo className="h-40 w-30 fill-current text-gray-100" />
                     </Link>
                 </div>
                 
-                <div>
-                    <InputLabel htmlFor="email" value="Email" className="font-semibold text-gray-900" />
+                <div className="-mt-5">
+                    <InputLabel htmlFor="email" value="Email" className="font-semibold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.7)] sm:text-gray-900 sm:[text-shadow:0_2px_8px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.35)]" />
 
                     <TextInput
                         id="email"
                         type="email"
                         name="email"
                         value={data.email}
-                        className="mt-1 block w-full"
+                        className="mt-1 block w-full border-transparent bg-black/28 text-black placeholder:text-black/70 shadow-[0_8px_24px_rgba(15,23,42,0.18)] sm:border-gray-300 sm:bg-white/95 sm:text-gray-900 sm:placeholder:text-gray-500"
                         placeholder="email"
                         autoComplete="username"
                         isFocused={true}
@@ -93,14 +92,14 @@ export default function Login({ status}) {
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" className="font-semibold text-gray-900" />
+                    <InputLabel htmlFor="password" value="Password" className="font-semibold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.7)] sm:text-gray-900 sm:[text-shadow:0_2px_8px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.35)]" />
 
                     <TextInput
                         id="password"
                         type="password"
                         name="password"
                         value={data.password}
-                        className="mt-1 block w-full"
+                        className="mt-1 block w-full border-transparent bg-black/28 text-black placeholder:text-black/70 shadow-[0_8px_24px_rgba(15,23,42,0.18)] sm:border-gray-300 sm:bg-white/95 sm:text-gray-900 sm:placeholder:text-gray-500"
                         placeholder="password"
                         autoComplete="current-password"
                         onChange={(e) => setData('password', e.target.value)}
@@ -118,7 +117,7 @@ export default function Login({ status}) {
                                 setData('remember', e.target.checked)
                             }
                         />
-                        <span className="ms-2 text-sm font-bold text-black drop-shadow-sm">
+                        <span className="ms-2 text-sm font-bold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.7)] sm:text-black sm:[text-shadow:0_2px_8px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.35)]">
                             Remember me
                         </span>
                     </label>
@@ -126,7 +125,7 @@ export default function Login({ status}) {
 
                 <div className="mt-4 flex items-center justify-center mb-8">
 
-                    <PrimaryButton disabled={processing}>
+                    <PrimaryButton className="shadow-[0_10px_26px_rgba(15,23,42,0.35)]" disabled={processing}>
                         Log in
                     </PrimaryButton>
                 </div>

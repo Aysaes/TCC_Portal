@@ -74,11 +74,7 @@ const Content = ({
                 >
                     <div
                         className={
-<<<<<<< HEAD
-                            `overflow-hidden rounded-2xl border border-slate-200/80 shadow-[0_18px_38px_rgba(15,23,42,0.14)] ring-0 ` +
-=======
                              `overflow-hidden rounded-2xl border border-slate-200/80 shadow-[0_18px_38px_rgba(15,23,42,0.14)] ring-0 ` +
->>>>>>> upstream/main
                             contentClasses
                         }
                     >

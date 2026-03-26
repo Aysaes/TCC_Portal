@@ -98,7 +98,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
                     <div className="grid w-full grid-cols-2 gap-3 sm:w-auto sm:min-w-[420px]">
                         <button 
                             onClick={() => setIsCategoryModalOpen(true)}
-                            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.12em] text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 sm:px-5"
+                            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-transparent px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.12em] text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-transparent hover:text-slate-900 sm:px-5"
                             title="Manage Categories"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4 shrink-0">
@@ -107,15 +107,16 @@ export default function Documents({ auth, documents = [], categories = [], activ
                             Manage Categories
                         </button>
 
-                        <PrimaryButton
+                        <button
+                            type="button"
                             onClick={() => setIsUploadModalOpen(true)}
-                            className="min-h-[48px] w-full justify-center gap-2 !rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.12em] text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:bg-slate-50 active:bg-slate-100 sm:px-5"
+                            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-transparent px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.12em] text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-transparent hover:text-slate-900 sm:px-5"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4 shrink-0">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V6.75m0 0L8.25 10.5M12 6.75l3.75 3.75M4.5 17.25v.75A1.5 1.5 0 006 19.5h12a1.5 1.5 0 001.5-1.5v-.75" />
                             </svg>
                             Upload Document
-                        </PrimaryButton>
+                        </button>
                     </div>
                 )}
             </div>
