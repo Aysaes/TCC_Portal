@@ -122,7 +122,9 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
 
     // 1. Base links
     const links = [
-        { label: 'Overview', href: route('hr.index'), active: route().current('hr.index') },
+        // This link is visible to ALL users
+
+        // This link is restricted to Admin/HR only
         ...(isHRAdmin ? [
             { 
                 label: 'HR Admin Overview', 
@@ -130,22 +132,31 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
                 active: route().current('hr.admin.index') 
             }
         ] : []),
+                {   
+            label: 'Pending Document Requests', 
+            href: route('hr.index'), 
+            active: route().current('hr.index') 
+        },
     ];
 
-    // 2. DEFENSIVE STRIPPING: Force string, lowercase it, and trim hidden spaces
-    const normalizedRole = String(UserRole).toLowerCase().trim();
-
-    // 3. The Math
-    const isTeamLeader = normalizedRole.includes('tl');
-    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr';
+    const normalizedRole = String(userRole).toLowerCase().trim();
+    
+    const isAdmin = normalizedRole === 'admin';
+    const isHR = normalizedRole === 'hr';
+    const isHRBP = normalizedRole === 'hrbp';
+    
+    // 🟢 DYNAMIC TL CHECK: If it contains 'tl', they are a requester
+    const isRequesterOnly = normalizedRole.includes('tl') || normalizedRole === 'marketing manager';
+    
+    // Approvers who can also request
     const isApprover = [
         'director of corporate services and operations', 
         'chief vet', 
         'operations manager', 
     ].includes(normalizedRole);
 
-    // 4. Push the links based on the math
-    if (isTeamLeader || isAdminOrHR || isApprover) {
+    // CREATE LINK: Everyone EXCEPT HR
+    if (isAdmin || isHRBP || isRequesterOnly || isApprover) {
         links.push({
             label: 'Manpower Request',
             href: route('hr.manpower-requests.create'),
@@ -153,26 +164,33 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
         });
     }
 
-    if (isTeamLeader || isAdminOrHR || isApprover) {
+    // DASHBOARD LINK: Everyone
+    if (isAdmin || isHR || isHRBP || isRequesterOnly || isApprover) {
         links.push({
-            label: isTeamLeader && !isAdminOrHR ? 'My Requests' : 'Approval Board',
+            label: isRequesterOnly ? 'My Requests' : 'Approval Board',
             href: route('hr.manpower-requests.index'),
             active: route().current('hr.manpower-requests.index'),
         });
     }
 
-    // 5. Final link
+    // 5. Final link (Visible to everyone)
     links.push({ 
         label: 'Feedback Form', 
         href: route('hr.feedback.create'), 
         active: route().current('hr.feedback.create') 
     });
+    
     return links;
 };
 
 export const getHRAdminLinks = (auth) => {
     return [
-        { label: 'Overview',
+        { 
+            label: 'HR Module Overview', 
+            href: route('hr.index'),
+            active: route().current('hr.index') 
+        },
+        { label: 'Pending Document Requests',
             href: route('hr.admin.index'),
             active: route().current('hr.admin.index') 
         },

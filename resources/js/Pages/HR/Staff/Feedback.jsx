@@ -28,7 +28,7 @@ export default function Feedback({ auth }) {
     };
 
     return (
-        <SidebarLayout activeModule="HR MENU" sidebarLinks={hrLinks} header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Feedback Form</h2>}>
+        <SidebarLayout activeModule="HR" sidebarLinks={hrLinks} header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Feedback Form</h2>}>
             <Head title="Feedback Form" />
 
             <div className="py-12 max-w-4xl mx-auto sm:px-6 lg:px-8">
@@ -93,7 +93,7 @@ export default function Feedback({ auth }) {
                         {/* NEW: Optional Image Upload */}
                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
                             <InputLabel htmlFor="image" value="Attach an Image (Optional)" className="font-bold mb-1" />
-                            <p className="text-xs text-gray-500 mb-3">Include a screenshot or photo to provide more context (JPG, PNG - Max 5MB).</p>
+                            <p className="text-xs text-gray-500 mb-3">Include a screenshot or photo to provide more context (JPG, PNG).</p>
                             <input 
                                 type="file" 
                                 id="image" 

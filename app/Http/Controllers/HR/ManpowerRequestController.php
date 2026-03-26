@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Exception;
 
@@ -21,23 +22,133 @@ class ManpowerRequestController extends Controller
     // ----------------------------------------------------------------------
    public function create()
     {
-        // Because of our web.php middleware, we already know the user is authorized by the time they reach this line!
+        $user = User::with(['position', 'role'])->find(Auth::id());
+        $roleName = $user->role->name ?? '';
+        $userPositionId = $user->position_id;
+        $userDepartmentId = $user->position->department_id ?? null;
+        // --- GET ALL ALLOWED BRANCHES ---
+// 1. Get primary branch from the users table
+$primaryBranchId = $user->branch_id;
 
-        return Inertia::render('HR/ManpowerRequest', [
-            'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
-            'departments' => Department::select('id', 'name')->orderBy('name')->get(),
-            'positions' => Position::select('id', 'name', 'department_id')->orderBy('name')->get(),
+// 2. Get any additional branches from the pivot table
+$rotatingBranchIds = DB::table('branch_user')
+    ->where('user_id', $user->id)
+    ->pluck('branch_id')
+    ->toArray();
+
+// 3. Merge them together, remove duplicates, and filter out nulls
+$allowedBranchIds = array_filter(array_unique(array_merge((array) $primaryBranchId, $rotatingBranchIds)));
+
+// 1. 🟢 BRANCH RESTRICTION
+$branchesQuery = Branch::select('id', 'name')->orderBy('name');
+if (strtolower($roleName) !== 'admin') {
+    if (!empty($allowedBranchIds)) {
+        $branchesQuery->whereIn('id', $allowedBranchIds);
+    } else {
+        $branchesQuery->where('id', 0); // Failsafe
+    }
+}
+
+        // 2. Base Query
+        $positionsQuery = Position::with('department')->select('id', 'name', 'department_id');
+
+        // 3. 🟢 GLOBAL RULE: Cannot request own position
+        if ($userPositionId) {
+            $positionsQuery->where('id', '!=', $userPositionId);
+        }
+
+        // 4. 🟢 EXACT ROLE-BASED FILTERING MATRIX
+        if (strtolower($roleName) !== 'admin') {
             
-            // Fetch users who hold Manager roles for the routing dropdown
-            'managers' => User::whereHas('role', function ($query) {
-                $query->whereIn('name', ['Chief Vet', 'Operations Manager', 'Clinic Manager']);
-            })->select('id', 'name', 'position_id')->with('position')->orderBy('name')->get(),
-        ]);
+            $positionsQuery->where(function ($query) use ($roleName, $userDepartmentId) {
+
+                if ($roleName === 'Director of Corporate Services and Operations') {
+                    // DCSO: Accounting/Operational Depts OR exact specific roles
+                    $query->whereHas('department', function ($q) {
+                        $q->whereIn('name', ['Accounting', 'Operational']); // Fixed exact DB name
+                    })
+                    ->orWhereIn('name', ['Chief Veterinarian', 'Human Resources Business Partner', 'Marketing Manager']) // Fixed exact DB names
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->where(function ($q) {
+                            $q->where('name', 'LIKE', '%TL%')
+                              ->orWhere('name', 'LIKE', '%Team Leader%');
+                        })->whereNotIn('name', [
+                            'Veterinary Technician Team Leader', // Exact DB name
+                            'Clinic Assistant TL'                // Exact DB name
+                        ]);
+                    });
+
+                } elseif ($roleName === 'Operations Manager') {
+                    // OM: Only Receptionist
+                    $query->where('name', 'Receptionist');
+
+                } elseif ($roleName === 'Chief Vet') {
+                    // Chief Vet: Veterinarians Dept OR specific TLs
+                    $query->whereHas('department', function ($q) {
+                        $q->where('name', 'Veterinarians'); // Exact DB name
+                    })
+                    ->orWhereIn('name', [
+                        'Veterinary Technician Team Leader', 
+                        'Clinic Assistant TL'
+                    ]);
+
+                } elseif ($roleName === 'Marketing Manager') {
+                    // Marketing Manager: Marketing Dept only
+                    $query->whereHas('department', function ($q) {
+                        $q->where('name', 'Marketing'); 
+                    });
+
+                } elseif ($roleName === 'HRBP') {
+                    // HRBP: Human Resources Dept only
+                    $query->whereHas('department', function ($q) {
+                        $q->where('name', 'Human Resources'); // Exact DB name
+                    });
+
+                } elseif (str_contains($roleName, 'TL')) {
+                    // All TLs: Only positions strictly under their own Department
+                    if ($userDepartmentId) {
+                        $query->where('department_id', $userDepartmentId);
+                    } else {
+                        $query->where('id', 0);
+                    }
+
+                } else {
+                    $query->where('id', 0);
+                }
+            });
+        }
+
+        
+
+        // 5. 🟢 DYNAMIC DEPARTMENT FILTERING 🟢
+    // Automatically fetch only the departments that contain the user's allowed positions
+    if (strtolower($roleName) === 'admin') {
+        $departmentsQuery = Department::select('id', 'name')->orderBy('name');
+    } else {
+        // Clone the positions query so we don't consume it, then extract the unique department IDs
+        $allowedDepartmentIds = (clone $positionsQuery)
+            ->pluck('department_id')
+            ->unique()
+            ->filter() // Removes any nulls safely
+            ->toArray();
+            
+        $departmentsQuery = Department::select('id', 'name')
+            ->whereIn('id', $allowedDepartmentIds)
+            ->orderBy('name');
+    }
+
+    return Inertia::render('HR/ManpowerRequest', [
+        'branches' => $branchesQuery->get(),
+        'departments' => $departmentsQuery->get(), // Updated to use the new filtered query!
+        'positions' => $positionsQuery->orderBy('name')->get(),
+    ]);
     }
 
     public function store(Request $request)
     {
-        // 👇 We wrap EVERYTHING in the Throwable catch now
+        
+        Log::info('--- NEW MRF SUBMISSION STARTED ---', ['user' => Auth::user()->name, 'role' => Auth::user()->role->name]);
+
         try {
             // 1. Validate the incoming data
             $validated = $request->validate([
@@ -61,46 +172,82 @@ class ManpowerRequestController extends Controller
                 'poc_name' => 'required|string',
             ]);
 
+            Log::info('MARKER 2: Form validation passed successfully!');
+
+            $user = Auth::user();
+
+// --- GET ALL ALLOWED BRANCHES FOR VALIDATION ---
+$primaryBranchId = $user->branch_id;
+$rotatingBranchIds = DB::table('branch_user')
+    ->where('user_id', $user->id)
+    ->pluck('branch_id')
+    ->toArray();
+
+$allowedBranchIds = array_filter(array_unique(array_merge((array) $primaryBranchId, $rotatingBranchIds)));
+
+// Check if they are NOT an admin AND the submitted branch is NOT in their allowed list
+if (strtolower($user->role->name) !== 'admin' && !in_array($validated['branch_id'], $allowedBranchIds)) {
+    return back()->withErrors(['branch_id' => 'Unauthorized: You can only request manpower for your officially assigned branches.']);
+}
+
             // 2. 🟢 THE NEW DYNAMIC WORKFLOW ROUTING 🟢
             $userRole = Auth::user()->role->name;
 
-            // Map the exact Requester Role to their specific approval path
-            // IMPORTANT: Ensure these strings exactly match your database role names!
             $workflowPath = match($userRole) {
-                // Medical Paths (4 Steps)
                 'Clinic Assistant TL', 'Vet Tech TL' 
                     => ['Chief Vet', 'Operations Manager', 'Director of Corporate Services and Operations', 'HR'],
-                
-                // Medical & Ops Level 2 Paths (3 Steps)
                 'Chief Veterinarian', 'Cashier TL', 'Housekeeping TL', 'Inventory TL' 
                     => ['Operations Manager', 'Director of Corporate Services and Operations', 'HR'],
-                
-                // Direct to DCSO Paths (2 Steps)
                 'IT TL', 'HRBP', 'Marketing Manager', 'Operations Manager', 'Procurement TL', 'Auditor TL' 
                     => ['Director of Corporate Services and Operations', 'HR'],
-                
-                // Fallback (Safe Default)
+                'Director of Corporate Services and Operations' 
+                    => ['HR'],
                 default => ['Director of Corporate Services and Operations', 'HR'],
             };
 
+            Log::info('MARKER 3: Calculated Workflow Path', ['path' => $workflowPath]);
+
             // 3. Finalize data
-            // We no longer need 'requesting_manager_id' because the workflow path dictates who sees it!
             $validated['user_id'] = Auth::id();
-            $validated['status'] = 'Pending';
             $validated['workflow_path'] = $workflowPath;
-            $validated['current_step'] = 0; // Starts at the first role in the array
+            $validated['current_step'] = 0; 
+
+            // 🟢 AUTO-APPROVE DCSO REQUESTS 🟢
+            if (isset($workflowPath[0]) && $workflowPath[0] === 'HR') {
+                $validated['status'] = 'Approved'; 
+                $successMessage = "Request auto-approved and forwarded to HR for reference.";
+            } else {
+                $validated['status'] = 'Pending';
+                $firstApprover = $workflowPath[0] ?? 'Unknown';
+                $successMessage = "Manpower Request submitted and routed to the {$firstApprover} for approval.";
+            }
+
+            Log::info('MARKER 4: Attempting to save to database...');
 
             // 4. Save to database
             ManpowerRequest::create($validated);
 
-            $firstApprover = $workflowPath[0];
+            Log::info('MARKER 5: Successfully saved to database! Redirecting...');
 
             return redirect()->route('hr.manpower-requests.index')
-                ->with('success', "Manpower Request submitted and routed to the {$firstApprover} for approval.");
+                ->with('success', $successMessage);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            
+            Log::warning('MRF VALIDATION FAILED: User missed a required field.', $e->errors());
+            throw $e; // Re-throw so Laravel safely returns the user to the form
+            
         } catch (\Throwable $e) { 
+            
             Log::error('MRF SUBMISSION CRASH: ' . $e->getMessage());
-            return back()->withErrors(['form_error' => 'Submission failed. Check logs.']);
+            Log::error('FILE: ' . $e->getFile() . ' on line ' . $e->getLine());
+            
+            
+            dd([
+                'CRASH REASON' => $e->getMessage(),
+                'FILE' => $e->getFile(),
+                'LINE' => $e->getLine()
+            ]);
         }
     }
 
@@ -121,11 +268,11 @@ class ManpowerRequestController extends Controller
         ]);
 
         // 🟢 NEW DYNAMIC ROLE-BASED VISIBILITY 🟢
-        if (str_contains($userRole, 'TL')) {
+        if (in_array($userRole, ['TL', 'Marketing Manager'])) {
             // Team Leaders only see what they submitted
             $query->where('user_id', $user->id);
             
-        } elseif (in_array($userRole, ['admin', 'HR', 'Director of Corporate Services and Operations'])) {
+        } elseif (in_array($userRole, ['admin', 'HR','HRBP' ,'Director of Corporate Services and Operations'])) {
             // High-level roles pull everything. React will filter their specific "Action Required" tab.
             
         } else {

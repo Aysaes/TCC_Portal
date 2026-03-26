@@ -91,7 +91,6 @@ export default function StaffOverview({ auth, requests }) {
         <SidebarLayout
             activeModule="HR"
             sidebarLinks={HRLinks}
-            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Overview</h2>}
         >
             <Head title="HR Overview" />
 
