@@ -1,7 +1,8 @@
 import Modal from '@/Components/Modal';
 import { getHRLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { formatAppDate } from '@/Utils/date';
 import { useState } from 'react';
 
 const COE_REASONS = [
@@ -14,6 +15,7 @@ const COE_REASONS = [
 ];
 
 export default function StaffOverview({ auth, requests }) {
+    const { system } = usePage().props;
 
     // Extract the role from the now-updated auth object
     const currentRole = auth.user?.role?.name || 'Guest';
@@ -159,7 +161,7 @@ export default function StaffOverview({ auth, requests }) {
                                         {requestList.map((req) => (
                                             <tr key={req.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                                                    {new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {formatAppDate(req.created_at, system?.timezone)}
                                                 </td>
                                                 <td className="px-6 py-4 font-bold text-indigo-900">
                                                     {req.type === 'COE' ? 'Certificate of Employment' : 'Form 2316'}

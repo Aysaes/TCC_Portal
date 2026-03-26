@@ -3,18 +3,19 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 // 1. IMPORT YOUR DYNAMIC LINKS GENERATOR
 import { getHRLinks } from '@/Config/navigation';
 
 export default function ManpowerRequest({ auth, branches = [], departments = [], positions = [], managers = [] }) {
+    const { system } = usePage().props;
     
     // 2. GENERATE THE LINKS FOR THIS SPECIFIC USER
     const hrLinks = getHRLinks(auth.user.role?.name || 'Employee', auth);
 
     // Auto-calculate the minimum date (30 calendar days notice)
-    const thirtyDaysFromNow = new Date();
+    const thirtyDaysFromNow = new Date(`${system?.serverDate || '1970-01-01'}T00:00:00`);
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     const minDateNeeded = thirtyDaysFromNow.toISOString().split('T')[0];
 

@@ -5,12 +5,14 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import { getDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { formatAppDate } from '@/Utils/date';
 
 export default function Index({ auth, dutymeals = [], employees = [], departments = [], positions = [], branches = [] }) {
     
     const dutyMealsLinks = getDutyMealLinks();
+    const { system } = usePage().props;
 
     const [isPoolModalOpen, setIsPoolModalOpen] = useState(false);
 
@@ -118,7 +120,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         }
 
         // B. Setup Date Math Helpers
-        const today = new Date();
+        const today = new Date(`${system?.serverDate || '1970-01-01'}T00:00:00`);
         today.setHours(0, 0, 0, 0);
 
         const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; 
@@ -152,7 +154,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         });
 
         return filtered;
-    }, [dutymeals, overviewBranch, dateFilterType, customStartDate, customEndDate]);
+    }, [dutymeals, overviewBranch, dateFilterType, customStartDate, customEndDate, system?.serverDate]);
 
     // 👇 2. STATS CRUNCHER: Calculate the numbers based ONLY on the filtered list above!
     const stats = useMemo(() => {
@@ -318,7 +320,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                 filteredDutyMeals.map((meal) => (
                                     <tr key={meal.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setSelectedRosterId(meal.id)}>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {new Date(meal.duty_date).toLocaleDateString()}
+                                            {formatAppDate(meal.duty_date, system?.timezone)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.branch?.name}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.participants_count} Staff</td>
@@ -336,7 +338,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                     <div className="p-6">
                         <div className="flex justify-between items-start mb-4">
                             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    {selectedRoster.branch?.name} - {new Date(selectedRoster.duty_date).toLocaleDateString()}
+                                    {selectedRoster.branch?.name} - {formatAppDate(selectedRoster.duty_date, system?.timezone)}
                                     
                                     
                                     {selectedRoster.is_locked && (

@@ -1,16 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import GHImage from '@/Assets/GH.jpg';
 import ALBImage from '@/Assets/ALB.jpg';
+import GHPortraitImage from '@/Assets/GH Portrait.jpg';
+import ALBPortraitImage from '@/Assets/ALB Portrait.png';
+import MKTPortraitImage from '@/Assets/MKT Portrait 1.png';
 import MKTImage from '@/Assets/MKT.jpg';
 
 export default function BackgroundCarousel() {
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [isMobile, setIsMobile] = useState(false);
 
-    const slides = [
-        GHImage,
-        ALBImage,
-        MKTImage,
-    ];
+    const desktopSlides = useMemo(() => ([
+        { src: GHImage, position: 'center center' },
+        { src: ALBImage, position: 'center center' },
+        { src: MKTImage, position: 'center center' },
+    ]), []);
+
+    const mobileSlides = useMemo(() => ([
+        { src: MKTPortraitImage, position: 'center center' },
+        { src: ALBPortraitImage, position: 'center center' },
+        { src: GHPortraitImage, position: 'center center' },
+    ]), []);
+
+    const slides = isMobile ? mobileSlides : desktopSlides;
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(max-width: 639px)');
+        const updateViewport = (event) => {
+            setIsMobile(event.matches);
+        };
+
+        setIsMobile(mediaQuery.matches);
+        mediaQuery.addEventListener('change', updateViewport);
+
+        return () => mediaQuery.removeEventListener('change', updateViewport);
+    }, []);
+
+    useEffect(() => {
+        setCurrentSlide(0);
+    }, [isMobile]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -18,7 +46,7 @@ export default function BackgroundCarousel() {
         }, 5000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [slides.length]);
 
     return (
         <>
@@ -30,9 +58,10 @@ export default function BackgroundCarousel() {
                     }`}
                 >
                     <img
-                        src={slide}
+                        src={slide.src}
                         alt={`Slide ${index + 1}`}
                         className="w-full h-full object-cover"
+                        style={{ objectPosition: slide.position }}
                     />
                 </div>
             ))}

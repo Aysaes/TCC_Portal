@@ -1,8 +1,10 @@
 import { getStaffDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { formatAppDate } from '@/Utils/date';
 
 const MealCard = ({ meal }) => {
+    const { system } = usePage().props;
     // 👇 RESTORED INTEGRITY LOGIC: 
     // It is locked IF the server says it's past 6AM, OR if they already submitted a choice!
     const isStrictlyLocked = meal.is_locked || meal.choice !== 'none';
@@ -33,7 +35,7 @@ const MealCard = ({ meal }) => {
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                 <div>
                     <h3 className="font-bold text-gray-900">
-                        {new Date(meal.duty_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                        {formatAppDate(meal.duty_date, system?.timezone, { weekday: 'long', month: 'short', day: 'numeric' })}
                     </h3>
                     <span className="text-xs font-medium text-indigo-600 uppercase tracking-wider">{meal.branch_name}</span>
                 </div>
