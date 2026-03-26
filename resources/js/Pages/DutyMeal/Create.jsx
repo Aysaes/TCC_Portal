@@ -5,12 +5,13 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import { getDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function CreateDutyMeal({ auth, employees = [], branches = [], departments = [], positions = [] }) {
 
     const dutyMealsLinks = getDutyMealLinks();
+    const { system } = usePage().props;
     
     // --- FORM STATE ---
     const { data, setData, post, processing, errors } = useForm({
@@ -31,7 +32,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
         ? positions 
         : positions.filter(pos => String(pos.department_id) === String(departmentFilter));
 
-    const tomorrow = new Date();
+    const tomorrow = new Date(`${system?.serverDate || '1970-01-01'}T00:00:00`);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const minDate = tomorrow.toISOString().split('T')[0];
 

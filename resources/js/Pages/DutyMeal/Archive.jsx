@@ -2,11 +2,13 @@ import ConfirmModal from '@/Components/ConfirmModal';
 import DangerButton from '@/Components/DangerButton';
 import { getDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { formatAppDate } from '@/Utils/date';
 
 export default function Archive({ auth, archivedMealsByWeek, availableDates, currentFilter }) {
     const dutyMealsLinks = getDutyMealLinks();
+    const { system } = usePage().props;
     
     // Global Confirm Modal State
     const [confirmDialog, setConfirmDialog] = useState({ 
@@ -78,8 +80,7 @@ export default function Archive({ auth, archivedMealsByWeek, availableDates, cur
                     >
                         {availableDates.length === 0 && <option value={`${currentFilter.year}-${currentFilter.month}`}>No Archives Found</option>}
                         {availableDates.map(date => {
-                            const dateObj = new Date(date.year, date.month - 1);
-                            const label = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+                            const label = formatAppDate(`${date.year}-${String(date.month).padStart(2, '0')}-01`, system?.timezone, { month: 'long', year: 'numeric' });
                             return <option key={`${date.year}-${date.month}`} value={`${date.year}-${date.month}`}>{label}</option>;
                         })}
                     </select>
@@ -114,13 +115,13 @@ export default function Archive({ auth, archivedMealsByWeek, availableDates, cur
                                     {meals.map((meal) => (
                                         <tr key={meal.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {new Date(meal.duty_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                                {formatAppDate(meal.duty_date, system?.timezone, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.branch?.name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.participants_count} Staff</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 {auth.user.role_id === 1 && (
-                                                    <button onClick={() => handleDeleteRoster(meal.id, new Date(meal.duty_date).toLocaleDateString())} className="text-red-600 hover:text-red-900">
+                                                    <button onClick={() => handleDeleteRoster(meal.id, formatAppDate(meal.duty_date, system?.timezone))} className="text-red-600 hover:text-red-900">
                                                         Delete
                                                     </button>
                                                 )}
