@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getHRLinks } from '@/Config/navigation';
+import Modal from '@/Components/Modal';
 
 export default function AccountingApprovals({ auth, requests }) {
 
@@ -15,12 +16,11 @@ export default function AccountingApprovals({ auth, requests }) {
 
     const tabs = [
         { name: 'All Requests', value: 'All' },
-        { name: 'Pending', value: 'Pending' }, // "Pending" maps to "General Accounting"
+        { name: 'Pending', value: 'Pending' }, 
         { name: 'Released', value: 'Released' },
         { name: 'Rejected', value: 'Rejected' },
     ];
 
-    // Calculate counts for the badges
     const counts = {
         All: requestList.length,
         Pending: requestList.filter(r => r.status === 'General Accounting').length,
@@ -28,7 +28,6 @@ export default function AccountingApprovals({ auth, requests }) {
         Rejected: requestList.filter(r => r.status === 'Rejected').length,
     };
 
-    // Filter the table data based on the selected tab
     const filteredRequests = requestList.filter(req => {
         if (filter === 'All') return true;
         if (filter === 'Pending') return req.status === 'General Accounting';
@@ -37,8 +36,22 @@ export default function AccountingApprovals({ auth, requests }) {
         return true;
     });
 
+    // --- REJECTION MODAL STATE ---
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [rejectingId, setRejectingId] = useState(null);
+    const [rejectReason, setRejectReason] = useState('');
+
     // --- ACTION HANDLER ---
     const handleAction = (id, actionStatus) => {
+        // If clicking reject, open the modal instead of submitting immediately
+        if (actionStatus === 'Rejected') {
+            setRejectingId(id);
+            setRejectReason('');
+            setIsRejectModalOpen(true);
+            return;
+        }
+
+        // For Release, keep the standard confirmation
         if (confirm(`Are you sure you want to mark this request as ${actionStatus}?`)) {
             router.patch(route('hr.accounting.update', id), {
                 status: actionStatus
@@ -48,11 +61,24 @@ export default function AccountingApprovals({ auth, requests }) {
         }
     };
 
+    // --- SUBMIT REJECTION ---
+    const submitRejection = (e) => {
+        e.preventDefault();
+        router.patch(route('hr.accounting.update', rejectingId), {
+            status: 'Rejected',
+            remarks: rejectReason // Send the reason to the backend
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsRejectModalOpen(false);
+                setRejectingId(null);
+                setRejectReason('');
+            }
+        });
+    };
+
     return (
-        <SidebarLayout
-            activeModule="HR"
-            sidebarLinks={HRLinks}
-        >
+        <SidebarLayout activeModule="HR" sidebarLinks={HRLinks}>
             <Head title="Accounting Approvals" />
 
             <div className="py-12">
@@ -95,7 +121,6 @@ export default function AccountingApprovals({ auth, requests }) {
 
                     {/* Pending Requests Table */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        
                         {filteredRequests.length === 0 ? (
                             <div className="p-12 text-center text-gray-500">
                                 No requests found for the selected filter.
@@ -163,6 +188,50 @@ export default function AccountingApprovals({ auth, requests }) {
 
                 </div>
             </div>
+
+            {/* Rejection Reason Modal */}
+            <Modal show={isRejectModalOpen} onClose={() => setIsRejectModalOpen(false)} maxWidth="md">
+                <div className="p-6">
+                    <div className="flex items-center justify-between border-b pb-4 mb-5">
+                        <h2 className="text-xl font-bold text-gray-900">Reason for Rejection</h2>
+                        <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    
+                    <form onSubmit={submitRejection}>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">
+                                Please provide a brief reason why this Form 2316 request is being rejected.
+                            </label>
+                            <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                rows="4"
+                                placeholder="e.g., Incomplete details, invalid clearance status..."
+                                required
+                            />
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
+                            <button
+                                type="button"
+                                onClick={() => setIsRejectModalOpen(false)}
+                                className="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="rounded-md bg-red-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-500 transition-colors"
+                            >
+                                Confirm Reject
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
         </SidebarLayout>
     );
 }

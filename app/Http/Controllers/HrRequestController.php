@@ -107,12 +107,18 @@ class HrRequestController extends Controller
     public function updateAccountingStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:Released,Rejected' // 'Released' means accepted/done
+            'status' => 'required|in:Released,Rejected',
+            'remarks' => 'nullable|string' // Allow the new remarks field
         ]);
 
-        // FIXED: Changed DocumentRequest to HrRequest
         $docRequest = HrRequest::findOrFail($id);
         $docRequest->status = $request->status;
+
+        // If they rejected it and provided a reason, save the reason
+        if ($request->status === 'Rejected' && $request->filled('remarks')) {
+            $docRequest->remarks = $request->remarks; 
+        }
+
         $docRequest->save();
 
         return redirect()->back()->with('success', 'Document status updated successfully.');
