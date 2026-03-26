@@ -43,7 +43,7 @@ export default function HRAdminOverview({ auth, requests }) {
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     
                     <div className="mb-8">
-                        <h1 className="text-2xl font-semibold text-gray-900">Pending Document Requests</h1>
+                        <h1 className="text-2xl font-semibold text-gray-900">Pending Document Request</h1>
                             <p className="text-gray-500 text-sm mt-1">Review, approve, or reject employee document requests.</p>
                     </div>
 

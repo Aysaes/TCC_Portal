@@ -7,8 +7,20 @@ import { useState } from 'react';
 export default function SidebarLayout({ header, children, sidebarLinks = [], activeModule = 'Dashboard', headerClassName = '' }) {
     const user = usePage().props.auth.user;
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    const currentModuleLabel =
+        activeModule === 'Admin'
+            ? 'Admin Module'
+            : ['HR', 'HR MENU', 'HR ADMIN'].includes(activeModule)
+              ? 'HR Module'
+              : activeModule === 'Duty Meals'
+                ? 'Duty Meal Module'
+                : activeModule === 'Document Repository'
+                  ? 'Admin Module'
+                  : 'Select Module';
     const priorityLinkLabel =
-        activeModule === 'HR MENU'
+        activeModule === 'HR'
+            ? 'HR Admin Overview'
+            : activeModule === 'HR MENU'
             ? 'HR Admin Overview'
             : activeModule === 'HR ADMIN'
               ? 'HR Module Overview'
@@ -228,7 +240,13 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z" />
                                     </svg>
                                 ),
-                                'Pending Document Requests': (
+                                'Document Request': (
+                                    <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h8M8 11h8M8 15h5" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 3h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                                    </svg>
+                                ),
+                                'Pending Document Request': (
                                     <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h8M8 11h8M8 15h5" />
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 3h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z" />
@@ -285,11 +303,33 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
 
                     <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
 
+                        {/* NOTIFICATION DROPDOWN */}
+                        <Dropdown>
+                            <Dropdown.Trigger>
+                                <button
+                                    type="button"
+                                    className="relative inline-flex h-[42px] w-[42px] items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none"
+                                    aria-label="Notifications"
+                                >
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.563 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                                    </svg>
+                                    <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white"></span>
+                                </button>
+                            </Dropdown.Trigger>
+                            <Dropdown.Content align="right" width="80">
+                                <div className="px-4 py-3">
+                                    <div className="text-sm font-semibold text-gray-900">Notifications</div>
+                                    <p className="mt-1 text-xs text-gray-500">No new notifications yet.</p>
+                                </div>
+                            </Dropdown.Content>
+                        </Dropdown>
+
                         {/* THE MAIN MODULE SWITCHER */}
                         <Dropdown>
                             <Dropdown.Trigger>
                                  <button className="inline-flex min-h-[42px] items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none sm:px-4">
-                                    Select Module
+                                    {currentModuleLabel}
                                     <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>

@@ -92,10 +92,10 @@ export default function Overview({ auth, announcements, contents }) {
         <SidebarLayout
             activeModule="General"
             sidebarLinks={dashboardLinks}
-            headerClassName="mx-auto mb-1 w-full max-w-[96rem] sm:mb-6 2xl:max-w-[112rem]"
-            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Overview</h2>}
+            headerClassName="mx-auto -mb-1 w-full max-w-[96rem] sm:mb-0 2xl:max-w-[112rem]"
+            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Dashboard</h2>}
         >
-            <Head title="Overview" />
+            <Head title="Dashboard" />
 
             <style>{`
                 .hide-scroll::-webkit-scrollbar { display: none; }

@@ -103,7 +103,7 @@ export default function StaffOverview({ auth, requests }) {
                     
                     {/* Header Section */}
                     <div className="mb-8">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">Document Requests</h3>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">Document Request</h3>
                         <p className="text-gray-600">Request your official company documents and track their approval status.</p>
                     </div>
 
