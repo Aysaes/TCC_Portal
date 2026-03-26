@@ -30,10 +30,14 @@ Route::get('/', function () {
         Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
         Route::post('/hr-module/request', [HrRequestController::class, 'store'])->name('hr.store');
         
-        // --- HR MODULE (Admin Management) --- Add these two lines!
+        // --- HR MODULE (Admin Management) --- 
         Route::get('/hr-module/admin', [HrRequestController::class, 'adminIndex'])->name('hr.admin.index');
         Route::patch('/hr-module/admin/{hrRequest}/status', [HrRequestController::class, 'updateStatus'])->name('hr.admin.update-status');
     
+        // --- NEW: HR MODULE (Accounting Approvals) ---
+        Route::get('/hr-module/accounting-approvals', [HrRequestController::class, 'accountingApprovals'])->name('hr.accounting.index');
+        Route::patch('/hr-module/accounting-approvals/{hrRequest}/status', [HrRequestController::class, 'updateAccountingStatus'])->name('hr.accounting.update');
+
         // --- OVERVIEW: Now the main landing page! ---
         Route::get('/dashboard', function () {
         $announcements = Announcement::with(['priorityLevel', 'branches'])

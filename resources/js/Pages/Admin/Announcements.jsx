@@ -7,11 +7,13 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import { getAdminLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { formatAppDate } from '@/Utils/date';
 import { useState } from 'react';
 
 export default function Announcements({ auth, announcements = [], branches = [], priorities = [] }) {
     const adminLinks = getAdminLinks();
+    const { system } = usePage().props;
 
     // --- SAFE COLOR CONVERTER ---
     const getPastelStyle = (hexColor) => {
@@ -168,7 +170,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                         
                                         <div className="flex flex-1 flex-col p-5">
                                             <h3 className="text-lg font-bold text-gray-900 pr-16">{item.title}</h3>
-                                            <p className="text-xs text-gray-500 mb-3">By {item.author} • {new Date(item.created_at).toLocaleDateString()}</p>
+                                            <p className="text-xs text-gray-500 mb-3">By {item.author} • {formatAppDate(item.created_at, system?.timezone)}</p>
                                             
                                             {/* Branch Tags */}
                                             <div className="flex flex-wrap gap-1 mb-4">

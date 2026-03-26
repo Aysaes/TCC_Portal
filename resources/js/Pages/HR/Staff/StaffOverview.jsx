@@ -1,7 +1,8 @@
 import Modal from '@/Components/Modal';
 import { getHRLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { formatAppDate } from '@/Utils/date';
 import { useState } from 'react';
 
 const COE_REASONS = [
@@ -14,6 +15,7 @@ const COE_REASONS = [
 ];
 
 export default function StaffOverview({ auth, requests }) {
+    const { system } = usePage().props;
 
     // Extract the role from the now-updated auth object
     const currentRole = auth.user?.role?.name || 'Guest';
@@ -159,7 +161,7 @@ export default function StaffOverview({ auth, requests }) {
                                         {requestList.map((req) => (
                                             <tr key={req.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                                                    {new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {formatAppDate(req.created_at, system?.timezone)}
                                                 </td>
                                                 <td className="px-6 py-4 font-bold text-indigo-900">
                                                     {req.type === 'COE' ? 'Certificate of Employment' : 'Form 2316'}
@@ -242,22 +244,22 @@ export default function StaffOverview({ auth, requests }) {
                                     {errors.reason && <p className="mt-1 text-xs text-red-500">{errors.reason}</p>}
                                 </div>
 
-                                {/* Dynamic Details Field based on the dropdown choice */}
+                                {/* Dynamic Details Field based on the dropdown choice (UPDATED TO TEXTAREA) */}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">
-                                        {getDetailsLabel(data.reason)}
-                                        {!['Visa Application', 'Travel', 'Others'].includes(data.reason) && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.specific_details}
-                                        onChange={(e) => setData('specific_details', e.target.value)}
-                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                        placeholder={`e.g. ${getDetailsLabel(data.reason)}`}
-                                        required={['Visa Application', 'Travel', 'Others'].includes(data.reason)}
-                                    />
-                                    {errors.specific_details && <p className="mt-1 text-xs text-red-500">{errors.specific_details}</p>}
-                                </div>
+                                    {getDetailsLabel(data.reason)}
+                                    {!['Visa Application', 'Travel', 'Others'].includes(data.reason) && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
+                                </label>
+                                <textarea
+                                    value={data.specific_details}
+                                    onChange={(e) => setData('specific_details', e.target.value)}
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    placeholder={`e.g. ${getDetailsLabel(data.reason)}`}
+                                    required={['Visa Application', 'Travel', 'Others'].includes(data.reason)}
+                                    rows="4"
+                                />
+                                {errors.specific_details && <p className="mt-1 text-xs text-red-500">{errors.specific_details}</p>}
+                            </div>
                             </>
                         )}
 

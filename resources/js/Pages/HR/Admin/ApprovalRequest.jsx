@@ -1,6 +1,6 @@
 import { getHRLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 import ConfirmModal from '@/Components/ConfirmModal';
@@ -143,7 +143,7 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
                                         <tr key={req.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-gray-900">{req.requester?.name || 'Unknown'}</div>
-                                                <div className="text-xs text-gray-500 mt-1">{new Date(req.created_at).toLocaleDateString()}</div>
+
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-indigo-700">{req.position?.name || 'N/A'}</div>

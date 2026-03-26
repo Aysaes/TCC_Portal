@@ -1,10 +1,12 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getHRAdminLinks } from '@/Config/navigation';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { formatAppDate } from '@/Utils/date';
 
 export default function HRAdminOverview({ auth, requests }) {
     // Bring in the dynamically generated HR links, passing 'auth' to prevent errors!
     const hrLinks = getHRAdminLinks(auth);
+    const { system } = usePage().props;
 
     const requestList = requests || [];
 
@@ -75,7 +77,7 @@ export default function HRAdminOverview({ auth, requests }) {
 
                                                 {/* Date Column */}
                                                 <td className="px-6 py-4 font-medium text-gray-500 whitespace-nowrap">
-                                                    {new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {formatAppDate(req.created_at, system?.timezone)}
                                                 </td>
 
                                                 {/* Type Column */}

@@ -7,19 +7,33 @@ import { useState } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
+    const isProfilePage = route().current('profile.edit');
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
 
     return (
         <div className="min-h-screen bg-gray-100">
-            <nav className="border-b border-gray-100 bg-white">
+            <nav className="relative border-b border-gray-100 bg-white">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between">
                         <div className="flex">
-                            <div className="flex shrink-0 items-center">
+                            <div className="-ms-5 flex shrink-0 items-center sm:-ms-4">
                                 <Link href={route('dashboard')}>
-                                    <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
+                                    <ApplicationLogo className="block h-16 w-auto fill-current text-gray-800" />
+                                </Link>
+                            </div>
+
+                            <div className="flex items-center ps-3 sm:hidden">
+                                <Link
+                                    href={route('dashboard')}
+                                    className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-900"
+                                >
+                                    <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
+                                    </svg>
+                                    Dashboard
                                 </Link>
                             </div>
 
@@ -28,7 +42,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                     href={route('dashboard')}
                                     active={route().current('dashboard')}
                                 >
-                                    Dashboard
+                                    <span className="inline-flex items-center gap-2">
+                                        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
+                                        </svg>
+                                        Dashboard
+                                    </span>
                                 </NavLink>
                             </div>
                         </div>
@@ -61,11 +81,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </Dropdown.Trigger>
 
                                     <Dropdown.Content>
-                                        <Dropdown.Link
-                                            href={route('profile.edit')}
-                                        >
-                                            Profile
-                                        </Dropdown.Link>
+                                        {!isProfilePage && (
+                                            <Dropdown.Link
+                                                href={route('profile.edit')}
+                                            >
+                                                Profile
+                                            </Dropdown.Link>
+                                        )}
                                         <Dropdown.Link
                                             href={route('logout')}
                                             method="post"
@@ -124,32 +146,26 @@ export default function AuthenticatedLayout({ header, children }) {
                 <div
                     className={
                         (showingNavigationDropdown ? 'block' : 'hidden') +
-                        ' sm:hidden'
+                        ' absolute inset-x-0 top-full z-40 px-4 pt-3 sm:hidden'
                     }
                 >
-                    <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            href={route('dashboard')}
-                            active={route().current('dashboard')}
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
-                    </div>
-
-                    <div className="border-t border-gray-200 pb-1 pt-4">
-                        <div className="px-4">
-                            <div className="text-base font-medium text-gray-800">
-                                {user.name}
+                    <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.16)]">
+                    <div className="bg-gray-50/60 px-4 py-3">
+                        <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                Signed in as
                             </div>
-                            <div className="text-sm font-medium text-gray-500">
-                                {user.email}
+                            <div className="mt-1 text-sm font-semibold text-gray-800">
+                                {user.name}
                             </div>
                         </div>
 
-                        <div className="mt-3 space-y-1">
-                            <ResponsiveNavLink href={route('profile.edit')}>
-                                Profile
-                            </ResponsiveNavLink>
+                        <div className="mt-3 space-y-1 rounded-2xl border border-gray-200 bg-white py-1 shadow-sm">
+                            {!isProfilePage && (
+                                <ResponsiveNavLink href={route('profile.edit')}>
+                                    Profile
+                                </ResponsiveNavLink>
+                            )}
                             <ResponsiveNavLink
                                 method="post"
                                 href={route('logout')}
@@ -158,6 +174,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 Log Out
                             </ResponsiveNavLink>
                         </div>
+                    </div>
                     </div>
                 </div>
             </nav>
