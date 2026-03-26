@@ -19,28 +19,38 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
 });
 
 const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        if (!confirm(`Are you sure you want to import ${file.name}?`)) return;
+        const file = e.target.files[0];
         
-        // We use postImport directly because useForm handles multipart/form-data automatically
-        setImportData('import_file', file);
-        
-        // Use a slight timeout to ensure state is set before posting
-        setTimeout(() => {
-            router.post(route('prpo.products.import'), {
-                import_file: file
-            }, {
-                preserveScroll: true,
-                forceFormData: true,
-                onSuccess: () => {
-                    resetImport();
-                    e.target.value = null; // Reset the input element
+        if (file) {
+            // 🟢 Trigger your Global Confirm Modal instead of the browser alert
+            setConfirmDialog({
+                isOpen: true,
+                title: 'Confirm Batch Import',
+                message: `Are you sure you want to import products from "${file.name}"? Make sure your column headers match the template.`,
+                confirmText: 'Import File',
+                confirmColor: 'bg-green-600 hover:bg-green-700',
+                onConfirm: () => {
+                    // 1. Close the modal visually right away
+                    closeConfirmModal();
+                    
+                    // 2. Execute the file upload
+                    router.post(route('prpo.products.import'), {
+                        import_file: file
+                    }, {
+                        preserveScroll: true,
+                        forceFormData: true,
+                        onSuccess: () => {
+                            resetImport();
+                            e.target.value = null; // Clear the input so they can upload the same file again if needed
+                        },
+                        onError: () => {
+                            e.target.value = null; // Clear on error too
+                        }
+                    });
                 }
             });
-        }, 100);
-    }
-};
+        }
+    };
     
     // ==========================================
     // 1. DATA TABLE & FILTER STATE
