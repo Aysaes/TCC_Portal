@@ -149,23 +149,11 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
                 active: route().current('hr.admin.index') 
             }
         ] : []),
-                {   
-            label: 'Document Request', 
-            href: route('hr.index'), 
-            active: route().current('hr.index') 
-        },
     ];
 
-    const normalizedRole = String(userRole).toLowerCase().trim();
-    
-    const isAdmin = normalizedRole === 'admin';
-    const isHR = normalizedRole === 'hr';
-    const isHRBP = normalizedRole === 'hrbp';
-    
-    // 🟢 DYNAMIC TL CHECK: If it contains 'tl', they are a requester
-    const isRequesterOnly = normalizedRole.includes('tl') || normalizedRole === 'marketing manager';
-    
-    // Approvers who can also request
+    // 3. The Math
+    const isRequesterOnly = ['vet tech tl', 'marketing manager'].includes(normalizedRole);
+    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr' || normalizedRole === 'hrbp';
     const isApprover = [
         'director of corporate services and operations', 
         'chief vet', 
@@ -206,7 +194,7 @@ export const getHRAdminLinks = (auth) => {
             href: route('hr.index'),
             active: route().current('hr.index') 
         },
-        { label: 'Pending Document Request',
+        { label: 'Pending Document Requests',
             href: route('hr.admin.index'),
             active: route().current('hr.admin.index') 
         },
@@ -214,5 +202,19 @@ export const getHRAdminLinks = (auth) => {
             href: route('hr.feedback.index'),
             active: route().current('hr.feedback.index')
         }
+    ];
+};
+
+export const getPRPOLinks = (auth) => {
+    return [
+        { 
+            label: 'Products Masterlist', 
+            href: route('prpo.products.index'),
+            active: route().current('prpo.products.index') 
+        },
+        { label: 'PR/PO Request',
+            href: '#',
+            active: false, 
+        },
     ];
 };
