@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\DutyMealController;
 use App\Http\Controllers\Admin\OrgChartController;
 use App\Http\Controllers\HrRequestController;
 use App\Http\Controllers\HR\ManpowerRequestController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -178,6 +180,27 @@ Route::middleware(['auth'])->group(function(){
 
     });
 
+});
+
+Route::prefix('prpo')->name('prpo.')->middleware(['auth'])->group(function () {
+
+    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('/products/import-template', [ProductController::class, 'downloadTemplate'])->name('products.import-template');
+    Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
+    Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+
+    
+    // Supplier Routes
+    Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+    Route::put('/suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
+    Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
+
+    // Product Routes
+    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+    Route::post('/products/batch-destroy', [ProductController::class, 'batchDestroy'])->name('products.batch-destroy');
+    
 });
 
 require __DIR__.'/auth.php';

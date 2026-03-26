@@ -199,3 +199,17 @@ export const getHRAdminLinks = (auth) => {
         }
     ];
 };
+
+export const getPRPOLinks = (auth) => {
+    return [
+        { 
+            label: 'Products Masterlist', 
+            href: route('prpo.products.index'),
+            active: route().current('prpo.products.index') 
+        },
+        { label: 'PR/PO Request',
+            href: '#',
+            active: false, 
+        },
+    ];
+};
