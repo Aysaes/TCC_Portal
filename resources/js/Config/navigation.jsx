@@ -194,7 +194,7 @@ export const getHRAdminLinks = (auth) => {
             href: route('hr.index'),
             active: route().current('hr.index') 
         },
-        { label: 'Pending Document Request',
+        { label: 'Pending Document Requests',
             href: route('hr.admin.index'),
             active: route().current('hr.admin.index') 
         },
@@ -202,5 +202,19 @@ export const getHRAdminLinks = (auth) => {
             href: route('hr.feedback.index'),
             active: route().current('hr.feedback.index')
         }
+    ];
+};
+
+export const getPRPOLinks = (auth) => {
+    return [
+        { 
+            label: 'Products Masterlist', 
+            href: route('prpo.products.index'),
+            active: route().current('prpo.products.index') 
+        },
+        { label: 'PR/PO Request',
+            href: '#',
+            active: false, 
+        },
     ];
 };
