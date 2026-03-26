@@ -242,22 +242,22 @@ export default function StaffOverview({ auth, requests }) {
                                     {errors.reason && <p className="mt-1 text-xs text-red-500">{errors.reason}</p>}
                                 </div>
 
-                                {/* Dynamic Details Field based on the dropdown choice */}
+                                {/* Dynamic Details Field based on the dropdown choice (UPDATED TO TEXTAREA) */}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">
-                                        {getDetailsLabel(data.reason)}
-                                        {!['Visa Application', 'Travel', 'Others'].includes(data.reason) && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.specific_details}
-                                        onChange={(e) => setData('specific_details', e.target.value)}
-                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                        placeholder={`e.g. ${getDetailsLabel(data.reason)}`}
-                                        required={['Visa Application', 'Travel', 'Others'].includes(data.reason)}
-                                    />
-                                    {errors.specific_details && <p className="mt-1 text-xs text-red-500">{errors.specific_details}</p>}
-                                </div>
+                                    {getDetailsLabel(data.reason)}
+                                    {!['Visa Application', 'Travel', 'Others'].includes(data.reason) && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
+                                </label>
+                                <textarea
+                                    value={data.specific_details}
+                                    onChange={(e) => setData('specific_details', e.target.value)}
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                    placeholder={`e.g. ${getDetailsLabel(data.reason)}`}
+                                    required={['Visa Application', 'Travel', 'Others'].includes(data.reason)}
+                                    rows="4"
+                                />
+                                {errors.specific_details && <p className="mt-1 text-xs text-red-500">{errors.specific_details}</p>}
+                            </div>
                             </>
                         )}
 

@@ -88,4 +88,33 @@ class HrRequestController extends Controller
             return back()->with('success', 'COE Request marked as Released.');
         }
     }
-} 
+    
+    // --- ACCOUNTING FUNCTIONS ---
+
+    public function accountingApprovals()
+    {
+        // Fetch Form 2316 requests that reached Accounting (Pending, Released, or Rejected)
+        $requests = HrRequest::where('type', '2316')
+                        ->whereIn('status', ['General Accounting', 'Released', 'Rejected'])
+                        ->latest()
+                        ->get();
+
+        return inertia('HR/AccountingApprovals', [
+            'requests' => $requests
+        ]);
+    }
+
+    public function updateAccountingStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:Released,Rejected' // 'Released' means accepted/done
+        ]);
+
+        // FIXED: Changed DocumentRequest to HrRequest
+        $docRequest = HrRequest::findOrFail($id);
+        $docRequest->status = $request->status;
+        $docRequest->save();
+
+        return redirect()->back()->with('success', 'Document status updated successfully.');
+    }
+}
