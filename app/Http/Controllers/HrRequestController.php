@@ -40,25 +40,25 @@ class HrRequestController extends Controller
 
     // --- HR ADMIN FUNCTIONS ---
 
-    // NEW HELPER: We put the security check here so we don't have to write it twice!
     private function checkHrAccess()
     {
         // Safely grab the names, default to empty strings, and convert to lowercase
         $roleName = strtolower(auth()->user()->role?->name ?? '');
         $positionName = strtolower(auth()->user()->position?->name ?? '');
 
-        // If they are NOT an Admin, NOT an HR role, and NOT a Human Resources position -> Kick them out!
-        if ($roleName !== 'admin' && $roleName !== 'hr' && $positionName !== 'human resources') {
+        // ALLOWED ROLES (Including HRBP!)
+        $allowedRoles = ['admin', 'hr', 'hrbp'];
+
+        // If they are NOT in the allowed roles, and NOT a Human Resources position -> Kick them out
+        if (!in_array($roleName, $allowedRoles) && $positionName !== 'human resources') {
             abort(403, 'UNAUTHORIZED ACCESS. ONLY HR PERSONNEL CAN VIEW THIS PAGE.');
         }
     }
 
     public function adminIndex()
     {
-        // 1. Run the new security check
         $this->checkHrAccess();
 
-        // 2. If they pass, load the page!
         $requests = HrRequest::with('user')->latest()->get();
         
         return Inertia::render('HR/Admin/HRAdminOverview', [
@@ -68,15 +68,19 @@ class HrRequestController extends Controller
 
     public function updateStatus(Request $request, HrRequest $hrRequest)
     {
-        // 1. Run the new security check
         $this->checkHrAccess();
 
         $request->validate([
-            'action' => 'required|in:accept,reject'
+            'action' => 'required|in:accept,reject',
+            'remarks' => 'nullable|string' // MUST validate remarks so they save!
         ]);
 
         if ($request->action === 'reject') {
-            $hrRequest->update(['status' => 'Rejected']);
+            // Save the rejection and attach the "HR|" prefix
+            $hrRequest->update([
+                'status' => 'Rejected',
+                'remarks' => $request->filled('remarks') ? 'HR|' . $request->remarks : null
+            ]);
             return back()->with('success', 'Request has been rejected.');
         }
 
@@ -93,7 +97,6 @@ class HrRequestController extends Controller
 
     public function accountingApprovals()
     {
-        // Fetch Form 2316 requests that reached Accounting (Pending, Released, or Rejected)
         $requests = HrRequest::where('type', '2316')
                         ->whereIn('status', ['General Accounting', 'Released', 'Rejected'])
                         ->latest()
@@ -108,15 +111,15 @@ class HrRequestController extends Controller
     {
         $request->validate([
             'status' => 'required|in:Released,Rejected',
-            'remarks' => 'nullable|string' // Allow the new remarks field
+            'remarks' => 'nullable|string'
         ]);
 
         $docRequest = HrRequest::findOrFail($id);
         $docRequest->status = $request->status;
 
-        // If they rejected it and provided a reason, save the reason
+        // Save the rejection and attach the "ACCOUNTING|" prefix
         if ($request->status === 'Rejected' && $request->filled('remarks')) {
-            $docRequest->remarks = $request->remarks; 
+            $docRequest->remarks = 'ACCOUNTING|' . $request->remarks; 
         }
 
         $docRequest->save();

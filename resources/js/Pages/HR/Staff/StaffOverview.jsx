@@ -20,7 +20,6 @@ export default function StaffOverview({ auth, requests }) {
     
     const requestList = requests || [];
 
-    // --- STATE FOR REQUEST MODAL (CREATE) ---
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -30,11 +29,9 @@ export default function StaffOverview({ auth, requests }) {
         specific_details: '',
     });
 
-    // --- STATE FOR VIEW DETAILS MODAL ---
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
 
-    // --- MODAL HANDLERS ---
     const openModal = (requestType) => {
         reset();
         setData((prevData) => ({
@@ -68,7 +65,6 @@ export default function StaffOverview({ auth, requests }) {
         });
     };
 
-    // Helper function for labels
     const getDetailsLabel = (reason) => {
         switch (reason) {
             case 'Visa Application': return 'Specify Country / Passport No.';
@@ -78,38 +74,29 @@ export default function StaffOverview({ auth, requests }) {
         }
     };
 
-    // Helper to style the status badges perfectly
     const getStatusStyle = (status) => {
-        switch (status) {
-            case 'Pending HR': 
-                return 'bg-amber-100 text-amber-800 border-amber-200';
-            case 'General Accounting': 
-                return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'Released': 
-                return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-            case 'Rejected': 
-                return 'bg-red-100 text-red-800 border-red-200';
-            default: 
-                return 'bg-gray-100 text-gray-800 border-gray-200';
+        switch (String(status).toLowerCase()) {
+            case 'pending hr': return 'bg-amber-100 text-amber-800 border-amber-200';
+            case 'general accounting': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'released': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+            case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
 
     return (
         <SidebarLayout activeModule="HR" sidebarLinks={HRLinks}>
-            <Head title="HR Overview" />
+            <Head title="Document Requests" />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     
-                    {/* Header Section */}
                     <div className="mb-8">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">Document Request</h3>
-                        <p className="text-gray-600">Request your official company documents and track their approval status.</p>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">Document Requests</h3>
+                        <p className="text-gray-600 text-sm">Request your official company documents and track their approval status.</p>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                        {/* 2316 Button */}
                         <div 
                             onClick={() => openModal('2316')}
                             className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg border border-gray-100 hover:border-indigo-300"
@@ -124,7 +111,6 @@ export default function StaffOverview({ auth, requests }) {
                             <p className="relative z-10 text-sm text-gray-500">Your Certificate of Compensation Payment / Tax Withheld.</p>
                         </div>
 
-                        {/* COE Button */}
                         <div 
                             onClick={() => openModal('COE')}
                             className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg border border-gray-100 hover:border-emerald-300"
@@ -140,9 +126,8 @@ export default function StaffOverview({ auth, requests }) {
                         </div>
                     </div>
 
-                    {/* Tracking Table */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                        <div className="px-6 py-5 border-b border-gray-200 bg-gray-50 shrink-0">
                             <h3 className="text-lg font-bold text-gray-800">My Requests Tracker</h3>
                         </div>
                         
@@ -151,9 +136,9 @@ export default function StaffOverview({ auth, requests }) {
                                 You have not made any document requests yet.
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm text-gray-600">
-                                    <thead className="bg-white border-b border-gray-100 text-gray-500 uppercase tracking-wider text-[11px] font-bold">
+                            <div className="overflow-x-auto overflow-y-auto max-h-[400px] relative w-full custom-scrollbar">
+                                <table className="min-w-full divide-y divide-gray-200 text-left text-sm text-gray-600">
+                                    <thead className="bg-white sticky top-0 z-10 border-b border-gray-100 text-gray-500 uppercase tracking-wider text-[11px] font-bold shadow-sm">
                                         <tr>
                                             <th className="px-6 py-4">Date Requested</th>
                                             <th className="px-6 py-4">Document Type</th>
@@ -161,13 +146,12 @@ export default function StaffOverview({ auth, requests }) {
                                             <th className="px-6 py-4 text-right">Current Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100">
+                                    <tbody className="bg-white divide-y divide-gray-100">
                                         {requestList.map((req) => (
-                                            {/* UPDATED: Added onClick and cursor-pointer to the row */},
                                             <tr 
                                                 key={req.id} 
                                                 onClick={() => openViewModal(req)}
-                                                className="hover:bg-gray-100 transition-colors cursor-pointer group"
+                                                className="hover:bg-gray-50 transition-colors cursor-pointer group"
                                             >
                                                 <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                                     {new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -177,9 +161,11 @@ export default function StaffOverview({ auth, requests }) {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {req.type === 'COE' ? (
-                                                        <div>
+                                                        /* 🟢 ADDED: max-w-xs to restrict column width */
+                                                        <div className="max-w-xs">
                                                             <span className="font-semibold block">{req.reason}</span>
-                                                            {req.specific_details && <span className="text-xs text-gray-500">{req.specific_details}</span>}
+                                                            {/* 🟢 ADDED: break-all and line-clamp-2 (to keep the table tidy!) */}
+                                                            {req.specific_details && <span className="text-xs text-gray-500 break-all line-clamp-2">{req.specific_details}</span>}
                                                         </div>
                                                     ) : (
                                                         <span className="text-gray-400 italic">Standard Request</span>
@@ -200,7 +186,6 @@ export default function StaffOverview({ auth, requests }) {
                             </div>
                         )}
                     </div>
-
                 </div>
             </div>
 
@@ -291,10 +276,10 @@ export default function StaffOverview({ auth, requests }) {
                 </div>
             </Modal>
 
-            {/* --- NEW: VIEW DETAILS MODAL --- */}
+            {/* --- VIEW DETAILS MODAL --- */}
             <Modal show={isViewModalOpen} onClose={closeViewModal} maxWidth="md">
                 {selectedRequest && (
-                    <div className="p-6">
+                    <div className="p-6 max-h-[85vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b pb-4 mb-5">
                             <h2 className="text-xl font-bold text-gray-900">Request Details</h2>
                             <button onClick={closeViewModal} className="text-gray-400 hover:text-gray-600">
@@ -327,7 +312,7 @@ export default function StaffOverview({ auth, requests }) {
                                     {selectedRequest.specific_details && (
                                         <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Specific Details</label>
-                                            <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{selectedRequest.specific_details}</p>
+                                            <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap break-all">{selectedRequest.specific_details}</p>
                                         </div>
                                     )}
                                 </>
@@ -340,17 +325,35 @@ export default function StaffOverview({ auth, requests }) {
                                 </span>
                             </div>
 
-                            {/* --- THE REJECTION REMARKS SECTION --- */}
-                            {selectedRequest.status === 'Rejected' && selectedRequest.remarks && (
-                                <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                                    <label className="block text-xs font-bold text-red-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                        Reason for Rejection
-                                    </label>
-                                    <p className="text-sm text-red-700 whitespace-pre-wrap leading-relaxed">{selectedRequest.remarks}</p>
-                                </div>
+                            {/* --- THE REJECTION REMARKS SECTION (WITH DYNAMIC ROLE PREFIXING) --- */}
+                            {String(selectedRequest.status).toLowerCase() === 'rejected' && selectedRequest.remarks && (
+                                (() => {
+                                    let rejector = 'Admin';
+                                    let cleanRemarks = selectedRequest.remarks;
+
+                                    // Parse the prefix we injected from the Controller
+                                    if (selectedRequest.remarks.startsWith('HR|')) {
+                                        rejector = 'HR ADMIN';
+                                        cleanRemarks = selectedRequest.remarks.substring(3);
+                                    } else if (selectedRequest.remarks.startsWith('ACCOUNTING|')) {
+                                        rejector = 'GENERAL ACCOUNTING';
+                                        cleanRemarks = selectedRequest.remarks.substring(11);
+                                    }
+
+                                    return (
+                                        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <label className="block text-xs font-bold text-red-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                </svg>
+                                                Reason for Rejection (By {rejector})
+                                            </label>
+                                            <p className="text-sm text-red-700 whitespace-pre-wrap leading-relaxed break-all">
+                                                {cleanRemarks || 'No specific reason was provided.'}
+                                            </p>
+                                        </div>
+                                    );
+                                })()
                             )}
 
                         </div>
