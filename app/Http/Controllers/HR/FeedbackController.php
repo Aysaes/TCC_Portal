@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Carbon;
 
 class FeedbackController extends Controller
 {
@@ -25,7 +26,13 @@ class FeedbackController extends Controller
         }
 
         // Paginate results (e.g., 10 per page) and keep query strings for pagination links
-        $submissions = $query->paginate(10)->withQueryString();
+        $submissions = $query->paginate(10)->withQueryString()->through(function ($submission) {
+            $submission->created_at_display = Carbon::parse($submission->created_at)
+                ->timezone(config('app.timezone'))
+                ->format('M j, Y');
+
+            return $submission;
+        });
 
         return Inertia::render('HR/Admin/FeedbackSubmissions', [
             'submissions' => $submissions,

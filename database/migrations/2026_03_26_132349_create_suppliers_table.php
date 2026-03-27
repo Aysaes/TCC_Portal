@@ -11,9 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('manpower_requests', function (Blueprint $table) {
-        $table->json('workflow_path')->nullable()->after('status');
-        $table->integer('current_step')->default(0)->after('workflow_path');
+        Schema::create('suppliers', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->unique();
+            $table->timestamps();
         });
     }
 
@@ -22,8 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('manpower_requests', function (Blueprint $table) {
-            //
-        });
+        Schema::dropIfExists('suppliers');
     }
 };

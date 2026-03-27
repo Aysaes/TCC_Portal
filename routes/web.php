@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\DutyMealController;
 use App\Http\Controllers\Admin\OrgChartController;
 use App\Http\Controllers\HrRequestController;
 use App\Http\Controllers\HR\ManpowerRequestController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -28,10 +30,14 @@ Route::get('/', function () {
         Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
         Route::post('/hr-module/request', [HrRequestController::class, 'store'])->name('hr.store');
         
-        // --- HR MODULE (Admin Management) --- Add these two lines!
+        // --- HR MODULE (Admin Management) --- 
         Route::get('/hr-module/admin', [HrRequestController::class, 'adminIndex'])->name('hr.admin.index');
         Route::patch('/hr-module/admin/{hrRequest}/status', [HrRequestController::class, 'updateStatus'])->name('hr.admin.update-status');
     
+        // --- NEW: HR MODULE (Accounting Approvals) ---
+        Route::get('/hr-module/accounting-approvals', [HrRequestController::class, 'accountingApprovals'])->name('hr.accounting.index');
+        Route::patch('/hr-module/accounting-approvals/{hrRequest}/status', [HrRequestController::class, 'updateAccountingStatus'])->name('hr.accounting.update');
+
         // --- OVERVIEW: Now the main landing page! ---
         Route::get('/dashboard', function () {
         $announcements = Announcement::with(['priorityLevel', 'branches'])
@@ -178,6 +184,27 @@ Route::middleware(['auth'])->group(function(){
 
     });
 
+});
+
+Route::prefix('prpo')->name('prpo.')->middleware(['auth'])->group(function () {
+
+    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('/products/import-template', [ProductController::class, 'downloadTemplate'])->name('products.import-template');
+    Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
+    Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+
+    
+    // Supplier Routes
+    Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+    Route::put('/suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
+    Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
+
+    // Product Routes
+    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+    Route::post('/products/batch-destroy', [ProductController::class, 'batchDestroy'])->name('products.batch-destroy');
+    
 });
 
 require __DIR__.'/auth.php';

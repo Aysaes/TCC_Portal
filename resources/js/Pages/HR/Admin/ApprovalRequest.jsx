@@ -1,10 +1,17 @@
-import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
-// 1. IMPORT YOUR DYNAMIC LINKS GENERATOR
 import { getHRLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+
+import ConfirmModal from '@/Components/ConfirmModal';
+
 
 export default function ApprovalRequest({ auth, requests = [], userRole = '' }) {
+
+    // Global Confirm Modal
+    const [confirmDialog, setConfirmDialog] = useState({ 
+        isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
+    });
     
     // --- STATE MANAGEMENT ---
     const exactUserRole = userRole; 
@@ -19,18 +26,37 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     // --- NEW SIMPLIFIED ACTION HELPER ---
-    // Notice we no longer need to pass the 'level', just the status!
-    const handleAction = (requestId, status) => {
-        const actionWord = status === 'Approved' ? 'Approve' : 'Reject';
-        if (!confirm(`Are you sure you want to ${actionWord} this request?`)) return;
 
-        router.patch(route('hr.manpower-requests.update-status', requestId), {
-            status: status
-        }, { 
-            preserveScroll: true,
-            onSuccess: () => closeModal() // Close modal automatically if action is taken inside it
+    // STEP 1: Intercept the button click and open the custom modal
+   const confirmAction = (requestId, status) => {
+        const isApprove = status === 'Approved';
+        const actionWord = isApprove ? 'Endorse' : 'Reject';
+        
+        setConfirmDialog({
+            isOpen: true,
+            title: `${actionWord} Request`,
+            message: `Are you sure you want to ${actionWord.toLowerCase()} this manpower request?`,
+            confirmText: actionWord,
+            confirmColor: isApprove ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-red-600 hover:bg-red-500',
+            onConfirm: () => {
+                // Execute the actual network request when they click "Confirm"
+                router.patch(route('hr.manpower-requests.update-status', requestId), {
+                    status: status
+                }, { 
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        closeConfirmModal();
+                        closeModal(); // Also closes the details modal if it happens to be open
+                    }
+                });
+            }
         });
     };
+
+    // Helper to close the confirm modal without doing anything
+    const closeConfirmModal = () => {
+    setConfirmDialog({ ...confirmDialog, isOpen: false });
+};
 
     const openModal = (req) => {
         setSelectedRequest(req);
@@ -117,7 +143,7 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
                                         <tr key={req.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-gray-900">{req.requester?.name || 'Unknown'}</div>
-                                                <div className="text-xs text-gray-500 mt-1">{new Date(req.created_at).toLocaleDateString()}</div>
+
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-indigo-700">{req.position?.name || 'N/A'}</div>
@@ -136,8 +162,9 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
                                                 {/* QUICK ACTIONS */}
                                                 {activeTab === 'action-required' && req.status !== 'Rejected' && (
                                                     <>
-                                                        <button onClick={() => handleAction(req.id, 'Rejected')} className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md font-bold transition">Reject</button>
-                                                        <button onClick={() => handleAction(req.id, 'Approved')} className="text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md font-bold transition">Endorse</button>
+                                                        <button onClick={() => confirmAction(req.id, 'Rejected')} className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md font-bold transition">Reject</button>
+
+                                                        <button onClick={() => confirmAction(req.id, 'Approved')} className="text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md font-bold transition">Endorse</button>
                                                     </>
                                                 )}
                                             </td>
@@ -259,10 +286,10 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
                                 {/* Show Action buttons if it is currently this user's turn */}
                                 {activeTab === 'action-required' && selectedRequest.status === 'Pending' && (
                                     <>
-                                        <button onClick={() => handleAction(selectedRequest.id, 'Rejected')} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition">
-                                            Reject Request
+                                        <button onClick={() => confirmAction(selectedRequest.id, 'Rejected')} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition">
+                                             Reject Request
                                         </button>
-                                        <button onClick={() => handleAction(selectedRequest.id, 'Approved')} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition">
+                                        <button onClick={() => confirmAction(selectedRequest.id, 'Approved')} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition">
                                             Endorse Request
                                         </button>
                                     </>
@@ -272,8 +299,18 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
                         </div>
                     </div>
                 )}
-
             </div>
+
+            <ConfirmModal 
+                show={confirmDialog.isOpen}
+                onClose={closeConfirmModal}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText={confirmDialog.confirmText}
+                confirmColor={confirmDialog.confirmColor}
+                onConfirm={confirmDialog.onConfirm}
+            />
+
         </SidebarLayout>
     );
 }

@@ -13,6 +13,7 @@ class HrRequest extends Model
         'name',
         'reason',
         'specific_details',
+        'remarks',
     ];
 
     // Connects the request to the User who made it

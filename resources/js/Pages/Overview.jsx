@@ -1,11 +1,13 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getDashboardLinks } from '@/Config/navigation';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import { useState, useRef } from 'react';
+import { formatAppDate } from '@/Utils/date';
 
 export default function Overview({ auth, announcements, contents }) {
     const dashboardLinks = getDashboardLinks();
+    const { system } = usePage().props;
     
     const announcementList = announcements.data || announcements || [];
 
@@ -90,21 +92,22 @@ export default function Overview({ auth, announcements, contents }) {
         <SidebarLayout
             activeModule="General"
             sidebarLinks={dashboardLinks}
-            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Overview</h2>}
+            headerClassName="mx-auto -mb-1 w-full max-w-[96rem] sm:mb-0 2xl:max-w-[112rem]"
+            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Dashboard</h2>}
         >
-            <Head title="Overview" />
+            <Head title="Dashboard" />
 
             <style>{`
                 .hide-scroll::-webkit-scrollbar { display: none; }
                 .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-12">
+            <div className="py-0 sm:py-12">
+                <div className="mx-auto w-full max-w-[96rem] space-y-0 sm:px-2 sm:space-y-6 lg:px-4 2xl:max-w-[112rem]">
                     
                     {/* Welcome Banner */}
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg border border-gray-100">
-                        <div className="p-6 text-gray-900">
+                    <div className="w-full overflow-hidden border border-gray-100 bg-white shadow-sm sm:rounded-lg">
+                        <div className="p-4 text-gray-900 sm:p-6">
                             <span className="mr-2">🐾</span>Welcome to The Cat Clinic Purrtal, <strong>{auth.user.name}</strong>!
                         </div>
                     </div>
@@ -145,7 +148,7 @@ export default function Overview({ auth, announcements, contents }) {
                                         
                                         <div key={pageIndex} className="w-full shrink-0 snap-center px-1">
                                             
-                                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                                                 {pageOfSix.map((item) => {
                                                     const priorityName = item.priority_level?.name || 'Notice';
                                                     const badgeColor = item.priority_level?.color || '#4F46E5';
@@ -177,7 +180,7 @@ export default function Overview({ auth, announcements, contents }) {
                                                             <div className="flex flex-1 flex-col p-5">
                                                                 <h4 className="mb-1 pr-12 text-lg font-bold text-gray-900 leading-tight">{item.title}</h4>
                                                                 <p className="mb-3 text-[11px] font-medium text-gray-500 uppercase tracking-tighter">
-                                                                    By {item.author} • {new Date(item.created_at).toLocaleDateString()}
+                                                                    By {item.author} • {formatAppDate(item.created_at, system?.timezone)}
                                                                 </p>
                                                                 
                                                                 <p className="mb-4 flex-1 whitespace-pre-wrap text-sm text-gray-600 leading-relaxed italic border-l-2 border-gray-100 pl-3 line-clamp-3">
@@ -229,7 +232,7 @@ export default function Overview({ auth, announcements, contents }) {
                     {/* --- MISSION & VISION SECTION --- */}
                     <section>
                         <h3 className="mb-6 text-lg font-bold text-gray-700 uppercase tracking-wide">Company Direction</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                             
                             {mission && (
                                 <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden flex flex-col">
@@ -289,7 +292,7 @@ export default function Overview({ auth, announcements, contents }) {
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedAnnouncement.title}</h2>
                                     <p className="text-sm font-medium text-gray-500">
-                                        Posted by {selectedAnnouncement.author} on {new Date(selectedAnnouncement.created_at).toLocaleDateString()}
+                                        Posted by {selectedAnnouncement.author} on {formatAppDate(selectedAnnouncement.created_at, system?.timezone)}
                                     </p>
                                 </div>
                                 <span className="rounded-md border px-3 py-1 text-xs font-black uppercase tracking-wider shrink-0" style={getPastelStyle(selectedAnnouncement.priority_level?.color)}>

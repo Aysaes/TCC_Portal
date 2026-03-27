@@ -10,6 +10,7 @@ export default function Home({ contents }) {
         <SidebarLayout
             activeModule="General"
             sidebarLinks={dashboardLinks}
+            headerClassName="mx-auto mb-1 w-full max-w-[96rem] sm:mb-6 2xl:max-w-[112rem]"
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800">
                     Mission & Vision
@@ -18,8 +19,8 @@ export default function Home({ contents }) {
         >
             <Head title="Mission & Vision" />
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div className="py-0 sm:py-12">
+                <div className="mx-auto w-full max-w-[96rem] sm:px-2 lg:px-4 2xl:max-w-[112rem]">
                     
                     {/* 2. Replaced the single white box with a CSS Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

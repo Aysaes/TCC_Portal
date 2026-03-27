@@ -116,15 +116,32 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     
     const userRole = (auth?.user?.role?.name || '').toLowerCase();
     const userPosition = (auth?.user?.position?.name || '').toLowerCase();
+    
+    // DEFENSIVE STRIPPING: Force string, lowercase it, and trim hidden spaces
+    const normalizedRole = String(UserRole).toLowerCase().trim();
 
     // Kurudapya merge
-    const isHRAdmin = userRole === 'admin' || userRole === 'hr' || userPosition === 'human resources';
+    const isHRAdmin = normalizedRole === 'admin' || normalizedRole === 'hr' || userPosition === 'human resources';
+    
+    // NEW: Check for General Accounting role
+    const isAccounting = normalizedRole === 'general accounting' || normalizedRole === 'accounting';
 
     // 1. Base links
     const links = [
-        // This link is visible to ALL users
-
-        // This link is restricted to Admin/HR only
+        {   
+            label: 'Pending Document Requests', 
+            href: route('hr.index'), 
+            active: route().current('hr.index') 
+        },
+        // --- NEW: General Accounting Link for Form 2316 ---
+        ...(isAccounting || normalizedRole === 'admin' ? [
+            { 
+                label: 'Form 2316 Approvals', 
+                href: route('hr.accounting.index'), // Make sure to create this route in web.php!
+                active: route().current('hr.accounting.index') 
+            }
+        ] : []),
+        // --- End New Link ---
         ...(isHRAdmin ? [
             { 
                 label: 'HR Admin Overview', 
@@ -132,31 +149,19 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
                 active: route().current('hr.admin.index') 
             }
         ] : []),
-                {   
-            label: 'Pending Document Requests', 
-            href: route('hr.index'), 
-            active: route().current('hr.index') 
-        },
     ];
 
-    const normalizedRole = String(userRole).toLowerCase().trim();
-    
-    const isAdmin = normalizedRole === 'admin';
-    const isHR = normalizedRole === 'hr';
-    const isHRBP = normalizedRole === 'hrbp';
-    
-    // 🟢 DYNAMIC TL CHECK: If it contains 'tl', they are a requester
-    const isRequesterOnly = normalizedRole.includes('tl') || normalizedRole === 'marketing manager';
-    
-    // Approvers who can also request
+    // 3. The Math
+    const isRequesterOnly = ['vet tech tl', 'marketing manager'].includes(normalizedRole);
+    const isAdminOrHR = normalizedRole === 'admin' || normalizedRole === 'hr' || normalizedRole === 'hrbp';
     const isApprover = [
         'director of corporate services and operations', 
         'chief vet', 
         'operations manager', 
     ].includes(normalizedRole);
 
-    // CREATE LINK: Everyone EXCEPT HR
-    if (isAdmin || isHRBP || isRequesterOnly || isApprover) {
+    // 4. Push the links based on the math
+    if (isRequesterOnly || isAdminOrHR || isApprover) {
         links.push({
             label: 'Manpower Request',
             href: route('hr.manpower-requests.create'),
@@ -164,10 +169,9 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
         });
     }
 
-    // DASHBOARD LINK: Everyone
-    if (isAdmin || isHR || isHRBP || isRequesterOnly || isApprover) {
+    if (isRequesterOnly || isAdminOrHR || isApprover) {
         links.push({
-            label: isRequesterOnly ? 'My Requests' : 'Approval Board',
+            label: isRequesterOnly && !isAdminOrHR ? 'My Requests' : 'Approval Board',
             href: route('hr.manpower-requests.index'),
             active: route().current('hr.manpower-requests.index'),
         });
@@ -198,5 +202,19 @@ export const getHRAdminLinks = (auth) => {
             href: route('hr.feedback.index'),
             active: route().current('hr.feedback.index')
         }
+    ];
+};
+
+export const getPRPOLinks = (auth) => {
+    return [
+        { 
+            label: 'Products Masterlist', 
+            href: route('prpo.products.index'),
+            active: route().current('prpo.products.index') 
+        },
+        { label: 'PR/PO Request',
+            href: '#',
+            active: false, 
+        },
     ];
 };
