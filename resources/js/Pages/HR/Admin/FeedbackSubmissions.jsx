@@ -1,10 +1,10 @@
-import React, { useState } from 'react'; // <-- Added useState here
+import React, { useState } from 'react'; 
 import { Head } from '@inertiajs/react';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getHRAdminLinks } from '@/Config/navigation';
-import Modal from '@/Components/Modal'; // <-- Added Modal import here
+import Modal from '@/Components/Modal'; 
 
-export default function FeedbackSubmissions({ auth, submissions, filters }) {
+export default function FeedbackSubmissions({ auth, submissions }) {
     const adminSidebarLinks = getHRAdminLinks(auth);
     
     // --- STATE FOR THE MODAL ---
@@ -30,21 +30,15 @@ export default function FeedbackSubmissions({ auth, submissions, filters }) {
                             <h1 className="text-2xl font-semibold text-gray-900">Feedback Submissions</h1>
                             <p className="text-gray-500 text-sm mt-1">Review and manage feedback submitted by employees.</p>
                         </div>
-                        
-                        <div className="flex gap-2">
-                            <input type="text" placeholder="Search subject..." className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                            <select className="border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">All Types</option>
-                                <option value="recommendation">Recommendation</option>
-                                <option value="issue">Issue</option>
-                            </select>
-                        </div>
+                        {/* THE SEARCH AND FILTER DROPDOWN HAVE BEEN COMPLETELY REMOVED FROM HERE */}
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="overflow-x-auto">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                        {/* THE SCROLLBAR FIX: max-h-[400px] and overflow-y-auto */}
+                        <div className="overflow-x-auto overflow-y-auto max-h-[400px] relative w-full custom-scrollbar">
                             <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                                {/* STICKY HEADER: Added sticky, top-0, and z-10 */}
+                                <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
                                     <tr>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Submitted</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
@@ -72,7 +66,6 @@ export default function FeedbackSubmissions({ auth, submissions, filters }) {
                                                     {item.user?.name || 'Unknown'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    {/* --- THE FIX IS HERE! Added onClick event --- */}
                                                     <button 
                                                         onClick={() => setViewingFeedback(item)}
                                                         className="text-indigo-600 hover:text-indigo-900 font-bold transition-colors"
@@ -123,8 +116,6 @@ export default function FeedbackSubmissions({ auth, submissions, filters }) {
                         {viewingFeedback.image_path && (
                             <div className="mb-6 shrink-0">
                                 <h3 className="text-sm font-bold text-gray-700 mb-2">Attached Image:</h3>
-                                
-                                {/* 🛑 THE ULTIMATE FIX: Fixed height wrapper + Absolute Image 🛑 */}
                                 <div className="relative w-full h-64 md:h-80 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
                                     <img 
                                         src={`/storage/${viewingFeedback.image_path}`} 
@@ -132,7 +123,6 @@ export default function FeedbackSubmissions({ auth, submissions, filters }) {
                                         className="absolute inset-0 w-full h-full object-contain p-2"
                                     />
                                 </div>
-
                             </div>
                         )}
 

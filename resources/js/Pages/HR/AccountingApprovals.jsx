@@ -9,32 +9,8 @@ export default function AccountingApprovals({ auth, requests }) {
     const currentRole = auth.user?.role?.name || 'Guest';
     const HRLinks = getHRLinks(currentRole, auth);
     
+    // We now just use the raw request list since tabs are removed
     const requestList = requests || [];
-
-    // --- TAB FILTERING LOGIC ---
-    const [filter, setFilter] = useState('All');
-
-    const tabs = [
-        { name: 'All Requests', value: 'All' },
-        { name: 'Pending', value: 'Pending' }, 
-        { name: 'Released', value: 'Released' },
-        { name: 'Rejected', value: 'Rejected' },
-    ];
-
-    const counts = {
-        All: requestList.length,
-        Pending: requestList.filter(r => r.status === 'General Accounting').length,
-        Released: requestList.filter(r => r.status === 'Released').length,
-        Rejected: requestList.filter(r => r.status === 'Rejected').length,
-    };
-
-    const filteredRequests = requestList.filter(req => {
-        if (filter === 'All') return true;
-        if (filter === 'Pending') return req.status === 'General Accounting';
-        if (filter === 'Released') return req.status === 'Released';
-        if (filter === 'Rejected') return req.status === 'Rejected';
-        return true;
-    });
 
     // --- VIEW DETAILS MODAL STATE ---
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -93,54 +69,30 @@ export default function AccountingApprovals({ auth, requests }) {
         <SidebarLayout activeModule="HR" sidebarLinks={HRLinks}>
             <Head title="Accounting Approvals" />
 
-            <div className="py-12">
+            {/* Changed py-12 to py-8 to give a little more vertical room and prevent outer scrolling */}
+            <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     
                     {/* Header Section */}
-                    <div className="mb-8">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">General Accounting Approvals</h3>
-                        <p className="text-gray-600">Review and process Form 2316 requests forwarded by HR.</p>
+                    <div className="mb-6 flex justify-between items-end">
+                        <div>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">General Accounting Approvals</h3>
+                            <p className="text-gray-600 text-sm">Review and process Form 2316 requests forwarded by HR.</p>
+                        </div>
                     </div>
 
-                    {/* Navigation Tabs */}
-                    <div className="mb-6 border-b border-gray-200">
-                        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                            {tabs.map((tab) => {
-                                const isActive = filter === tab.value;
-                                return (
-                                    <button
-                                        key={tab.name}
-                                        onClick={() => setFilter(tab.value)}
-                                        className={`
-                                            whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors
-                                            ${isActive 
-                                                ? 'border-indigo-500 text-indigo-600' 
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                                        `}
-                                    >
-                                        {tab.name}
-                                        <span className={`
-                                            rounded-full px-2.5 py-0.5 text-xs font-medium
-                                            ${isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-900'}
-                                        `}>
-                                            {counts[tab.value]}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </nav>
-                    </div>
-
-                    {/* Pending Requests Table */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        {filteredRequests.length === 0 ? (
+                    {/* Requests Table Container */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                        {requestList.length === 0 ? (
                             <div className="p-12 text-center text-gray-500">
-                                No requests found for the selected filter.
+                                No requests found.
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm text-gray-600">
-                                    <thead className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase tracking-wider text-[11px] font-bold">
+                            /* THE SCROLLBAR FIX: max-h-[400px] and custom-scrollbar applied here */
+                            <div className="overflow-x-auto overflow-y-auto max-h-[400px] relative w-full custom-scrollbar">
+                                <table className="min-w-full divide-y divide-gray-200 text-left text-sm text-gray-600">
+                                    {/* STICKY HEADER */}
+                                    <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[11px] font-bold shadow-sm">
                                         <tr>
                                             <th className="px-6 py-4">Date Requested</th>
                                             <th className="px-6 py-4">Employee Name</th>
@@ -149,9 +101,9 @@ export default function AccountingApprovals({ auth, requests }) {
                                             <th className="px-6 py-4 text-right">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredRequests.map((req) => (
-                                            {/* UPDATED: Added onClick and cursor-pointer to the row */},
+                                    <tbody className="bg-white divide-y divide-gray-100">
+                                        {/* Now mapping over requestList instead of filteredRequests */}
+                                        {requestList.map((req) => (
                                             <tr 
                                                 key={req.id} 
                                                 onClick={() => openViewModal(req)}
@@ -214,7 +166,7 @@ export default function AccountingApprovals({ auth, requests }) {
             {/* --- VIEW DETAILS MODAL --- */}
             <Modal show={isViewModalOpen} onClose={closeViewModal} maxWidth="md">
                 {selectedRequest && (
-                    <div className="p-6">
+                    <div className="p-6 max-h-[85vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b pb-4 mb-5">
                             <h2 className="text-xl font-bold text-gray-900">Request Details</h2>
                             <button onClick={closeViewModal} className="text-gray-400 hover:text-gray-600">
@@ -255,17 +207,36 @@ export default function AccountingApprovals({ auth, requests }) {
                                 </span>
                             </div>
 
-                            {/* Show Remarks if Rejected */}
+                            {/* --- THE REJECTION REMARKS SECTION (WITH PREFIX PARSING & BREAK-ALL) --- */}
                             {selectedRequest.status === 'Rejected' && selectedRequest.remarks && (
-                                <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                                    <label className="block text-xs font-bold text-red-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                        Reason for Rejection
-                                    </label>
-                                    <p className="text-sm text-red-700 whitespace-pre-wrap leading-relaxed">{selectedRequest.remarks}</p>
-                                </div>
+                                (() => {
+                                    let rejector = 'Admin';
+                                    let cleanRemarks = selectedRequest.remarks || '';
+
+                                    // Parse the prefix
+                                    if (cleanRemarks.startsWith('HR|')) {
+                                        rejector = 'HR ADMIN';
+                                        cleanRemarks = cleanRemarks.substring(3);
+                                    } else if (cleanRemarks.startsWith('ACCOUNTING|')) {
+                                        rejector = 'GENERAL ACCOUNTING';
+                                        cleanRemarks = cleanRemarks.substring(11);
+                                    }
+
+                                    return (
+                                        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <label className="block text-xs font-bold text-red-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                </svg>
+                                                Reason for Rejection (By {rejector})
+                                            </label>
+                                            {/* ADDED break-all to fix the overflow */}
+                                            <p className="text-sm text-red-700 whitespace-pre-wrap leading-relaxed break-all">
+                                                {cleanRemarks || 'No specific reason was provided.'}
+                                            </p>
+                                        </div>
+                                    );
+                                })()
                             )}
 
                         </div>
@@ -284,7 +255,7 @@ export default function AccountingApprovals({ auth, requests }) {
 
             {/* Rejection Reason Modal */}
             <Modal show={isRejectModalOpen} onClose={() => setIsRejectModalOpen(false)} maxWidth="md">
-                <div className="p-6">
+                <div className="p-6 max-h-[85vh] overflow-y-auto">
                     <div className="flex items-center justify-between border-b pb-4 mb-5">
                         <h2 className="text-xl font-bold text-gray-900">Reason for Rejection</h2>
                         <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-gray-600">
