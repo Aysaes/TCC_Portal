@@ -138,9 +138,10 @@ export default function AccountingApprovals({ auth, requests }) {
                                 No requests found for the selected filter.
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm text-gray-600">
-                                    <thead className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase tracking-wider text-[11px] font-bold">
+                            <div className="overflow-auto max-h-[calc(100vh-280px)]">
+    <table className="w-full text-left text-sm text-gray-600 relative">
+        {/* Added sticky, top-0, and z-10 to keep the header visible when scrolling */}
+        <thead className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase tracking-wider text-[11px] font-bold sticky top-0 z-10 shadow-sm">
                                         <tr>
                                             <th className="px-6 py-4">Date Requested</th>
                                             <th className="px-6 py-4">Employee Name</th>
