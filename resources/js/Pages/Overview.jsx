@@ -9,7 +9,8 @@ export default function Overview({ auth, announcements, contents }) {
     const dashboardLinks = getDashboardLinks();
     const { system } = usePage().props;
 
-    const announcementList = announcements.data || announcements || [];
+    const announcementList = announcements?.data || announcements || [];
+    const contentList = contents || [];
 
     const cardsPerPage = 3;
     const chunkedAnnouncements = [];
@@ -163,16 +164,27 @@ export default function Overview({ auth, announcements, contents }) {
         setTimeout(() => setSelectedAnnouncement(null), 300);
     };
 
-    const mission = contents.find((c) =>
-        c?.type === 'mission' ||
-        c?.slug === 'mission' ||
-        c?.title?.toLowerCase().includes('mission')
-    );
+    const isMissionContent = (c) => {
+        const title = c?.title?.toLowerCase() || '';
+        const slug = c?.slug?.toLowerCase() || '';
+        const type = c?.type?.toLowerCase() || '';
 
-    const vision = contents.find((c) =>
-        c?.type === 'vision' ||
-        c?.slug === 'vision' ||
-        c?.title?.toLowerCase().includes('vision')
+        return type === 'mission' || slug === 'mission' || title.includes('mission');
+    };
+
+    const isVisionContent = (c) => {
+        const title = c?.title?.toLowerCase() || '';
+        const slug = c?.slug?.toLowerCase() || '';
+        const type = c?.type?.toLowerCase() || '';
+
+        return type === 'vision' || slug === 'vision' || title.includes('vision');
+    };
+
+    const mission = contentList.find((c) => isMissionContent(c));
+    const vision = contentList.find((c) => isVisionContent(c));
+
+    const otherContents = contentList.filter(
+        (c) => !isMissionContent(c) && !isVisionContent(c)
     );
 
     return (
@@ -185,7 +197,7 @@ export default function Overview({ auth, announcements, contents }) {
                     <span className="mr-2">🐾</span>
                     Welcome to The Cat Clinic Purrtal, {auth.user.name}!
                 </h2>
-}
+            }
         >
             <Head title="Dashboard" />
 
@@ -224,8 +236,6 @@ export default function Overview({ auth, announcements, contents }) {
 
             <div className="py-0 sm:py-12">
                 <div className="mx-auto w-full max-w-[96rem] space-y-6 sm:px-2 lg:px-4 2xl:max-w-[112rem]">
-
-
                     <section>
                         <div className="mb-6 flex items-end justify-between">
                             <h3 className="text-lg font-bold uppercase tracking-wide text-gray-700">
@@ -405,57 +415,99 @@ export default function Overview({ auth, announcements, contents }) {
                         <h3 className="mb-6 text-lg font-bold uppercase tracking-wide text-gray-700">
                             Company Direction
                         </h3>
-                        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                            {mission && (
-                                <div className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
-                                    {mission.image_path && (
-                                        <div className="h-64 w-full bg-gray-200">
-                                            <img
-                                                src={`/storage/${mission.image_path}`}
-                                                alt="Mission"
-                                                className="h-full w-full object-cover"
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="p-8">
-                                        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
-                                            Mission
-                                        </p>
-                                        <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
-                                            {mission.title}
-                                        </h4>
-                                        <div className="prose whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
-                                            {mission.content}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
 
-                            {vision && (
-                                <div className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
-                                    {vision.image_path && (
-                                        <div className="h-64 w-full bg-gray-200">
-                                            <img
-                                                src={`/storage/${vision.image_path}`}
-                                                alt="Vision"
-                                                className="h-full w-full object-cover"
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="p-8">
-                                        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
-                                            Vision
-                                        </p>
-                                        <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
-                                            {vision.title}
-                                        </h4>
-                                        <div className="prose whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
-                                            {vision.content}
+                        {(mission || vision) && (
+                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                                {mission && (
+                                    <div className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                                        {mission.image_path && (
+                                            <div className="h-64 w-full bg-gray-200">
+                                                <img
+                                                    src={`/storage/${mission.image_path}`}
+                                                    alt="Mission"
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="p-8">
+                                            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
+                                                Mission
+                                            </p>
+                                            <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
+                                                {mission.title}
+                                            </h4>
+                                            <div className="prose whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                                                {mission.content}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+
+                                {vision && (
+                                    <div className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                                        {vision.image_path && (
+                                            <div className="h-64 w-full bg-gray-200">
+                                                <img
+                                                    src={`/storage/${vision.image_path}`}
+                                                    alt="Vision"
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="p-8">
+                                            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
+                                                Vision
+                                            </p>
+                                            <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
+                                                {vision.title}
+                                            </h4>
+                                            <div className="prose whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                                                {vision.content}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {otherContents.length > 0 && (
+                            <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+                                {otherContents.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm"
+                                    >
+                                        {item.image_path && (
+                                            <div className="h-56 w-full bg-gray-200">
+                                                <img
+                                                    src={`/storage/${item.image_path}`}
+                                                    alt={item.title}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="p-8">
+                                            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
+                                                {item.type || item.slug || 'Company Content'}
+                                            </p>
+                                            <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
+                                                {item.title}
+                                            </h4>
+                                            <div className="prose max-w-none whitespace-pre-wrap break-words break-all text-sm leading-relaxed text-gray-600">
+                                                {item.content}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {!mission && !vision && otherContents.length === 0 && (
+                            <div className="rounded-lg border border-gray-100 bg-white p-6 text-center text-gray-500 shadow-sm">
+                                No company content has been posted yet.
+                            </div>
+                        )}
                     </section>
                 </div>
             </div>
