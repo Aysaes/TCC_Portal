@@ -120,11 +120,11 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     // DEFENSIVE STRIPPING: Force string, lowercase it, and trim hidden spaces
     const normalizedRole = String(UserRole).toLowerCase().trim();
 
-    // Kurudapya merge
-    const isHRAdmin = normalizedRole === 'admin' || normalizedRole === 'hr' || userPosition === 'human resources';
+    // 🟢 FIX 1: Add 'hrbp' to the isHRAdmin check so they can see HR Admin Overview
+    const isHRAdmin = normalizedRole === 'admin' || normalizedRole === 'hr' || normalizedRole === 'hrbp' || userPosition === 'human resources';
     
-    // NEW: Check for General Accounting role
-    const isAccounting = normalizedRole === 'general accounting' || normalizedRole === 'accounting';
+    // 🟢 FIX 2: Add 'hrbp' to isAccounting check so they can see Form 2316 Approvals
+    const isAccounting = normalizedRole === 'general accounting' || normalizedRole === 'accounting' || normalizedRole === 'hrbp';
 
     // 1. Base links
     const links = [
