@@ -7,8 +7,8 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import { getAdminLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { formatAppDate } from '@/Utils/date';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Announcements({ auth, announcements = [], branches = [], priorities = [] }) {
@@ -83,8 +83,10 @@ export default function Announcements({ auth, announcements = [], branches = [],
 
     // --- ADD LOGIC ---
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const { data: addData, setData: setAddData, post: postData, processing: addProcessing, errors: addErrors, clearErrors: clearAddErrors, reset: resetAdd } = useForm({
-        title: '', author: '', content: '', priority_level_id: '', branch_ids: [], image: null,
+   const { data: addData, setData: setAddData, post: postData, processing: addProcessing, errors: addErrors, clearErrors: clearAddErrors, reset: resetAdd } = useForm({
+        title: '', author: '', content: '', priority_level_id: '', branch_ids: [], 
+        image: null,      // 🟢 The Cover Photo
+        attachment: null, // 🟢 The Downloadable File
     });
 
     const closeAddModal = () => { setIsAddModalOpen(false); clearAddErrors(); resetAdd(); };
@@ -97,7 +99,9 @@ export default function Announcements({ auth, announcements = [], branches = [],
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const { data: editData, setData: setEditData, post: updateData, processing: editProcessing, errors: editErrors, clearErrors: clearEditErrors, reset: resetEdit } = useForm({
-        _method: 'put', title: '', author: '', content: '', priority_level_id: '', branch_ids: [], image: null,
+        _method: 'put', title: '', author: '', content: '', priority_level_id: '', branch_ids: [], 
+        image: null, 
+        attachment: null,
     });
 
     const openEditModal = (item) => {
@@ -160,35 +164,52 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                         </div>
 
                                         {/* Image Placeholder */}
-                                        <div className="h-40 w-full bg-gray-100">
-                                            {item.image_path ? (
-                                                <img src={`/storage/${item.image_path}`} alt={item.title} className="h-full w-full object-cover" />
-                                            ) : (
-                                                <div className="flex h-full items-center justify-center text-gray-400 text-sm">No Attachment</div>
-                                            )}
-                                        </div>
-                                        
-                                        <div className="flex flex-1 flex-col p-5">
-                                            <h3 className="text-lg font-bold text-gray-900 pr-16">{item.title}</h3>
-                                            <p className="text-xs text-gray-500 mb-3">By {item.author} • {formatAppDate(item.created_at, system?.timezone)}</p>
-                                            
-                                            {/* Branch Tags */}
-                                            <div className="flex flex-wrap gap-1 mb-4">
-                                                {item.branches.map(branch => (
-                                                    <span key={branch.id} className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-full font-semibold">
-                                                        {branch.name}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                        <div className="h-40 w-full bg-gray-100 border-b border-gray-100">
+    {item.image_path ? (
+        <img src={`/storage/${item.image_path}`} alt={item.title} className="h-full w-full object-cover" />
+    ) : (
+        <div className="flex h-full items-center justify-center text-gray-400 text-sm">No Cover Photo</div>
+    )}
+</div>
 
-                                            <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1 whitespace-pre-line">{item.content}</p>
-                                            
-                                            <div className="flex justify-end gap-3 border-t pt-3 mt-auto">
-                                                <button onClick={() => openEditModal(item)} className="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
-                                                <button onClick={() => confirmDelete(item)} className="text-sm font-medium text-red-600 hover:text-red-800">Delete</button>
-                                            </div>
+<div className="flex flex-1 flex-col p-5">
+    <h3 className="text-lg font-bold text-gray-900 pr-16">{item.title}</h3>
+    <p className="text-xs text-gray-500 mb-3">By {item.author} • {formatAppDate(item.created_at, system?.timezone)}</p>
+    
+    {/* Branch Tags */}
+    <div className="flex flex-wrap gap-1 mb-4">
+        {item.branches.map(branch => (
+            <span key={branch.id} className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-full font-semibold">
+                {branch.name}
+            </span>
+        ))}
+    </div>
+
+    <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1 whitespace-pre-line">{item.content}</p>
+    
+    {/* 2. 🟢 Attachment Download Button */}
+    {item.attachment_path && (
+        <div className="mb-4">
+            <a 
+                href={`/storage/${item.attachment_path}`} 
+                target="_blank" 
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-md hover:bg-indigo-100 transition-colors shadow-sm"
+            >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                Download Attachment
+            </a>
+        </div>
+    )}
+
+    {/* Footer Actions */}
+    <div className="flex justify-end gap-3 border-t border-gray-100 pt-3 mt-auto">
+        <button onClick={() => openEditModal(item)} className="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+        <button onClick={() => confirmDelete(item)} className="text-sm font-medium text-red-600 hover:text-red-800">Delete</button>
+    </div>
+</div>
                                         </div>
-                                    </div>
+                        
                                 ); 
                                
                             })
@@ -261,11 +282,29 @@ export default function Announcements({ auth, announcements = [], branches = [],
                             <InputError message={addErrors.content} className="mt-2" />
                         </div>
 
-                        <div className="md:col-span-2">
-                            <InputLabel htmlFor="add_image" value="Attachment / Flyer (Optional)" />
-                            <input id="add_image" type="file" accept="image/*" className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" onChange={(e) => setAddData('image', e.target.files[0])} />
-                            <InputError message={addErrors.image} className="mt-2" />
-                        </div>
+                        <div className="md:col-span-1">
+    <InputLabel value="Cover Photo (Image)" />
+    <input 
+        type="file" 
+        accept="image/*" 
+        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
+        // NOTE: Use setAddData for the Add modal, and setEditData for the Edit modal!
+        onChange={(e) => setAddData('image', e.target.files[0])} 
+    />
+    <InputError message={addErrors.image} className="mt-2" />
+</div>
+
+<div className="md:col-span-1">
+    <InputLabel value="File Attachment (PDF, Excel, Word)" />
+    <input 
+        type="file" 
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
+        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-green-50 file:text-green-700 hover:file:bg-green-100" 
+        // NOTE: Use setAddData for the Add modal, and setEditData for the Edit modal!
+        onChange={(e) => setAddData('attachment', e.target.files[0])} 
+    />
+    <InputError message={addErrors.attachment} className="mt-2" />
+</div>
                     </div>
 
                     <div className="mt-6 flex justify-end">
@@ -335,10 +374,29 @@ export default function Announcements({ auth, announcements = [], branches = [],
                             <textarea id="edit_content" rows="4" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value={editData.content} onChange={(e) => setEditData('content', e.target.value)} required />
                         </div>
 
-                        <div className="md:col-span-2">
-                            <InputLabel htmlFor="edit_image" value="Replace Attachment (Optional)" />
-                            <input id="edit_image" type="file" accept="image/*" className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" onChange={(e) => setEditData('image', e.target.files[0])} />
-                        </div>
+                       <div className="md:col-span-1">
+    <InputLabel value="Cover Photo (Image)" />
+    <input 
+        type="file" 
+        accept="image/*" 
+        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
+        // NOTE: Use setAddData for the Add modal, and setEditData for the Edit modal!
+        onChange={(e) => setEditData('image', e.target.files[0])} 
+    />
+    <InputError message={addErrors.image} className="mt-2" />
+</div>
+
+<div className="md:col-span-1">
+    <InputLabel value="File Attachment (PDF, Excel, Word)" />
+    <input 
+        type="file" 
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
+        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-green-50 file:text-green-700 hover:file:bg-green-100" 
+        // NOTE: Use setAddData for the Add modal, and setEditData for the Edit modal!
+        onChange={(e) => setEditData('attachment', e.target.files[0])} 
+    />
+    <InputError message={addErrors.attachment} className="mt-2" />
+</div>
                     </div>
 
                     <div className="mt-6 flex justify-end">

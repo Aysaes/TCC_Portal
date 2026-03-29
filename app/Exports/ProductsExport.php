@@ -48,6 +48,7 @@ class ProductsExport implements FromQuery, WithHeadings, WithMapping, ShouldAuto
             'Supplier Name',
             'Product Name',
             'Details / Description',
+            'Unit of Measurement',
             'Price (PHP)',
             'Date Added'
         ];
@@ -60,6 +61,7 @@ class ProductsExport implements FromQuery, WithHeadings, WithMapping, ShouldAuto
             $product->supplier->name ?? 'Unknown',
             $product->name,
             $product->details,
+            $product->unit,
             $product->price,
             $product->created_at->format('Y-m-d H:i:s'),
         ];
