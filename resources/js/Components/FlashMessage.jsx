@@ -27,8 +27,15 @@ export default function FlashMessage() {
             const timer = setTimeout(() => {
                 setVisible(false);
             }, 3000);
-            return () => clearTimeout(timer);
         }
+        const handleCustomToast = (e) => {
+            setToast({ message: e.detail.message, type: e.detail.type });
+            setVisible(true);
+            setTimeout(() => setVisible(false), 3000);
+        };
+        window.addEventListener('flash-toast', handleCustomToast);
+
+        return () => window.removeEventListener('flash-toast', handleCustomToast);
          }, [flash.success, flash.error]);
 
          return (

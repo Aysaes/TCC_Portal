@@ -13,6 +13,7 @@ class Product extends Model
         'supplier_id',
         'name',
         'details',
+        'unit',
         'price',
     ];
 

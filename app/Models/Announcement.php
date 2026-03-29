@@ -13,6 +13,7 @@ class Announcement extends Model
         'author',
         'content',
         'priority_level_id',
+        'attachment_path',
         'image_path',
     ];
 

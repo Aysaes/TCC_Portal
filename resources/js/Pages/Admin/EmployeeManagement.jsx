@@ -16,12 +16,46 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
     const adminLinks = getAdminLinks();
 
+    // Helper to manually trigger the global toast
+    const triggerToast = (message, type = 'success') => {
+        window.dispatchEvent(new CustomEvent('flash-toast', { detail: { message, type } }));
+    };
+
     // Global Confirm Modal
     const [confirmDialog, setConfirmDialog] = useState({ 
         isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
     });
 
     const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false,});
+
+    // ==========================================
+    // FILTER STATE & LOGIC
+    // ==========================================
+    const [filterSearch, setFilterSearch] = useState('');
+    const [filterDepartment, setFilterDepartment] = useState('');
+    const [filterBranch, setFilterBranch] = useState('');
+
+    // 1. Automatically extract unique Departments and Branches from the users array for the dropdowns
+    const uniqueDepartments = [...new Set(users.map(u => u.department?.name).filter(Boolean))].sort();
+    const uniqueBranches = [...new Set(users.flatMap(u => u.branches?.map(b => b.name) || []).filter(Boolean))].sort();
+
+    // 2. The Live Filter Math
+    const filteredUsers = users.filter(employee => {
+        // Search matches name or email
+        const matchesSearch = filterSearch === '' || 
+            employee.name.toLowerCase().includes(filterSearch.toLowerCase()) ||
+            employee.email.toLowerCase().includes(filterSearch.toLowerCase());
+            
+        // Department matches exactly
+        const matchesDept = filterDepartment === '' || 
+            employee.department?.name === filterDepartment;
+            
+        // Branch matches if the employee is assigned to it
+        const matchesBranch = filterBranch === '' || 
+            (employee.branches && employee.branches.some(b => b.name === filterBranch));
+
+        return matchesSearch && matchesDept && matchesBranch;
+    });
 
     // ==========================================
     // For Edit Departments
@@ -341,6 +375,43 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         });
     };
 
+    const { data: importData, setData: setImportData, post: postImport, processing: importProcessing, errors: importErrors, reset: resetImport } = useForm({
+    import_file: null,
+});
+
+const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        
+        if (file) {
+            // 🟢 Trigger your Global Confirm Modal instead of the browser alert
+            setConfirmDialog({
+                isOpen: true,
+                title: 'Confirm Batch Import',
+                message: `Are you sure you want to import employees from "${file.name}"? Make sure you used the official template to prevent errors.`,
+                confirmText: 'Import Employees',
+                confirmColor: 'bg-green-600 hover:bg-green-700',
+                onConfirm: () => {
+                    // 1. Close the modal visually right away
+                    closeConfirmModal();
+                    
+                    // 2. Execute the file upload via Inertia
+                    router.post(route('admin.employees.import'), {
+                        import_file: file
+                    }, {
+                        preserveScroll: true,
+                        forceFormData: true,
+                        onSuccess: () => {
+                            resetImport();
+                            e.target.value = null; // Clear input so the same file can be uploaded again if needed
+                        },
+                        onError: () => {
+                            e.target.value = null; // Clear on error so they aren't locked out of retrying
+                        }
+                    });
+                }
+            });
+        }
+    };
     return (
         <SidebarLayout
             activeModule="Admin"
@@ -351,109 +422,199 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                 </h2>
             }
         >
-            <Head title="Employee Management" />
+           <Head title="Employee Management" />
 
-            <div className="py-8">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col h-[calc(100vh-240px)] overflow-hidden">
+                
+              {/* 2. 🟢 TOP CONTROLS & FILTERS: flex-none so it doesn't shrink */}
+                <div className="flex-none mb-4 space-y-4">
                     
-                    <div className="mb-4 flex gap-4">
-                        <button className="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700" onClick={() =>setUserModalOpen(true)}>
-                            + Add Users
-                        </button>
-                        <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-gray-50" onClick={() => setPositionModalOpen(true)}>
-                            + Add Position
-                        </button>
-                        <button className="rounded-md border border-gray-300 bg-yellow-500 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-yellow-600" onClick={() => setBranchModalOpen(true)}>
-                            + Add Branch
-                        </button>
-                        <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-gray-50" onClick={() => setDepartmentModalOpen(true)}>
-                            Edit Departments
-                        </button>
-                        <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 hover:bg-gray-50" onClick={() => setRoleModalOpen(true)}>
-                            Edit Roles
-                        </button>
+                    {/* 🟢 FIXED: Split buttons into Left (Add/Edit) and Right (Excel Actions) */}
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                        
+                        {/* Left Side: Entity Management */}
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <button className="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white shadow-sm hover:bg-gray-700 transition flex-shrink-0" onClick={() => setUserModalOpen(true)}>
+                                + Add Users
+                            </button>
+                            <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm hover:bg-gray-50 transition flex-shrink-0" onClick={() => setPositionModalOpen(true)}>
+                                + Add Position
+                            </button>
+                            <button className="rounded-md border border-gray-300 bg-yellow-500 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white shadow-sm hover:bg-yellow-600 transition flex-shrink-0" onClick={() => setBranchModalOpen(true)}>
+                                + Add Branch
+                            </button>
+                            <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm hover:bg-gray-50 transition flex-shrink-0" onClick={() => setDepartmentModalOpen(true)}>
+                                Edit Departments
+                            </button>
+                            <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm hover:bg-gray-50 transition flex-shrink-0" onClick={() => setRoleModalOpen(true)}>
+                                Edit Roles
+                            </button>
+                        </div>
+
+                        {/* Right Side: Data Import/Export */}
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:justify-end">
+                            <a 
+                                href={route('admin.employees.export', { 
+                                    search: filterSearch, 
+                                    department: filterDepartment, 
+                                    branch: filterBranch 
+                                })} onClick={() => triggerToast('Preparing export. Download will start shortly...', 'success')}
+                                className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-bold uppercase tracking-widest text-indigo-700 shadow-sm hover:bg-indigo-100 transition flex-shrink-0"
+                            >
+                                📥 Export
+                            </a>
+
+                            <a 
+                                href={route('admin.employees.template')}  onClick={() => triggerToast('Downloading Excel template...', 'success')}
+                                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm hover:bg-gray-50 transition flex-shrink-0"
+                            >
+                                📄 Template
+                            </a>
+
+                            <div className="relative inline-block flex-shrink-0">
+                                <input 
+                                    type="file" 
+                                    id="excel-upload-emp" 
+                                    className="hidden" 
+                                    accept=".xlsx, .xls, .csv"
+                                    onChange={handleFileUpload}
+                                />
+                                <button 
+                                    onClick={() => document.getElementById('excel-upload-emp').click()}
+                                    disabled={importProcessing}
+                                    className="inline-flex items-center rounded-md border border-green-200 bg-green-50 px-4 py-2 text-xs font-bold uppercase tracking-widest text-green-700 shadow-sm hover:bg-green-100 transition"
+                                >
+                                    {importProcessing ? 'Importing...' : '📁 Batch Import'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="bg-white shadow-sm sm:rounded-lg pb-32">
-                        <div className="overflow-visible">
-                            <table className="w-full whitespace-nowrap text-left text-sm text-gray-500">
-                                <thead className="bg-gray-50 text-xs uppercase text-gray-700">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3">Name</th>
-                                        <th scope="col" className="px-6 py-3">Department</th>
-                                        <th scope="col" className="px-6 py-3">Position</th>
-                                        <th scope="col" className="px-6 py-3">Branch</th>
-                                        <th scope="col" className="px-6 py-3">Is Rotating</th>
-                                        <th scope="col" className="px-6 py-3 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {users.map((employee) => (
-                                        <tr key={employee.id} className="border-b bg-white hover:bg-gray-50">
-                                            <td className="px-6 py-4 font-medium text-gray-900">
+                    {/* 🟢 NEW: Filter Bar */}
+                    <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        
+                        {/* Search Input */}
+                        <div className="flex-1 relative">
+                            <input
+                                type="text"
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-8"
+                                placeholder="Search by name or email..."
+                                value={filterSearch}
+                                onChange={(e) => setFilterSearch(e.target.value)}
+                            />
+                            {filterSearch && (
+                                <button type="button" className="absolute right-2 top-2 text-gray-400 hover:text-gray-600 font-bold" onClick={() => setFilterSearch('')}>
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Department Dropdown */}
+                        <select 
+                            className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            value={filterDepartment}
+                            onChange={(e) => setFilterDepartment(e.target.value)}
+                        >
+                            <option value="">All Departments</option>
+                            {uniqueDepartments.map(dept => (
+                                <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                        </select>
+
+                        {/* Branch Dropdown */}
+                        <select 
+                            className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            value={filterBranch}
+                            onChange={(e) => setFilterBranch(e.target.value)}
+                        >
+                            <option value="">All Branches</option>
+                            {uniqueBranches.map(branch => (
+                                <option key={branch} value={branch}>{branch}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {/* 3. 🟢 TABLE WRAPPER: flex-1 to fill space, min-h-0 to contain scrollbar */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 min-h-0 flex flex-col overflow-hidden">
+                    <div className="overflow-x-auto overflow-y-auto flex-1 relative">
+                        <table className="min-w-full divide-y divide-gray-200 text-left text-sm text-gray-500">
+                            
+                            {/* 4. 🟢 STICKY HEADER: Locked to top, solid background */}
+                            <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200 shadow-sm text-xs uppercase text-gray-700">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Name</th>
+                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Department</th>
+                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Position</th>
+                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Branch</th>
+                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Is Rotating</th>
+                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider text-center w-20">Action</th>
+                                </tr>
+                            </thead>
+                            
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {filteredUsers.length === 0 ? (
+                                    <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-500 font-medium">No employees found.</td></tr>
+                                ) : (
+                                    filteredUsers.map((employee) => (
+                                        <tr key={employee.id} className="border-b bg-white hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                                 {employee.name}
-                                                <div className="text-xs text-gray-400">{employee.email}</div>
+                                                <div className="text-xs text-gray-500 mt-0.5">{employee.email}</div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                {employee.department?.name || <span className="text-gray-300 italic">Unassigned</span>}
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {employee.department?.name ? <span className="text-gray-900">{employee.department.name}</span> : <span className="text-gray-400 italic">Unassigned</span>}
                                             </td>
-                                            <td className="px-6 py-4">
-                                                {employee.position?.name || <span className="text-gray-300 italic">Unassigned</span>}
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {employee.position?.name ? <span className="text-gray-900 font-medium">{employee.position.name}</span> : <span className="text-gray-400 italic">Unassigned</span>}
                                             </td>
-                                            <td className="px-6 py-4">
-                                            {employee.branches && employee.branches.length > 0 ? (
-                                            <div className="flex flex-wrap gap-1">
-                                                 {employee.branches.map((branch) => (
-                                                 <span key={branch.id} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1      text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                                                    {branch.name}
-                                                 </span>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {employee.branches && employee.branches.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {employee.branches.map((branch) => (
+                                                            <span key={branch.id} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                                {branch.name}
+                                                            </span>
                                                         ))}
-                                                </div>
-                                               ) : (
-                                                  <span className="text-gray-300 italic">N/A</span>
-                                                                     )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400 italic">N/A</span>
+                                                )}
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${employee.is_rotating ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${employee.is_rotating ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-gray-50 text-gray-600 ring-gray-500/10'}`}>
                                                     {employee.is_rotating ? 'Yes' : 'No'}
                                                 </span>
                                             </td>
                                             
-                                           
-                                            <td className="relative px-6 py-4 text-center">
+                                            <td className="px-6 py-4 whitespace-nowrap text-center relative">
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation(); 
                                                         setActiveDropdown(activeDropdown === employee.id ? null : employee.id);
                                                     }}
-                                                    className="inline-flex items-center justify-center rounded-md p-1 hover:bg-gray-200 focus:outline-none"
+                                                    className="inline-flex items-center justify-center rounded-md p-1.5 hover:bg-gray-200 focus:outline-none transition-colors"
                                                 >
                                                     <img src={settingsIcon} alt="Settings" className="h-5 w-5 opacity-70 hover:opacity-100" />
                                                 </button>
 
-                                                
                                                 {activeDropdown === employee.id && (
                                                     <div
                                                         onClick={(e) => e.stopPropagation()} 
                                                         className="absolute right-8 top-10 z-50 w-36 overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5"
                                                     >
-                                                        <Link as="button" className="block px-4 py-2 text-left text-sm text-blue-600 hover:bg-gray-100" onClick = {(e) =>{ 
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            openEditUserModal(employee)}}>
+                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-blue-600 hover:bg-gray-100 transition-colors" onClick={(e) => { 
+                                                            e.preventDefault(); e.stopPropagation(); openEditUserModal(employee); 
+                                                        }}>
                                                             Edit
                                                         </Link>
-                                                        <Link as="button" className="block px-4 py-2 text-left text-sm text-orange-600 hover:bg-gray-100" onClick = {(e)=> {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            confirmDeviceReset(employee);
+                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-orange-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
+                                                            e.preventDefault(); e.stopPropagation(); confirmDeviceReset(employee);
                                                         }}>
                                                             Device Reset
                                                         </Link>
-                                                        <Link  as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100" onClick = {(e)=> {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            confirmDeleteUser(employee);
+                                                        <Link as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
+                                                            e.preventDefault(); e.stopPropagation(); confirmDeleteUser(employee);
                                                         }}>
                                                             Delete
                                                         </Link>
@@ -461,12 +622,11 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                 )}
                                             </td>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
-
                 </div>
             </div>
 

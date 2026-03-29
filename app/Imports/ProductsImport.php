@@ -11,26 +11,27 @@ class ProductsImport implements ToModel, WithHeadingRow
 {
     public function model(array $row)
     {
-        // 1. Skip empty rows
-        if (!isset($row['product_name']) || !isset($row['price'])) {
-            return null;
-        }
-
-        // 2. Find the supplier by the name provided in the Excel file
+        // 1. Find the supplier by name (assuming your current logic looks like this)
         $supplier = Supplier::where('name', trim($row['supplier_name']))->first();
 
-        // 3. If the supplier doesn't exist, skip this row 
-        // (You can also throw an exception here if you want it to halt completely)
+        // Skip rows where the supplier doesn't exist in the database
         if (!$supplier) {
             return null; 
         }
 
-        // 4. Create the product
-        return new Product([
-            'supplier_id' => $supplier->id,
-            'name'        => $row['product_name'],
-            'details'     => $row['details'] ?? null,
-            'price'       => $row['price'],
-        ]);
+        // 2. Create or Update the product
+        return Product::updateOrCreate(
+            [
+                'name' => trim($row['product_name']),
+                'supplier_id' => $supplier->id,
+            ],
+            [
+                // 🟢 ADD THIS LINE: Reads the unit column, trims spaces, and forces UPPERCASE
+                'unit' => isset($row['unit']) ? strtoupper(trim($row['unit'])) : null,
+                
+                'details' => isset($row['details']) ? trim($row['details']) : null,
+                'price' => isset($row['price']) ? (float) $row['price'] : 0,
+            ]
+        );
     }
 }

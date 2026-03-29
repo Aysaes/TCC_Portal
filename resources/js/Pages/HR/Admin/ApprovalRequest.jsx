@@ -1,6 +1,6 @@
 import { getHRLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 import ConfirmModal from '@/Components/ConfirmModal';
@@ -15,11 +15,20 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
     
     // --- STATE MANAGEMENT ---
     const exactUserRole = userRole; 
-    const roleLower = String(userRole).toLowerCase();
+    // 1. Force lowercase and remove any hidden spaces
+    const roleLower = String(userRole).toLowerCase().trim();
+    
     const isAdmin = roleLower === 'admin';
-    const isRequesterOnly = ['tl', 'marketing manager'].includes(roleLower);
+    
+    // 2. 🟢 BULLETPROOF REQUESTER CHECK 🟢
+    // Checks for "tl", "team leader", and "marketing manager"
+    const isRequesterOnly = roleLower.includes('tl') || 
+                            roleLower.includes('team leader') || 
+                            roleLower === 'marketing manager';
+
     const hrLinks = getHRLinks(auth.user.role?.name || 'Employee', auth);
-    // 2. DYNAMIC DEFAULT TAB
+    
+    // 3. Set the default tab correctly
     const [activeTab, setActiveTab] = useState((isRequesterOnly && !isAdmin) ? 'in-progress' : 'action-required');
     
     // Modal State

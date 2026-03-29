@@ -1,9 +1,9 @@
-import SidebarLayout from '@/Layouts/SidebarLayout';
-import { getDashboardLinks } from '@/Config/navigation';
-import { Head, usePage } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
-import { useState, useRef } from 'react';
+import { getDashboardLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
 import { formatAppDate } from '@/Utils/date';
+import { Head, usePage } from '@inertiajs/react';
+import { useRef, useState } from 'react';
 
 export default function Dashboard({ auth, announcements }) {
     const dashboardLinks = getDashboardLinks();
@@ -162,6 +162,11 @@ export default function Dashboard({ auth, announcements }) {
                                                             </span>
                                                         </div>
 
+                                                        {item.attachment_path && (
+                                                            <div className="absolute left-3 top-3 z-20">
+                                                            <span className="flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-gray-70 shadow-sm backdrop-blur-md"><svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg> Has File</span>
+                                                            </div>)}
+
                                                         <div className="h-44 w-full shrink-0 bg-gray-200 relative">
                                                             {item.image_path ? (
                                                                 <img src={`/storage/${item.image_path}`} alt={item.title} className="h-full w-full object-cover" />
@@ -254,6 +259,23 @@ export default function Dashboard({ auth, announcements }) {
                             <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed pb-20">
                                 {selectedAnnouncement.content}
                             </div>
+
+                            {selectedAnnouncement.attachment_path && (
+                                <div className="mt-2 mb-10 border-t border-gray-100 pt-6">
+                                    <h4 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Attached File</h4>
+                                    <a 
+                                        href={`/storage/${selectedAnnouncement.attachment_path}`} 
+                                        target="_blank" 
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-2 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-4 py-3 rounded-lg hover:bg-indigo-100 hover:text-indigo-800 transition-colors shadow-sm w-full sm:w-auto"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                        </svg>
+                                        Download / View Document
+                                    </a>
+                                </div>
+                            )}
                             
                             {/* NEW: Floating sticky footer with a gradient fade effect */}
                             <div className="sticky bottom-0 -mx-6 -mb-6 sm:-mx-8 sm:-mb-8 px-6 pb-6 sm:px-8 sm:pb-8 pt-10 flex justify-end bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
