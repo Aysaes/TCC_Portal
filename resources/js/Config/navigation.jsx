@@ -212,9 +212,13 @@ export const getPRPOLinks = (auth) => {
             href: route('prpo.products.index'),
             active: route().current('prpo.products.index') 
         },
-        { label: 'PR/PO Request',
-            href: '#',
-            active: false, 
+        { 
+            label: 'PR/PO Request',
+            href: route('prpo.purchase-requests.create'), // Updated!
+            active: route().current('prpo.purchase-requests.create'), 
         },
+        {
+            label: 'Approval Board',
+        }
     ];
 };

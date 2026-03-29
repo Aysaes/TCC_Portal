@@ -204,6 +204,9 @@ Route::prefix('prpo')->name('prpo.')->middleware(['auth'])->group(function () {
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     Route::post('/products/batch-destroy', [ProductController::class, 'batchDestroy'])->name('products.batch-destroy');
+
+    Route::get('/purchase-request/create', [App\Http\Controllers\PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
+    Route::post('/purchase-request', [App\Http\Controllers\PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
     
 });
 
