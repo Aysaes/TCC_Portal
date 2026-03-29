@@ -211,6 +211,9 @@ Route::prefix('prpo')->name('prpo.')->middleware(['auth'])->group(function () {
     Route::get('/purchase-request/create', [App\Http\Controllers\PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
     Route::post('/purchase-request', [App\Http\Controllers\PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
     
+    // 👇 --- NEW APPROVAL BOARD ROUTES HERE --- 👇
+    Route::get('/approval-board', [App\Http\Controllers\PurchaseRequestController::class, 'approvalBoard'])->name('approval-board');
+    Route::patch('/purchase-requests/{purchaseRequest}/status', [App\Http\Controllers\PurchaseRequestController::class, 'updateStatus'])->name('purchase-requests.update-status');
 });
 
 require __DIR__.'/auth.php';

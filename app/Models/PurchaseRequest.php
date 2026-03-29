@@ -15,13 +15,11 @@ class PurchaseRequest extends Model
         'no_of_quotations', 'purpose_of_request', 'impact_if_not_procured', 'status'
     ];
 
-    // A PR has many items
     public function items()
     {
         return $this->hasMany(PurchaseRequestItem::class);
     }
 
-    // A PR belongs to the user who created it
     public function user()
     {
         return $this->belongsTo(User::class);

@@ -15,14 +15,13 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
     const PRPOLinks = getPRPOLinks(auth.user.role?.name || 'employee', auth);
 
     const { data: importData, setData: setImportData, post: postImport, processing: importProcessing, errors: importErrors, reset: resetImport } = useForm({
-    import_file: null,
-});
+        import_file: null,
+    });
 
-const handleFileUpload = (e) => {
+    const handleFileUpload = (e) => {
         const file = e.target.files[0];
         
         if (file) {
-            // 🟢 Trigger your Global Confirm Modal instead of the browser alert
             setConfirmDialog({
                 isOpen: true,
                 title: 'Confirm Batch Import',
@@ -30,10 +29,8 @@ const handleFileUpload = (e) => {
                 confirmText: 'Import File',
                 confirmColor: 'bg-green-600 hover:bg-green-700',
                 onConfirm: () => {
-                    // 1. Close the modal visually right away
                     closeConfirmModal();
                     
-                    // 2. Execute the file upload
                     router.post(route('prpo.products.import'), {
                         import_file: file
                     }, {
@@ -41,10 +38,10 @@ const handleFileUpload = (e) => {
                         forceFormData: true,
                         onSuccess: () => {
                             resetImport();
-                            e.target.value = null; // Clear the input so they can upload the same file again if needed
+                            e.target.value = null;
                         },
                         onError: () => {
-                            e.target.value = null; // Clear on error too
+                            e.target.value = null;
                         }
                     });
                 }
@@ -57,16 +54,11 @@ const handleFileUpload = (e) => {
     // ==========================================
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [activeDropdown, setActiveDropdown] = useState(null);
-
-    // Filter States
     const [filterSupplier, setFilterSupplier] = useState('');
-    
-    // 🟢 NEW: Product Searchable Dropdown States
     const [filterProductSearch, setFilterProductSearch] = useState('');
     const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState('');
 
-    // 🟢 UPDATED: Filter logic now respects BOTH Supplier and Product selections
     const filteredProducts = products.filter(product => {
         const matchesSupplier = filterSupplier ? String(product.supplier_id) === String(filterSupplier) : true;
         const matchesProduct = filterProductSearch 
@@ -76,7 +68,6 @@ const handleFileUpload = (e) => {
         return matchesSupplier && matchesProduct;
     });
 
-    // 🟢 NEW: The list of products that appear inside the custom typing dropdown
     const searchableProducts = products.filter(p => 
         p.name.toLowerCase().includes(filterProductSearch.toLowerCase())
     );
@@ -84,11 +75,9 @@ const handleFileUpload = (e) => {
     const isBatchSelection = selectedProducts.length > 0;
     const isAllSelected = filteredProducts.length > 0 && selectedProducts.length === filteredProducts.length;
 
-    // Close dropdowns when clicking outside
     useEffect(() => {
         const closeDropdowns = () => {
             setActiveDropdown(null);
-            // Close product search dropdown if clicked outside
             setTimeout(() => setIsProductDropdownOpen(false), 200); 
         };
         document.addEventListener('click', closeDropdowns);
@@ -99,7 +88,7 @@ const handleFileUpload = (e) => {
     const handleSelectOne = (id) => setSelectedProducts(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]);
 
     // ==========================================
-    // 2. GLOBAL CONFIRM MODAL (For all Deletes)
+    // 2. GLOBAL CONFIRM MODAL
     // ==========================================
     const [confirmDialog, setConfirmDialog] = useState({ 
         isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
@@ -184,7 +173,6 @@ const handleFileUpload = (e) => {
         } else {
             setEditingProduct(null);
             resetProd();
-            // Optional: Auto-select supplier if currently filtered
             if (filterSupplier) setProdData('supplier_id', filterSupplier);
         }
         setProductModalOpen(true);
@@ -249,10 +237,9 @@ const handleFileUpload = (e) => {
     };
 
     return (
-        <SidebarLayout user={auth.user} activeModule="PR/PO" sidebarLinks={PRPOLinks}>
+        <SidebarLayout user={auth.user} activeModule="PR/PO Module" sidebarLinks={PRPOLinks}>
             <Head title="Products & Suppliers" />
             
-
            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col h-[calc(100vh-140px)] overflow-hidden">
                 <div className="flex-none">
                 
@@ -265,42 +252,44 @@ const handleFileUpload = (e) => {
                     <div className="flex flex-wrap gap-3">
                         <SecondaryButton onClick={() => setSupplierModalOpen(true)}>Manage Suppliers</SecondaryButton>
 
-                    <a 
-                     href={route('prpo.products.import-template')}
-                     className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 transition ease-in-out duration-150" >
-                        📄 Download Template
-                    </a>
+                        <a 
+                            href={route('prpo.products.import-template')}
+                            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 transition ease-in-out duration-150" 
+                        >
+                            📄 Download Template
+                        </a>
 
                         <div className="relative">
                             <input 
-                            type="file" 
-                            id="excel-upload" 
-                            className="hidden" 
-                            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                            onChange={handleFileUpload}/>
+                                type="file" 
+                                id="excel-upload" 
+                                className="hidden" 
+                                accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                                onChange={handleFileUpload}
+                            />
                             
-                            <SecondaryButton onClick={() => document.getElementById('excel-upload').click()}disabled={importProcessing} className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
+                            <SecondaryButton onClick={() => document.getElementById('excel-upload').click()} disabled={importProcessing} className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
                                 {importProcessing ? 'Importing...' : '📁 Batch Import'}
                             </SecondaryButton>
                         </div>
 
-                       <a 
-    href={route('prpo.products.export', { 
-        supplier_id: filterSupplier, 
-        search: filterProductSearch 
-    })}
-    className="inline-flex items-center px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-md font-bold text-xs text-indigo-700 uppercase tracking-widest shadow-sm hover:bg-indigo-100 transition ease-in-out duration-150"
->
-    📥 Export Current View
-</a>
+                        <a 
+                            href={route('prpo.products.export', { 
+                                supplier_id: filterSupplier, 
+                                search: filterProductSearch 
+                            })}
+                            className="inline-flex items-center px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-md font-bold text-xs text-indigo-700 uppercase tracking-widest shadow-sm hover:bg-indigo-100 transition ease-in-out duration-150"
+                        >
+                            📥 Export Current View
+                        </a>
 
                         <PrimaryButton onClick={() => openProductModal(null)}>+ Add Product</PrimaryButton>
 
                         {importErrors.import_file && (
-    <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded w-full">
-        {importErrors.import_file}
-    </div>
-)}
+                            <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded w-full">
+                                {importErrors.import_file}
+                            </div>
+                        )}
                     </div>
                 </div>
                 
@@ -318,57 +307,55 @@ const handleFileUpload = (e) => {
                             {suppliers.map(sup => <option key={`filter-${sup.id}`} value={sup.id}>{sup.name}</option>)}
                         </select>
                     </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto relative" onClick={(e) => e.stopPropagation()}>
-                            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Product:</label>
-                            <div className="relative w-full sm:w-64">
-                               <input
-            type="text"
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-8"
-            placeholder="Search by name..."
-            value={filterProductSearch}
-            onChange={(e) => {
-                setFilterProductSearch(e.target.value);
-                setSelectedProducts([]); // Instantly clear checkboxes when search changes
-            }}
-        />
-        {/* 'X' Clear Button */}
-        {filterProductSearch && (
-            <button 
-                type="button"
-                className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600 font-bold"
-                onClick={() => { 
-                    setFilterProductSearch(''); 
-                    setSelectedProducts([]); 
-                }}
-            >
-                ✕
-            </button>
-        )}
+                    <div className="flex items-center gap-2 w-full sm:w-auto relative" onClick={(e) => e.stopPropagation()}>
+                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Product:</label>
+                        <div className="relative w-full sm:w-64">
+                            <input
+                                type="text"
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-8"
+                                placeholder="Search by name..."
+                                value={filterProductSearch}
+                                onChange={(e) => {
+                                    setFilterProductSearch(e.target.value);
+                                    setSelectedProducts([]);
+                                }}
+                            />
+                            {filterProductSearch && (
+                                <button 
+                                    type="button"
+                                    className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600 font-bold"
+                                    onClick={() => { 
+                                        setFilterProductSearch(''); 
+                                        setSelectedProducts([]); 
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            )}
 
-                                {/* Floating Dropdown Menu */}
-                                {isProductDropdownOpen && (
-                                    <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                                        {searchableProducts.length === 0 ? (
-                                            <li className="relative cursor-default select-none py-2 px-4 text-gray-500">No products found.</li>
-                                        ) : (
-                                            searchableProducts.map(product => (
-                                                <li
-                                                    key={`search-${product.id}`}
-                                                    className="relative cursor-pointer select-none py-2 px-4 text-gray-900 hover:bg-indigo-600 hover:text-white transition-colors"
-                                                    onClick={() => {
-                                                        setSelectedProductId(product.id);
-                                                        setFilterProductSearch(product.name);
-                                                        setIsProductDropdownOpen(false);
-                                                    }}
-                                                >
-                                                    {product.name}
-                                                </li>
-                                            ))
-                                        )}
-                                    </ul>
-                                )}
-                            </div>
+                            {isProductDropdownOpen && (
+                                <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                                    {searchableProducts.length === 0 ? (
+                                        <li className="relative cursor-default select-none py-2 px-4 text-gray-500">No products found.</li>
+                                    ) : (
+                                        searchableProducts.map(product => (
+                                            <li
+                                                key={`search-${product.id}`}
+                                                className="relative cursor-pointer select-none py-2 px-4 text-gray-900 hover:bg-indigo-600 hover:text-white transition-colors"
+                                                onClick={() => {
+                                                    setSelectedProductId(product.id);
+                                                    setFilterProductSearch(product.name);
+                                                    setIsProductDropdownOpen(false);
+                                                }}
+                                            >
+                                                {product.name}
+                                            </li>
+                                        ))
+                                    )}
+                                </ul>
+                            )}
                         </div>
+                    </div>
                     <div className="w-full sm:w-auto flex justify-end min-h-[38px]">
                         {isBatchSelection && (
                             <button onClick={confirmBatchDelete} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-md shadow-sm transition-colors">
@@ -399,7 +386,7 @@ const handleFileUpload = (e) => {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredProducts.length === 0 ? (
-                                    <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-500 font-medium">No products found.</td></tr>
+                                    <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-500 font-medium">No products found.</td></tr>
                                 ) : (
                                     filteredProducts.map((product) => (
                                         <tr key={product.id} className={`hover:bg-gray-50 ${selectedProducts.includes(product.id) ? 'bg-indigo-50/30' : ''}`}>
@@ -437,16 +424,11 @@ const handleFileUpload = (e) => {
                 </div>
             </div>
 
-            {/* ========================================== */}
-            {/* MODALS SECTION */}
-            {/* ========================================== */}
-
             {/* 1. MANAGE SUPPLIERS MODAL */}
             <Modal show={isSupplierModalOpen} onClose={closeSupplierModal}>
                 <div className="p-6">
                     <h2 className="text-lg font-medium text-gray-900 mb-4">Manage Suppliers</h2>
                     
-                    {/* Add/Edit Form */}
                     <form onSubmit={submitSupplier} className="mb-6 flex items-end gap-3 rounded-md bg-gray-50 p-4 border border-gray-100">
                         <div className="flex-grow">
                             <InputLabel htmlFor="sup_name" value={editingSupplier ? "Update Supplier Name" : "New Supplier Name"} />
@@ -461,7 +443,6 @@ const handleFileUpload = (e) => {
                         </PrimaryButton>
                     </form>
 
-                    {/* Suppliers List */}
                     <h3 className="text-sm font-semibold text-gray-700 mb-2">Existing Suppliers</h3>
                     <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
                         <ul className="divide-y divide-gray-200">
@@ -482,7 +463,6 @@ const handleFileUpload = (e) => {
                         <SecondaryButton onClick={closeSupplierModal}>Close</SecondaryButton>
                     </div>
                 </div>
-
             </Modal>
 
             {/* 2. ADD/EDIT PRODUCT MODAL */}
@@ -527,20 +507,18 @@ const handleFileUpload = (e) => {
                             <InputError message={prodErrors.details} className="mt-2" />
                         </div>
 
-                        <div className="mb-4">
-                            <label htmlFor="unit" className="block text-sm font-medium text-gray-700">
-                                Unit of Measurement
-                            </label>
-                           <input
+                        <div>
+                            <InputLabel htmlFor="unit" value="Unit of Measurement" />
+                            <input
                                 type="text"
                                 id="unit"
-                                name="unit"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                 placeholder="e.g., PCS, ML, BOX, KG"
                                 value={prodData.unit}
                                 onChange={(e) => setProdData('unit', e.target.value.toUpperCase())} 
                                 required
                             />
+                            <InputError message={prodErrors.unit} className="mt-2" />
                         </div>
 
                         <div>

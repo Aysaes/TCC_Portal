@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import SidebarLayout from '@/Layouts/SidebarLayout';
+import { getPRPOLinks } from '@/Config/navigation';
 
 export default function CreatePR({ auth, suppliers, products }) {
+    // Get today's date to restrict past dates in the date picker
+    const today = new Date().toISOString().split('T')[0];
+
     // Initialize the form with expanded header data and table columns
     const { data, setData, post, processing, errors } = useForm({
         branch: 'Makati Branch', 
         department: 'Inventory',
-        date_prepared: new Date().toISOString().split('T')[0],
+        date_prepared: today,
         date_needed: '',
         request_type: '',
         priority: '',
@@ -54,7 +58,7 @@ export default function CreatePR({ auth, suppliers, products }) {
             newItems[index]['total_cost'] = (qty * cost).toFixed(2);
         }
 
-        // Optional: Auto-fill Supplier if a Product is chosen and it has a linked supplier
+        // Auto-fill Supplier if a Product is chosen and it has a linked supplier
         if (field === 'product_id') {
              const selectedProduct = products.find(p => p.id.toString() === value.toString());
              if (selectedProduct && selectedProduct.supplier_id) {
@@ -70,11 +74,16 @@ export default function CreatePR({ auth, suppliers, products }) {
         post(route('prpo.purchase-requests.store'));
     };
 
+    // Generate the sidebar links for the PR/PO module
+    const sidebarLinks = getPRPOLinks(auth);
+
     return (
-        <SidebarLayout activeModule="PR/PO Module">
+        <SidebarLayout activeModule="PR/PO Module" sidebarLinks={sidebarLinks}>
+            {/* Pass the generated links to the layout so the sidebar populates */}
             <Head title="Create Purchase Request" />
 
             <div className="mx-auto max-w-7xl">
+                {/* ... rest of the code ... */}
                 <div className="mb-6 flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">Purchase Requisition Form</h2>
@@ -99,7 +108,7 @@ export default function CreatePR({ auth, suppliers, products }) {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Date Prepared</label>
-                                <input type="date" value={data.date_prepared} onChange={e => setData('date_prepared', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" readOnly />
+                                <input type="date" value={data.date_prepared} onChange={e => setData('date_prepared', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" readOnly />
                             </div>
 
                             <div>
@@ -123,7 +132,20 @@ export default function CreatePR({ auth, suppliers, products }) {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Date Needed</label>
-                                <input type="date" value={data.date_needed} onChange={e => setData('date_needed', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                                <input 
+                                    type="date" 
+                                    value={data.date_needed} 
+                                    onChange={e => setData('date_needed', e.target.value)} 
+                                    min={today} 
+                                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                                        errors.date_needed 
+                                            ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500' 
+                                            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                    }`} 
+                                />
+                                {errors.date_needed && (
+                                    <p className="mt-2 text-sm text-red-600">{errors.date_needed}</p>
+                                )}
                             </div>
 
                             <div>
@@ -136,11 +158,13 @@ export default function CreatePR({ auth, suppliers, products }) {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Budget Ref. <span className="text-red-500">*</span></label>
-                                <input type="text" value={data.budget_ref} onChange={e => setData('budget_ref', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Enter Ref..." />
+                                <input type="text" value={data.budget_ref} onChange={e => setData('budget_ref', e.target.value)} className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.budget_ref ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`} placeholder="Enter Ref..." />
+                                {errors.budget_ref && <p className="mt-2 text-sm text-red-600">{errors.budget_ref}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">No. of Quotations <span className="text-red-500">*</span></label>
-                                <input type="number" value={data.no_of_quotations} onChange={e => setData('no_of_quotations', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="0" />
+                                <input type="number" value={data.no_of_quotations} onChange={e => setData('no_of_quotations', e.target.value)} className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.no_of_quotations ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`} placeholder="0" />
+                                {errors.no_of_quotations && <p className="mt-2 text-sm text-red-600">{errors.no_of_quotations}</p>}
                             </div>
                             
                             <div className="sm:col-span-3">
@@ -163,7 +187,7 @@ export default function CreatePR({ auth, suppliers, products }) {
                             </button>
                         </div>
                         
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto pb-4">
                             <table className="min-w-full divide-y divide-gray-300 text-sm">
                                 <thead>
                                     <tr>
@@ -238,7 +262,7 @@ export default function CreatePR({ auth, suppliers, products }) {
                     </div>
 
                     <div className="flex items-center justify-end gap-x-6 px-4 py-4 sm:px-8">
-                        <button type="button" className="text-sm font-semibold leading-6 text-gray-900">Cancel</button>
+                        <button type="button" onClick={() => window.history.back()} className="text-sm font-semibold leading-6 text-gray-900 hover:text-gray-700">Cancel</button>
                         <button type="submit" disabled={processing} className="rounded-md bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                             Submit Request
                         </button>
