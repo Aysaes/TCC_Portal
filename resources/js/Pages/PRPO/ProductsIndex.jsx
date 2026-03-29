@@ -167,6 +167,7 @@ const handleFileUpload = (e) => {
         supplier_id: '',
         name: '',
         details: '',
+        unit: '',
         price: ''
     });
 
@@ -177,6 +178,7 @@ const handleFileUpload = (e) => {
                 supplier_id: product.supplier_id,
                 name: product.name,
                 details: product.details || '',
+                unit: product.unit || '',
                 price: product.price
             });
         } else {
@@ -390,6 +392,7 @@ const handleFileUpload = (e) => {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Supplier</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Product Name</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Details</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unit</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Price</th>
                                     <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-20">Actions</th>
                                 </tr>
@@ -406,6 +409,7 @@ const handleFileUpload = (e) => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{product.supplier?.name || 'Unknown'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">{product.name}</td>
                                             <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={product.details}>{product.details}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium"> {product.unit || <span className="text-gray-400 italic">N/A</span>}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">₱{parseFloat(product.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                             
                                             <td className="px-6 py-4 whitespace-nowrap text-center relative">
@@ -521,6 +525,22 @@ const handleFileUpload = (e) => {
                                 placeholder="Packaging size, usage instructions, etc."
                             />
                             <InputError message={prodErrors.details} className="mt-2" />
+                        </div>
+
+                        <div className="mb-4">
+                            <label htmlFor="unit" className="block text-sm font-medium text-gray-700">
+                                Unit of Measurement
+                            </label>
+                           <input
+                                type="text"
+                                id="unit"
+                                name="unit"
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                placeholder="e.g., PCS, ML, BOX, KG"
+                                value={prodData.unit}
+                                onChange={(e) => setProdData('unit', e.target.value.toUpperCase())} 
+                                required
+                            />
                         </div>
 
                         <div>

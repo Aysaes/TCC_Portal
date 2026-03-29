@@ -109,6 +109,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/users/{user}', [EmployeeController::class, 'destroy'])->name('.users.destroy');
     Route::delete('/departments/{department}', [EmployeeController::class, 'destroyDepartment'])->name('.departments.destroy');
     Route::delete('/roles/{role}', [EmployeeController::class, 'destroyRole'])->name('.roles.destroy');
+    Route::get('/employees/export', [EmployeeController::class, 'export'])->name('.employees.export');
+    Route::get('/employees/import-template', [EmployeeController::class, 'downloadTemplate'])->name('.employees.template');
+    Route::post('/employees/import', [EmployeeController::class, 'import'])->name('.employees.import');
     
 
 

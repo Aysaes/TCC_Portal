@@ -12,6 +12,10 @@ use App\Models\Department;
 use App\Models\Position;
 use App\Models\Branch;
 use App\Models\Role;
+use App\Exports\UsersExport;
+use App\Exports\UsersTemplateExport;
+use App\Imports\UsersImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Inertia\Inertia;
 
 
@@ -244,6 +248,35 @@ class EmployeeController extends Controller
             Log::error("Failed to delete user ID {$user->id}. Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
             
             return back()->with('error', 'Failed to delete user: ' . $e->getMessage());
+        }
+    }
+
+    public function export(Request $request)
+{
+    return Excel::download(
+        new UsersExport($request->search, $request->department, $request->branch), 
+        'employees_export_' . now()->format('Ymd_His') . '.xlsx'
+    );
+}
+
+public function downloadTemplate()
+{
+    return Excel::download(new UsersTemplateExport, 'employee_import_template.xlsx');
+}
+
+public function import(Request $request)
+    {
+        $request->validate(['import_file' => 'required|mimes:xlsx,xls,csv|max:10240']);
+        
+        try {
+            Excel::import(new UsersImport, $request->file('import_file'));
+            
+            // 🟢 Triggers your GREEN toast automatically!
+            return back()->with('success', 'Employees imported successfully.');
+            
+        } catch (\Exception $e) {
+            // 🔴 Triggers your RED toast automatically! (Changed from withErrors)
+            return back()->with('error', 'Failed to import. Please check your Excel format.');
         }
     }
 }

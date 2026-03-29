@@ -37,6 +37,7 @@ class ProductController extends Controller
             'supplier_id' => 'required|exists:suppliers,id',
             'name' => 'required|string|max:255',
             'details' => 'nullable|string',
+            'unit' => 'nullable|string|max:50',
             'price' => 'required|numeric|min:0',
         ]);
 
@@ -45,11 +46,12 @@ class ProductController extends Controller
         return back()->with('success', 'Product added successfully.');
     }
 
-    public function update(Request $request, Product $product)
+public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'name' => 'required|string|max:255',
+            'unit' => 'nullable|string|max:50', // 🟢 NEW: Added unit validation
             'details' => 'nullable|string',
             'price' => 'required|numeric|min:0',
         ]);
@@ -68,59 +70,53 @@ class ProductController extends Controller
 
     public function batchDestroy(Request $request)
     {
-        // Ensure they actually sent an array of IDs
         $request->validate([
             'ids'   => 'required|array',
             'ids.*' => 'exists:products,id',
         ]);
 
-        // Delete all products where the ID is in the provided array
         Product::whereIn('id', $request->ids)->delete();
 
         return back()->with('success', count($request->ids) . ' products deleted successfully.');
     }
 
     public function import(Request $request)
-{
-    $request->validate([
-        'import_file' => 'required|mimes:xlsx,csv,xls|max:10240', // Max 10MB
-    ]);
+    {
+        $request->validate([
+            'import_file' => 'required|mimes:xlsx,csv,xls|max:10240', // Max 10MB
+        ]);
 
-    try {
-        Excel::import(new ProductsImport, $request->file('import_file'));
-        return back()->with('success', 'Products imported successfully!');
-    } catch (\Exception $e) {
-        return back()->withErrors(['import_file' => 'Error importing file. Please check your template format.']);
+        try {
+            Excel::import(new ProductsImport, $request->file('import_file'));
+            return back()->with('success', 'Products imported successfully!');
+        } catch (\Exception $e) {
+            // 🟢 FIXED: Changed to with('error', ...) to trigger your custom red toast
+            return back()->with('error', 'Error importing file. Please check your template format.');
+        }
     }
-}
 
-public function downloadTemplate()
+    public function downloadTemplate()
     {
         return response()->streamDownload(function () {
             $file = fopen('php://output', 'w');
             
-            // 1. The Headers (Must match exactly what the Import class expects)
-            fputcsv($file, ['supplier_name', 'product_name', 'details', 'price']);
+            // 🟢 FIXED: Added 'unit' to the headers
+            fputcsv($file, ['supplier_name', 'product_name', 'unit', 'details', 'price']);
             
-            // 2. An Example Row (To guide the admin)
-            fputcsv($file, ['Example Supplier Inc.', 'Paracetamol 500mg', 'Box of 100 tablets', '150.50']);
+            // 🟢 FIXED: Added 'BOX' as the example unit
+            fputcsv($file, ['Example Supplier Inc.', 'Paracetamol 500mg', 'BOX', 'Box of 100 tablets', '150.50']);
             
             fclose($file);
         }, 'product_import_template.csv');
     }
 
+    public function export(Request $request)
+    {
+        $supplierId = $request->input('supplier_id');
+        $search = $request->input('search');
+        
+        $fileName = 'products_export_' . date('Y-m-d_H-i-s') . '.xlsx';
 
-// Add this method anywhere inside the class
-public function export(Request $request)
-{
-    // Grab the active filter from the URL
-    $supplierId = $request->input('supplier_id');
-    $search = $request->input('search');
-    
-    // Generate a clean filename with a timestamp
-    $fileName = 'products_export_' . date('Y-m-d_H-i-s') . '.xlsx';
-
-    // Download the Excel file
-    return Excel::download(new ProductsExport($supplierId, $search), $fileName);
-}
+        return Excel::download(new ProductsExport($supplierId, $search), $fileName);
+    }
 }
