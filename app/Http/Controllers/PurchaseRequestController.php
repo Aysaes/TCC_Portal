@@ -8,6 +8,7 @@ use App\Models\PurchaseRequest;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class PurchaseRequestController extends Controller
 {
@@ -65,7 +66,7 @@ class PurchaseRequestController extends Controller
             
             // Create the main header record
             $pr = PurchaseRequest::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'branch' => $validated['branch'],
                 'department' => $validated['department'],
                 'date_prepared' => $validated['date_prepared'],
@@ -96,7 +97,7 @@ class PurchaseRequestController extends Controller
     // =====================================================================
     public function approvalBoard()
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $roleName = strtolower($user->role->name ?? '');
 
         // Define which statuses each role is allowed to see
