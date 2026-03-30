@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\PurchaseRequest;
+use App\Models\Branch;
+use App\Models\Department;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,10 +21,14 @@ class PurchaseRequestController extends Controller
     {
         $suppliers = Supplier::select('id', 'name')->get();
         $products = Product::select('id', 'name', 'supplier_id', 'details')->get();
+        $branches = Branch::select('id', 'name')->get();
+        $departments = Department::select('id', 'name')->get();
 
         return Inertia::render('PRPO/CreatePR', [
             'suppliers' => $suppliers,
             'products' => $products,
+            'branches' => $branches,
+            'departments' => $departments,
         ]);
     }
 
