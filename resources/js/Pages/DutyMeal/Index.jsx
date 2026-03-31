@@ -418,7 +418,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                                  e.preventDefault();
                                                                  e.stopPropagation();
                                                                 handleRemove(p.user?.name, p.id)}}
-                                                            className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left border-t border-gray-100 mt-1"
+                                                            className="w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 text-left border-t border-gray-100 mt-1 rounded-md transition"
                                                         >
                                                             Remove from Roster
                                                         </button>

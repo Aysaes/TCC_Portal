@@ -9,7 +9,21 @@ export default function Overview({ auth, announcements, contents }) {
     const dashboardLinks = getDashboardLinks();
     const { system } = usePage().props;
 
-    const announcementList = announcements?.data || announcements || [];
+    const allAnnouncements = Array.isArray(announcements?.data)
+    ? announcements.data
+    : Array.isArray(announcements)
+        ? announcements
+        : [];
+
+    const announcementList = [...allAnnouncements]
+        .sort((a, b) => {
+            const dateA = new Date(a.created_at).getTime() || 0;
+            const dateB = new Date(b.created_at).getTime() || 0;
+            return dateB - dateA;
+        })
+        .slice(0, 6);
+
+
     const contentList = contents || [];
 
     const cardsPerPage = 3;
