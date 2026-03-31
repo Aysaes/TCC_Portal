@@ -230,6 +230,11 @@ export const getPRPOLinks = (auth) => {
             label: 'Approval Board',
             href: route('prpo.approval-board'),
             active: route().current('prpo.approval-board'),
+        },
+        {
+            label: 'PO Generation',
+            href: route('prpo.purchase-orders.index'),
+            active: route().current('prpo.purchase-orders.index'),
         }
     ];
 };

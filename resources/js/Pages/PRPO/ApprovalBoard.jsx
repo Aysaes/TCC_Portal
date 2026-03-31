@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
-import SidebarLayout from '@/Layouts/SidebarLayout';
+import TrackingStepper from '@/Components/TrackingStepper';
 import { getPRPOLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { Head, Link, router } from '@inertiajs/react'; // Removed useForm, kept router
+import { useState } from 'react';
 
-export default function ApprovalBoard({ auth, requests }) {
+export default function ApprovalBoard({ auth, requests, currentView, isApprover, canSeeAll }) {
     const sidebarLinks = getPRPOLinks(auth);
-    const { patch, processing } = useForm();
+
+    const userRole = auth.user.role?.name?.toLowerCase() || '';
+    const canManagePO = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin'].includes(userRole);
     
     // Modal State
     const [selectedPR, setSelectedPR] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // SECURITY LOGIC: Role-based approval checking
+   const canApprove = (pr) => {
+        if (['approved', 'rejected'].includes(pr.status)) return false;
+        if (['admin', 'director of corporate services and operations'].includes(userRole)) return true;
+        
+        if (pr.status === 'pending_inventory_assistant' && userRole === 'inventory assist') return true;
+        if (pr.status === 'pending_inventory_tl' && userRole === 'inventory tl') return true;
+        
+        // 🟢 UPDATED: Both Procurement roles can approve here
+        if (pr.status === 'pending_procurement' && ['procurement assist', 'procurement tl'].includes(userRole)) return true;
+        
+        return false;
+    };
 
     const formatStatus = (status) => {
         const statusMap = {
@@ -17,18 +34,30 @@ export default function ApprovalBoard({ auth, requests }) {
             'pending_inventory_tl': { label: 'Pending Inv. TL', color: 'bg-orange-100 text-orange-800' },
             'pending_procurement': { label: 'Pending Procurement', color: 'bg-blue-100 text-blue-800' },
             'approved': { label: 'Approved', color: 'bg-green-100 text-green-800' },
-            'rejected': { label: 'Rejected', color: 'bg-red-100 text-red-800' }
+            'rejected': { label: 'Rejected', color: 'bg-red-100 text-red-800' },
+            'po_generated': { label: 'PO Generated', color: 'bg-purple-100 text-purple-800' }
         };
         const mapped = statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
         return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${mapped.color}`}>{mapped.label}</span>;
     };
 
+    // ACTION FIX: Using router.patch directly to send the payload correctly
     const handleAction = (id, actionType) => {
         if (confirm(`Are you sure you want to ${actionType} this request?`)) {
-            patch(route('prpo.purchase-requests.update-status', id), {
-                data: { action: actionType },
+            router.patch(route('prpo.purchase-requests.update-status', id), 
+            { action: actionType }, // Payload data
+            {
                 preserveScroll: true,
                 onSuccess: () => setIsModalOpen(false) 
+            });
+        }
+    };
+
+    const handleGeneratePO = (id) => {
+        if (confirm('Are you sure you want to generate Purchase Orders for this approved request?')) {
+            router.post(route('prpo.purchase-requests.generate-pos', id), {}, {
+                preserveScroll: true,
+                onSuccess: () => closeModal()
             });
         }
     };
@@ -53,6 +82,36 @@ export default function ApprovalBoard({ auth, requests }) {
                         <h2 className="text-2xl font-bold text-gray-900">PR Approval Board</h2>
                         <p className="mt-1 text-sm text-gray-500">Review and manage pending purchase requests.</p>
                     </div>
+                </div>
+
+                {/* 🟢 NEW: Filter Tabs */}
+                <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
+                    <Link 
+                        href={route('prpo.approval-board', { view: 'my_requests' })} 
+                        className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${currentView === 'my_requests' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                    >
+                        My Requests
+                    </Link>
+
+                    {isApprover && (
+                        <Link 
+                            href={route('prpo.approval-board', { view: 'action_needed' })} 
+                            className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'action_needed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                        >
+                            Action Needed
+                            {/* Optional: Add a red dot if you want to make it look urgent */}
+                            {currentView !== 'action_needed'}
+                        </Link>
+                    )}
+
+                    {canSeeAll && (
+                        <Link 
+                            href={route('prpo.approval-board', { view: 'all' })} 
+                            className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${currentView === 'all' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                        >
+                            All Active PRs
+                        </Link>
+                    )}
                 </div>
 
                 {/* --- MAIN TABLE --- */}
@@ -89,18 +148,16 @@ export default function ApprovalBoard({ auth, requests }) {
                                         <td className="px-6 py-4">{formatStatus(pr.status)}</td>
                                         
                                         <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                                            {!['approved', 'rejected'].includes(pr.status) && (
+                                            {canApprove(pr) && (
                                                 <>
                                                     <button 
                                                         onClick={() => handleAction(pr.id, 'approve')}
-                                                        disabled={processing}
                                                         className="text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm transition"
                                                     >
                                                         Approve
                                                     </button>
                                                     <button 
                                                         onClick={() => handleAction(pr.id, 'reject')}
-                                                        disabled={processing}
                                                         className="text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm transition"
                                                     >
                                                         Reject
@@ -118,16 +175,13 @@ export default function ApprovalBoard({ auth, requests }) {
                 {/* --- DETAILS MODAL --- */}
                 {isModalOpen && selectedPR && (
                     <div 
-                        // FIX: Add onClick here to close modal when clicking the dark background
                         onClick={closeModal}
                         className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900 bg-opacity-50 p-4 sm:p-0"
                     >
                         <div 
-                            // FIX: Stop clicks inside the white modal box from closing it
                             onClick={(e) => e.stopPropagation()}
                             className="relative w-full max-w-5xl rounded-xl bg-white shadow-2xl transition-all"
                         >
-                            
                             {/* Modal Header */}
                             <div className="flex items-center justify-between border-b px-6 py-4">
                                 <div>
@@ -141,10 +195,8 @@ export default function ApprovalBoard({ auth, requests }) {
                                 </button>
                             </div>
 
-                            {/* Modal Body */}
+                            {/* Modal Body (RESTORED) */}
                             <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
-                                
-                                {/* Header Details Grid */}
                                 <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 rounded-lg bg-gray-50 p-4 text-sm">
                                     <div><span className="block font-semibold text-gray-900">Branch</span> {selectedPR.branch}</div>
                                     <div><span className="block font-semibold text-gray-900">Department</span> {selectedPR.department}</div>
@@ -164,7 +216,6 @@ export default function ApprovalBoard({ auth, requests }) {
                                     )}
                                 </div>
 
-                                {/* Items Table */}
                                 <h4 className="mb-2 font-bold text-gray-900 border-b pb-1">Requested Items ({selectedPR.items.length})</h4>
                                 <div className="overflow-x-auto rounded-lg border">
                                     <table className="min-w-full divide-y divide-gray-200 text-sm text-left table-fixed">
@@ -210,34 +261,47 @@ export default function ApprovalBoard({ auth, requests }) {
                                 </div>
                             </div>
 
+                            {/* 🟢 NEW: Tracker Component */}
+                             <div className="mb-8 px-4 sm:px-12">
+                                 <TrackingStepper currentStatus={selectedPR.status} type="PR" />
+                             </div>
+
                             {/* Modal Footer (Actions) */}
                             <div className="flex items-center justify-end gap-3 rounded-b-xl border-t bg-gray-50 px-6 py-4">
                                 <button onClick={closeModal} className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2">
                                     Close Window
                                 </button>
-                                {!['approved', 'rejected'].includes(selectedPR.status) && (
+                                
+                                {canApprove(selectedPR) && (
                                     <>
                                         <button 
                                             onClick={() => handleAction(selectedPR.id, 'reject')}
-                                            disabled={processing}
                                             className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
                                         >
                                             Reject Request
                                         </button>
                                         <button 
                                             onClick={() => handleAction(selectedPR.id, 'approve')}
-                                            disabled={processing}
                                             className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
                                         >
                                             Approve Request
                                         </button>
                                     </>
                                 )}
+
+                                {selectedPR.status === 'approved' && canManagePO && (
+                                    <button 
+                                        onClick={() => handleGeneratePO(selectedPR.id)}
+                                        className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 transition-all"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        Generate PO(s)
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
                 )}
-
             </div>
         </SidebarLayout>
     );

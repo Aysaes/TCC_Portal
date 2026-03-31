@@ -37,6 +37,8 @@ class PurchaseRequestController extends Controller
     // =====================================================================
     public function store(Request $request)
     {
+    
+
         // Validate the incoming data
         $validated = $request->validate([
             'branch' => 'required|string|max:255',
@@ -67,10 +69,19 @@ class PurchaseRequestController extends Controller
             'date_needed.after_or_equal' => 'The date needed cannot be a past date.',
         ]);
 
-        // Safely save using a Database Transaction
-        DB::transaction(function () use ($validated) {
+        // 1. Get exact role name, convert to lowercase for safe matching
+        $roleName = strtolower(trim(Auth::user()->role->name ?? 'employee'));
+        
+        // 2. Match exact lowercase strings from your database
+       $initialStatus = match($roleName) {
+            'inventory assist' => 'pending_inventory_tl',
+            'inventory tl' => 'pending_procurement',
+            'procurement assist', 'procurement tl', 'director of corporate services and operations' => 'approved', 
+            default => 'pending_inventory_assistant',
+        };
+
+        DB::transaction(function () use ($validated, $initialStatus) {
             
-            // Create the main header record
             $pr = PurchaseRequest::create([
                 'user_id' => Auth::id(),
                 'branch' => $validated['branch'],
@@ -84,58 +95,65 @@ class PurchaseRequestController extends Controller
                 'no_of_quotations' => $validated['no_of_quotations'],
                 'purpose_of_request' => $validated['purpose_of_request'],
                 'impact_if_not_procured' => $validated['impact_if_not_procured'],
-                'status' => 'pending_inventory_assistant', // Initial State
+                'status' => $initialStatus, // Injects the correct starting point
             ]);
 
-            // Loop through and attach all the dynamic items
             foreach ($validated['items'] as $item) {
                 $pr->items()->create($item);
             }
-            
         });
 
-        // Redirect back with a flash message
         return redirect()->route('prpo.approval-board')->with('success', 'Purchase Request submitted successfully!');
     }
-
     // =====================================================================
     // 3. APPROVAL BOARD (View Requests based on Role)
     // =====================================================================
-    public function approvalBoard()
+    public function approvalBoard(Request $request)
     {
         $user = Auth::user();
-        $roleName = strtolower($user->role->name ?? '');
+        $roleName = strtolower(trim($user->role->name ?? 'employee'));
 
-        // Define which statuses each role is allowed to see
-        $visibleStatuses = [];
-        
-        if ($roleName === 'inventory assistant') {
-            $visibleStatuses = ['pending_inventory_assistant'];
-        } elseif ($roleName === 'inventory tl') {
-            $visibleStatuses = ['pending_inventory_tl'];
-        } elseif (in_array($roleName, ['procurement', 'procurement tl'])) {
-            $visibleStatuses = ['pending_procurement'];
-        } elseif ($roleName === 'admin') {
-            // Admins see everything to oversee the process
-            $visibleStatuses = [
-                'pending_inventory_assistant', 
-                'pending_inventory_tl', 
-                'pending_procurement', 
-                'approved', 
-                'rejected'
-            ];
+        // 1. Determine User Permissions
+        $isApprover = in_array($roleName, ['inventory assist', 'inventory tl', 'procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin']);
+        $canSeeAll = in_array($roleName, ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin']);
+
+        // 2. Set Default View based on Role
+        $defaultView = $isApprover ? 'action_needed' : 'my_requests';
+        $view = $request->query('view', $defaultView);
+
+        // Fallback security if someone tries to hack the URL
+        if ($view === 'action_needed' && !$isApprover) $view = 'my_requests';
+        if ($view === 'all' && !$canSeeAll) $view = 'my_requests';
+
+        // 3. Build the Query
+        $query = PurchaseRequest::with(['user', 'items.product', 'items.supplier'])->latest();
+
+        if ($view === 'my_requests') {
+            $query->where('user_id', $user->id);
+        } 
+        elseif ($view === 'action_needed') {
+            if ($roleName === 'inventory assist') {
+                $query->where('status', 'pending_inventory_assistant');
+            } elseif ($roleName === 'inventory tl') {
+                $query->where('status', 'pending_inventory_tl');
+            } elseif (in_array($roleName, ['procurement assist', 'procurement tl'])) {
+                $query->whereIn('status', ['pending_procurement', 'approved']);
+            } elseif (in_array($roleName, ['admin', 'director of corporate services and operations'])) {
+                $query->whereIn('status', ['pending_inventory_assistant', 'pending_inventory_tl', 'pending_procurement', 'approved']);
+            }
+        } 
+        elseif ($view === 'all') {
+            $query->where('status', '!=', 'po_generated');
         }
 
-        // Fetch requests with their relationships
-       $requests = PurchaseRequest::with(['user', 'items.product', 'items.supplier'])
-            ->when(count($visibleStatuses) > 0, function ($query) use ($visibleStatuses) {
-                $query->whereIn('status', $visibleStatuses);
-            })
-            ->latest()
-            ->paginate(10);
+        // Add withQueryString() so pagination keeps the ?view= parameter!
+        $requests = $query->paginate(10)->withQueryString();
 
         return Inertia::render('PRPO/ApprovalBoard', [
             'requests' => $requests,
+            'currentView' => $view,
+            'isApprover' => $isApprover,
+            'canSeeAll' => $canSeeAll
         ]);
     }
 
@@ -152,20 +170,17 @@ class PurchaseRequestController extends Controller
         $newStatus = $currentStatus;
 
         if ($validated['action'] === 'approve') {
-            // State Machine: Move to the next step based on the current step
             if ($currentStatus === 'pending_inventory_assistant') {
                 $newStatus = 'pending_inventory_tl';
             } elseif ($currentStatus === 'pending_inventory_tl') {
                 $newStatus = 'pending_procurement';
             } elseif ($currentStatus === 'pending_procurement') {
-                $newStatus = 'approved';
+                $newStatus = 'approved'; // Ready for PO creation
             }
         } else {
-            // If rejected, it immediately goes to the rejected state
             $newStatus = 'rejected';
         }
 
-        // Update the database
         $purchaseRequest->update(['status' => $newStatus]);
 
         return back()->with('success', "Request has been {$validated['action']}d successfully.");

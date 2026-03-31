@@ -373,7 +373,7 @@ export default function SidebarLayout({ header, children, sidebarLinks = [], act
                                     </Dropdown.Link>
                                 
                                 
-                                    {(user.role?.name === 'admin') && (
+                                    {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations'].includes(user.role?.name) && (
                                         <Dropdown.Link href={route('prpo.products.index')}>
                                             PR/PO Module
                                         </Dropdown.Link>
