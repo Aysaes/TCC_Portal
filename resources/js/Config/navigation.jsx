@@ -56,8 +56,8 @@ export const getAdminLinks = () => [
     },
     {
         label: 'System Logs & Security',
-        href: '#',
-        active: false,
+        href: route('admin.logs.index'), // Updated from '#'
+        active: route().current('admin.logs.*'), // Updated from false
     },
    
    
