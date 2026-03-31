@@ -233,7 +233,7 @@ export default function OrgChartAdmin({ auth, members }) {
             sidebarLinks={adminLinks}
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Organizational Directory Management
+                    Employee Directory Management
                 </h2>
             }
         >

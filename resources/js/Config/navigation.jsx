@@ -18,7 +18,7 @@ export const getDashboardLinks = () => [
         active: route().current('dashboard.mission-vision'),
     },
     {
-        label: 'Organizational Chart', 
+        label: 'Organizational Directory', 
         href: route('dashboard.org-chart'), 
         active: route().current('dashboard.org-chart')
     },
@@ -50,7 +50,7 @@ export const getAdminLinks = () => [
         active: route().current('admin.company-content.*'),
     },
     { 
-        label: 'Organizational Chart', 
+        label: 'Organizational Directory', 
         href: route('admin.org-chart.index'), 
         active: route().current('admin.org-chart.index') 
     },
