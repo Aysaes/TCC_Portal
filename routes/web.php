@@ -5,6 +5,7 @@ use App\Models\CompanyContent;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\CompanyContentController;
+use App\Http\Controllers\Admin\SystemLogController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\CheckDutyMealAccess;
 use App\Http\Controllers\Admin\DocumentController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\HrRequestController;
 use App\Http\Controllers\HR\ManpowerRequestController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\PurchaseOrderController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -23,23 +25,23 @@ Route::get('/', function () {
     return Inertia::render('Auth/Login', []);
 });
 
-    // Keep this protective wrapper exactly as it is!
-        Route::middleware(['auth', 'verified'])->group(function () {
-        
-        // --- HR MODULE (User Requests) ---
-        Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
-        Route::post('/hr-module/request', [HrRequestController::class, 'store'])->name('hr.store');
-        
-        // --- HR MODULE (Admin Management) --- 
-        Route::get('/hr-module/admin', [HrRequestController::class, 'adminIndex'])->name('hr.admin.index');
-        Route::patch('/hr-module/admin/{hrRequest}/status', [HrRequestController::class, 'updateStatus'])->name('hr.admin.update-status');
-    
-        // --- NEW: HR MODULE (Accounting Approvals) ---
-        Route::get('/hr-module/accounting-approvals', [HrRequestController::class, 'accountingApprovals'])->name('hr.accounting.index');
-        Route::patch('/hr-module/accounting-approvals/{hrRequest}/status', [HrRequestController::class, 'updateAccountingStatus'])->name('hr.accounting.update');
+// Keep this protective wrapper exactly as it is!
+Route::middleware(['auth', 'verified'])->group(function () {
 
-        // --- OVERVIEW: Now the main landing page! ---
-        Route::get('/dashboard', function () {
+    // --- HR MODULE (User Requests) ---
+    Route::get('/hr-module', [HrRequestController::class, 'index'])->name('hr.index');
+    Route::post('/hr-module/request', [HrRequestController::class, 'store'])->name('hr.store');
+    
+    // --- HR MODULE (Admin Management) --- 
+    Route::get('/hr-module/admin', [HrRequestController::class, 'adminIndex'])->name('hr.admin.index');
+    Route::patch('/hr-module/admin/{hrRequest}/status', [HrRequestController::class, 'updateStatus'])->name('hr.admin.update-status');
+
+    // --- NEW: HR MODULE (Accounting Approvals) ---
+    Route::get('/hr-module/accounting-approvals', [HrRequestController::class, 'accountingApprovals'])->name('hr.accounting.index');
+    Route::patch('/hr-module/accounting-approvals/{hrRequest}/status', [HrRequestController::class, 'updateAccountingStatus'])->name('hr.accounting.update');
+
+    // --- OVERVIEW: Now the main landing page! ---
+    Route::get('/dashboard', function () {
         $announcements = Announcement::with(['priorityLevel', 'branches'])
                             ->latest()
                             ->get();
@@ -91,8 +93,11 @@ Route::middleware('auth')->group(function () {
     Route::patch('/staff/duty-meals/{id}/lock-in', [\App\Http\Controllers\Staff\DutyMealController::class, 'lockIn'])->name('staff.duty-meals.lock-in');
 });
 
-    Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
+Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
 
+    // ---> THIS IS THE FIXED LINE <---
+    Route::get('/logs', [SystemLogController::class, 'index'])->name('.logs.index');
+    
     Route::get('/dashboard', function(){
         return Inertia::render('Admin/AdminDashboard');
     })->name('.dashboard');
@@ -112,8 +117,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/employees/export', [EmployeeController::class, 'export'])->name('.employees.export');
     Route::get('/employees/import-template', [EmployeeController::class, 'downloadTemplate'])->name('.employees.template');
     Route::post('/employees/import', [EmployeeController::class, 'import'])->name('.employees.import');
-    
-
 
     // --- Company Content Management ---
     Route::get('/company-content', [CompanyContentController::class, 'index'])->name('.company-content.index');
@@ -141,7 +144,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
-    });
+});
 
 
 // DUTY MEAL MODULE (Admins & Custodians)
@@ -211,9 +214,14 @@ Route::prefix('prpo')->name('prpo.')->middleware(['auth'])->group(function () {
     Route::get('/purchase-request/create', [App\Http\Controllers\PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
     Route::post('/purchase-request', [App\Http\Controllers\PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
     
-    // 👇 --- NEW APPROVAL BOARD ROUTES HERE --- 👇
+    
     Route::get('/approval-board', [App\Http\Controllers\PurchaseRequestController::class, 'approvalBoard'])->name('approval-board');
     Route::patch('/purchase-requests/{purchaseRequest}/status', [App\Http\Controllers\PurchaseRequestController::class, 'updateStatus'])->name('purchase-requests.update-status');
+
+    Route::post('/purchase-requests/{purchaseRequest}/generate-pos', [PurchaseOrderController::class, 'generateFromPR'])
+    ->name('purchase-requests.generate-pos');
+    Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+    Route::put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->name('purchase-orders.update');
 });
 
 require __DIR__.'/auth.php';
