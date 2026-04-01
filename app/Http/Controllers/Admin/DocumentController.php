@@ -36,7 +36,8 @@ class DocumentController extends Controller
             'title' => 'required|string|max:255',
             'category' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:20480', // 20MB max
+            // The limit is set right here to 20480 kilobytes (20MB)
+            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:51200', 
         ]);
 
         $filePath = $request->file('file')->store('documents');
