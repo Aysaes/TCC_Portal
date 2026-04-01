@@ -19,8 +19,12 @@ class PurchaseRequestController extends Controller
     // =====================================================================
     public function create()
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $userBranches = $user->branches()->pluck('name')->toArray();
+
         $suppliers = Supplier::select('id', 'name')->get();
-        $products = Product::select('id', 'name', 'supplier_id', 'details')->get();
+        $products = Product::select('id', 'name', 'supplier_id', 'details', 'unit', 'price')->get();
         $branches = Branch::select('id', 'name')->get();
         $departments = Department::select('id', 'name')->get();
 
@@ -29,24 +33,23 @@ class PurchaseRequestController extends Controller
             'products' => $products,
             'branches' => $branches,
             'departments' => $departments,
+            'userBranches' => $userBranches,
         ]);
     }
 
     // =====================================================================
     // 2. STORE REQUEST (Save to Database)
     // =====================================================================
-    public function store(Request $request)
+   public function store(Request $request)
     {
-    
-
-        // Validate the incoming data
+        // 1. Validate the incoming data (Kept exactly as you had it)
         $validated = $request->validate([
             'branch' => 'required|string|max:255',
             'department' => 'required|string|max:255',
             'date_prepared' => 'required|date',
             'request_type' => 'nullable|string|max:255',
             'priority' => 'nullable|string|max:255',
-            'date_needed' => 'nullable|date|after_or_equal:today', // Backend check for past dates
+            'date_needed' => 'nullable|date|after_or_equal:today', 
             'budget_status' => 'nullable|string|max:255',
             'budget_ref' => 'required|string|max:255',
             'no_of_quotations' => 'required|integer|min:0',
@@ -69,21 +72,23 @@ class PurchaseRequestController extends Controller
             'date_needed.after_or_equal' => 'The date needed cannot be a past date.',
         ]);
 
-        // 1. Get exact role name, convert to lowercase for safe matching
-        $roleName = strtolower(trim(Auth::user()->role->name ?? 'employee'));
-        
-        // 2. Match exact lowercase strings from your database
-       $initialStatus = match($roleName) {
-            'inventory assist' => 'pending_inventory_tl',
-            'inventory tl' => 'pending_procurement',
-            'procurement assist', 'procurement tl', 'director of corporate services and operations' => 'approved', 
-            default => 'pending_inventory_assistant',
-        };
+        // 2. 🟢 DYNAMIC WORKFLOW ROUTING
+        $userRole = strtolower(Auth::user()->role->name ?? '');
+        $initialStatus = 'pending_inv_tl'; // Scenario 1 Default (Inventory Assistant)
 
+        if (str_contains($userRole, 'tl')) {
+            // Scenario 2: TL creates it, skips TL approval, goes straight to Ops Manager
+            $initialStatus = 'pending_ops_manager'; 
+        } elseif (str_contains($userRole, 'director') || str_contains($userRole, 'admin')) {
+            // Scenario 3: DCSO creates it, goes straight to Procurement for PO
+            $initialStatus = 'approved'; 
+        }
+
+        // 3. 🟢 Execute within a safe Database Transaction (Using your original safe code)
         DB::transaction(function () use ($validated, $initialStatus) {
             
             $pr = PurchaseRequest::create([
-                'user_id' => Auth::id(),
+                'user_id' => Auth::id(), // ✨ This safely handles the user_id!
                 'branch' => $validated['branch'],
                 'department' => $validated['department'],
                 'date_prepared' => $validated['date_prepared'],
@@ -95,7 +100,7 @@ class PurchaseRequestController extends Controller
                 'no_of_quotations' => $validated['no_of_quotations'],
                 'purpose_of_request' => $validated['purpose_of_request'],
                 'impact_if_not_procured' => $validated['impact_if_not_procured'],
-                'status' => $initialStatus, // Injects the correct starting point
+                'status' => $initialStatus, // ✨ Injects the dynamic status
             ]);
 
             foreach ($validated['items'] as $item) {
@@ -108,52 +113,58 @@ class PurchaseRequestController extends Controller
     // =====================================================================
     // 3. APPROVAL BOARD (View Requests based on Role)
     // =====================================================================
-    public function approvalBoard(Request $request)
+  public function approvalBoard(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
-        $roleName = strtolower(trim($user->role->name ?? 'employee'));
-
-        // 1. Determine User Permissions
-        $isApprover = in_array($roleName, ['inventory assist', 'inventory tl', 'procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin']);
-        $canSeeAll = in_array($roleName, ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin']);
-
-        // 2. Set Default View based on Role
-        $defaultView = $isApprover ? 'action_needed' : 'my_requests';
+        $userRole = strtolower($user->role->name ?? '');
+        $userBranches = $user->branches()->pluck('name')->toArray(); 
+        
+        $defaultView = str_contains($userRole, 'assistant') ? 'all' : 'action_needed';
         $view = $request->query('view', $defaultView);
 
-        // Fallback security if someone tries to hack the URL
-        if ($view === 'action_needed' && !$isApprover) $view = 'my_requests';
-        if ($view === 'all' && !$canSeeAll) $view = 'my_requests';
-
-        // 3. Build the Query
         $query = PurchaseRequest::with(['user', 'items.product', 'items.supplier'])->latest();
+        $isAdmin = str_contains($userRole, 'admin');
 
-        if ($view === 'my_requests') {
-            $query->where('user_id', $user->id);
-        } 
-        elseif ($view === 'action_needed') {
-            if ($roleName === 'inventory assist') {
-                $query->where('status', 'pending_inventory_assistant');
-            } elseif ($roleName === 'inventory tl') {
-                $query->where('status', 'pending_inventory_tl');
-            } elseif (in_array($roleName, ['procurement assist', 'procurement tl'])) {
-                $query->whereIn('status', ['pending_procurement', 'approved']);
-            } elseif (in_array($roleName, ['admin', 'director of corporate services and operations'])) {
-                $query->whereIn('status', ['pending_inventory_assistant', 'pending_inventory_tl', 'pending_procurement', 'approved']);
+        if ($view === 'action_needed') {
+            if ($isAdmin) {
+                $query->whereIn('status', ['pending_inv_tl', 'pending_ops_manager', 'approved']);
+            } 
+            elseif (str_contains($userRole, 'inventory tl')) {
+                $query->where('status', 'pending_inv_tl');
+                if (!empty($userBranches)) {
+                    $query->whereIn('branch', $userBranches); 
+                }
+            } 
+            elseif (str_contains($userRole, 'operations') || str_contains($userRole, 'ops manager')) {
+                $query->where('status', 'pending_ops_manager');
+                // 🟢 FIXED: Ops Managers are now strictly locked to their assigned pivot table branches
+                if (!empty($userBranches)) {
+                    $query->whereIn('branch', $userBranches); 
+                }
+            } 
+            elseif (str_contains($userRole, 'director') || str_contains($userRole, 'procurement')) {
+                $query->where('status', 'approved');
+            } 
+            else {
+                $query->whereRaw('1 = 0'); 
             }
-        } 
-        elseif ($view === 'all') {
-            $query->where('status', '!=', 'po_generated');
+        } else {
+            // "ALL / MY REQUESTS" VIEW
+            if (!$isAdmin && str_contains($userRole, 'assistant')) {
+                $query->where('user_id', $user->id);
+            } elseif (!$isAdmin && !empty($userBranches)) {
+                // 🟢 FIXED: Both TLs and Ops Managers can only see "All" requests for their branches
+                $query->whereIn('branch', $userBranches);
+            }
         }
 
-        // Add withQueryString() so pagination keeps the ?view= parameter!
-        $requests = $query->paginate(10)->withQueryString();
+        $requests = $query->paginate(15)->withQueryString();
 
         return Inertia::render('PRPO/ApprovalBoard', [
             'requests' => $requests,
             'currentView' => $view,
-            'isApprover' => $isApprover,
-            'canSeeAll' => $canSeeAll
+            'userBranches' => $userBranches, // 🟢 Passed to React for button security!
         ]);
     }
 
@@ -166,23 +177,31 @@ class PurchaseRequestController extends Controller
             'action' => 'required|in:approve,reject'
         ]);
 
-        $currentStatus = $purchaseRequest->status;
-        $newStatus = $currentStatus;
-
         if ($validated['action'] === 'approve') {
-            if ($currentStatus === 'pending_inventory_assistant') {
-                $newStatus = 'pending_inventory_tl';
-            } elseif ($currentStatus === 'pending_inventory_tl') {
-                $newStatus = 'pending_procurement';
-            } elseif ($currentStatus === 'pending_procurement') {
-                $newStatus = 'approved'; // Ready for PO creation
+            // 🟢 The New Stepper Logic
+            if ($purchaseRequest->status === 'pending_inv_tl') {
+                $purchaseRequest->status = 'pending_ops_manager';
+            } elseif ($purchaseRequest->status === 'pending_ops_manager') {
+                $purchaseRequest->status = 'approved'; // Sends to Procurement for PO!
             }
+            $message = 'Purchase request moved to the next approval stage.';
         } else {
-            $newStatus = 'rejected';
+            $purchaseRequest->status = 'rejected';
+            $message = 'Purchase request has been rejected.';
         }
 
-        $purchaseRequest->update(['status' => $newStatus]);
+        $purchaseRequest->save();
 
-        return back()->with('success', "Request has been {$validated['action']}d successfully.");
+        return back()->with('success', $message);
+    }
+
+    public function print(PurchaseRequest $purchaseRequest)
+    {
+        // Load all the necessary relationships
+        $purchaseRequest->load(['user', 'items.product', 'items.supplier']);
+
+        return Inertia::render('PRPO/PrintablePR', [
+            'pr' => $purchaseRequest
+        ]);
     }
 }

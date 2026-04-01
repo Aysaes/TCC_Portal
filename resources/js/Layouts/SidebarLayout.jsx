@@ -214,6 +214,12 @@ export default function SidebarLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         ),
+        'PO Generation': (
+        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h8l4 4v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 3v4h4" />
+        </svg>
+),
     };
 
     const renderSidebarIcon = (link) => {
@@ -396,7 +402,7 @@ export default function SidebarLayout({
                                     </Dropdown.Link>
                                 
                                 
-                                    {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations'].includes(user.role?.name) && (
+                                    {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations', 'Operations Manager'].includes(user.role?.name) && (
                                         <Dropdown.Link href={route('prpo.products.index')}>
                                             PR/PO Module
                                         </Dropdown.Link>

@@ -1,12 +1,9 @@
-
 export default function TrackingStepper({ currentStatus, type = 'PR' }) {
-    // 1. Define the workflow steps
+    // 1. Define the updated workflow steps
     const prWorkflow = [
-        { key: 'pending_inventory_assistant', label: 'Inventory Assistant' },
-        { key: 'pending_inventory_tl', label: 'Inventory TL' },
-        { key: 'pending_procurement', label: 'Procurement Review' },
-        { key: 'approved', label: 'Fully Approved' },
-        { key: 'po_generated', label: 'PO Generated' }
+        { key: 'pending_inv_tl', label: 'Inv. TL Approval' },
+        { key: 'pending_ops_manager', label: 'Ops Manager Approval' },
+        { key: 'approved', label: 'Approved (PO Ready)' }
     ];
 
     const poWorkflow = [
@@ -27,18 +24,21 @@ export default function TrackingStepper({ currentStatus, type = 'PR' }) {
                 {type === 'PR' ? 'Purchase Request Workflow' : 'Purchase Order Workflow'}
             </h4>
             
-            <div className="flex flex-wrap gap-2 text-sm font-bold text-gray-500">
+            <div className="flex flex-wrap gap-2 text-sm font-bold">
                 {workflow.map((step, index) => {
                     // Default to gray (future step or cancelled)
                     let dotColor = 'bg-gray-300'; 
+                    let textColor = 'text-gray-400';
                     
                     if (!isRejected) {
                         if (index < currentIndex) {
-                            // Past steps are solid green
+                            // Past steps (or automatically skipped steps) are solid green
                             dotColor = 'bg-green-500';
+                            textColor = 'text-gray-800';
                         } else if (index === currentIndex) {
+                            textColor = 'text-gray-900';
                             // If it's an end-state, make it solid green. Otherwise, pulsing amber.
-                            if (['approved', 'po_generated'].includes(step.key)) {
+                            if (step.key === 'approved') {
                                 dotColor = 'bg-green-500';
                             } else {
                                 dotColor = 'bg-amber-400 animate-pulse';
@@ -47,16 +47,16 @@ export default function TrackingStepper({ currentStatus, type = 'PR' }) {
                     }
 
                     return (
-                        <span key={index} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+                        <span key={index} className={`flex items-center gap-2 px-3 py-2 rounded-lg border shadow-sm transition-colors ${index === currentIndex && !isRejected ? 'bg-white border-gray-300 ring-1 ring-gray-200' : 'bg-gray-50 border-gray-200'}`}>
                             <span className={`h-3 w-3 rounded-full ${dotColor}`}></span> 
-                            {step.label}
+                            <span className={textColor}>{step.label}</span>
                         </span>
                     );
                 })}
 
                 {/* If the request was rejected/cancelled, append a red pill at the end */}
                 {isRejected && (
-                    <span className="flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-red-700">
+                    <span className="flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg border border-red-200 text-red-700 shadow-sm">
                         <span className="h-3 w-3 rounded-full bg-red-600 animate-pulse"></span> 
                         {type === 'PR' ? 'Rejected' : 'Cancelled'}
                     </span>

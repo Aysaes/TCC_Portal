@@ -1,14 +1,28 @@
+import ConfirmModal from '@/Components/ConfirmModal';
 import TrackingStepper from '@/Components/TrackingStepper';
 import { getPRPOLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, Link, router } from '@inertiajs/react'; // Removed useForm, kept router
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function ApprovalBoard({ auth, requests, currentView, isApprover, canSeeAll }) {
+export default function ApprovalBoard({ auth, requests, currentView, isApprover, canSeeAll, userBranches = [] }) {
     const sidebarLinks = getPRPOLinks(auth);
 
-    const userRole = auth.user.role?.name?.toLowerCase() || '';
+    const userRole = auth.user.role?.name?.toLowerCase().trim() || '';
+    const isAssistant = userRole.includes('assistant'); // 🟢 ADD THIS LINE
     const canManagePO = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin'].includes(userRole);
+
+    const isInvTL = userRole.includes('inventory tl') || userRole === 'admin';
+    const isOpsManager = userRole.includes('operations') || userRole.includes('ops manager') || userRole === 'admin';
+
+    // Global Confirm Modal State
+    const [confirmDialog, setConfirmDialog] = useState({ 
+        isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
+    });
+    
+    const closeConfirmModal = () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+    };
     
     // Modal State
     const [selectedPR, setSelectedPR] = useState(null);
@@ -16,50 +30,71 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
 
     // SECURITY LOGIC: Role-based approval checking
    const canApprove = (pr) => {
-        if (['approved', 'rejected'].includes(pr.status)) return false;
-        if (['admin', 'director of corporate services and operations'].includes(userRole)) return true;
+        if (!pr) return false;
         
-        if (pr.status === 'pending_inventory_assistant' && userRole === 'inventory assist') return true;
-        if (pr.status === 'pending_inventory_tl' && userRole === 'inventory tl') return true;
-        
-        // 🟢 UPDATED: Both Procurement roles can approve here
-        if (pr.status === 'pending_procurement' && ['procurement assist', 'procurement tl'].includes(userRole)) return true;
+        // Admins automatically bypass the branch check
+        const hasBranchAccess = userRole === 'admin' || userBranches.includes(pr.branch);
+
+        if (pr.status === 'pending_inv_tl' && isInvTL && hasBranchAccess) return true;
+        if (pr.status === 'pending_ops_manager' && isOpsManager && hasBranchAccess) return true;
         
         return false;
     };
 
     const formatStatus = (status) => {
         const statusMap = {
-            'pending_inventory_assistant': { label: 'Pending Inv. Assistant', color: 'bg-yellow-100 text-yellow-800' },
-            'pending_inventory_tl': { label: 'Pending Inv. TL', color: 'bg-orange-100 text-orange-800' },
-            'pending_procurement': { label: 'Pending Procurement', color: 'bg-blue-100 text-blue-800' },
-            'approved': { label: 'Approved', color: 'bg-green-100 text-green-800' },
+            'pending_inv_tl': { label: 'Pending Inv. TL', color: 'bg-yellow-100 text-yellow-800' },
+            'pending_ops_manager': { label: 'Pending Ops. Manager', color: 'bg-orange-100 text-orange-800' },
+            'approved': { label: 'PO Ready', color: 'bg-indigo-100 text-indigo-800' },
+            'po_generated': { label: 'PO Generated', color: 'bg-teal-100 text-teal-800' }, 
             'rejected': { label: 'Rejected', color: 'bg-red-100 text-red-800' },
-            'po_generated': { label: 'PO Generated', color: 'bg-purple-100 text-purple-800' }
+            'cancelled': { label: 'Cancelled', color: 'bg-gray-100 text-gray-500' } 
         };
         const mapped = statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
         return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${mapped.color}`}>{mapped.label}</span>;
     };
 
     // ACTION FIX: Using router.patch directly to send the payload correctly
-    const handleAction = (id, actionType) => {
-        if (confirm(`Are you sure you want to ${actionType} this request?`)) {
-            router.patch(route('prpo.purchase-requests.update-status', id), 
-            { action: actionType }, // Payload data
-            {
-                preserveScroll: true,
-                onSuccess: () => setIsModalOpen(false) 
-            });
-        }
+   const handleAction = (id, actionType) => {
+        const isApprove = actionType === 'approve';
+        
+        setConfirmDialog({
+            isOpen: true,
+            title: `${isApprove ? 'Approve' : 'Reject'} Request`,
+            message: `Are you sure you want to ${actionType} this purchase request?`,
+            confirmText: isApprove ? 'Approve' : 'Reject',
+            confirmColor: isApprove ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500',
+            onConfirm: () => {
+                router.patch(route('prpo.purchase-requests.update-status', id), 
+                { action: actionType }, 
+                {
+                    preserveScroll: true,
+                    onSuccess: () => { 
+                        closeConfirmModal(); 
+                        closeModal(); // Close the detail modal too
+                    } 
+                });
+            }
+        });
     };
 
-    const handleGeneratePO = (id) => {
-        if (confirm('Are you sure you want to generate Purchase Orders for this approved request?')) {
-            router.post(route('prpo.purchase-requests.generate-pos', id), {}, {
-                preserveScroll: true,
-                onSuccess: () => closeModal()
-            });
-        }
+   const handleGeneratePO = (id) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Generate Purchase Orders',
+            message: 'Are you sure you want to generate Purchase Orders for this approved request? This action cannot be undone.',
+            confirmText: 'Generate PO(s)',
+            confirmColor: 'bg-indigo-600 hover:bg-indigo-500',
+            onConfirm: () => {
+                router.post(route('prpo.purchase-requests.generate-pos', id), {}, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        closeConfirmModal();
+                        closeModal();
+                    }
+                });
+            }
+        });
     };
 
     const openModal = (pr) => {
@@ -85,7 +120,9 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                 </div>
 
                 {/* 🟢 NEW: Filter Tabs */}
-                <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
+               <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
+                    
+                    {/* 1. My Requests (Always visible so people can track their own submissions) */}
                     <Link 
                         href={route('prpo.approval-board', { view: 'my_requests' })} 
                         className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${currentView === 'my_requests' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
@@ -93,17 +130,17 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                         My Requests
                     </Link>
 
-                    {isApprover && (
+                    {/* 2. Approvals (Visible to EVERYONE EXCEPT Assistants) */}
+                    {!isAssistant && (
                         <Link 
                             href={route('prpo.approval-board', { view: 'action_needed' })} 
                             className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'action_needed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                         >
-                            Action Needed
-                            {/* Optional: Add a red dot if you want to make it look urgent */}
-                            {currentView !== 'action_needed'}
+                            Approvals {currentView !== 'action_needed' && <span className="h-2 w-2 rounded-full bg-red-500"></span>}
                         </Link>
                     )}
 
+                    {/* 3. All Active PRs (Visible to Managers/Admins based on your prop) */}
                     {canSeeAll && (
                         <Link 
                             href={route('prpo.approval-board', { view: 'all' })} 
@@ -136,11 +173,11 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                             ) : (
                                 requests.data.map((pr) => (
                                     <tr 
-                                        key={pr.id} 
+                                        key={pr.pr_number} 
                                         onClick={() => openModal(pr)} 
                                         className="hover:bg-gray-50 transition cursor-pointer"
                                     >
-                                        <td className="px-6 py-4 font-medium text-indigo-600 hover:text-indigo-900">#{pr.id} <br/><span className="text-xs text-gray-500">{pr.budget_ref}</span></td>
+                                        <td className="px-6 py-4 font-medium text-indigo-600 hover:text-indigo-900">{pr.pr_number}</td>
                                         <td className="px-6 py-4">{pr.user?.name || 'Unknown'}</td>
                                         <td className="px-6 py-4">{pr.branch} <br/><span className="text-xs text-gray-500">{pr.department}</span></td>
                                         <td className="px-6 py-4">{pr.date_needed}</td>
@@ -185,9 +222,10 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                             {/* Modal Header */}
                             <div className="flex items-center justify-between border-b px-6 py-4">
                                 <div>
-                                    <h3 className="text-lg font-bold text-gray-900">Purchase Request #{selectedPR.id}</h3>
+                                    <h3 className="text-lg font-bold text-gray-900">{selectedPR.pr_number}</h3>
                                     <p className="text-sm text-gray-500">Prepared by {selectedPR.user?.name} on {selectedPR.date_prepared}</p>
                                 </div>
+                                
                                 <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -303,6 +341,18 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                     </div>
                 )}
             </div>
+
+            {/* ... End of your main page div ... */}
+
+            <ConfirmModal 
+                show={confirmDialog.isOpen}
+                onClose={closeConfirmModal}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText={confirmDialog.confirmText}
+                confirmColor={confirmDialog.confirmColor}
+                onConfirm={confirmDialog.onConfirm}
+            />
         </SidebarLayout>
     );
 }
