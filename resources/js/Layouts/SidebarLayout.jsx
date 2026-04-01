@@ -76,7 +76,7 @@ export default function SidebarLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3m9-9h-3m-12 0H3m15.364-6.364l-2.121 2.121m-9.192 9.192l-2.121 2.121m0-12.727l2.121 2.121m9.192 9.192l2.121 2.121" />
             </svg>
         ),
-        'Organizational Chart': (
+        'Organizational Directory': (
             <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 6h8M8 12h8M8 18h8" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12" />
@@ -214,6 +214,12 @@ export default function SidebarLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         ),
+        'PO Generation': (
+        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 3h8l4 4v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 3v4h4" />
+        </svg>
+),
     };
 
     const renderSidebarIcon = (link) => {

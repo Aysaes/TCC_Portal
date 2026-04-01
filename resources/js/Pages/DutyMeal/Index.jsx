@@ -23,11 +23,11 @@ export default function Index({ auth, dutymeals = [], employees = [], department
     const [customEndDate, setCustomEndDate] = useState('');
 
     // Global Confirm Modal
-        const [confirmDialog, setConfirmDialog] = useState({ 
+    const [confirmDialog, setConfirmDialog] = useState({ 
         isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
     });
     
-        const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false,});
+    const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false,});
         
 
     const [selectedRosterId, setSelectedRosterId] = useState(null);
@@ -371,7 +371,10 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                         <tr key={p.id} className="hover:bg-gray-50">
                                             <td className="py-3 text-sm font-medium text-gray-900">{p.user?.name}</td>
                                             <td className="py-3">
-                                                {p.is_graveyard ? <span className="text-[10px] bg-slate-800 text-white px-2 py-0.5 rounded">GY</span> : <span className="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded">Day</span>}
+                                                {/* NEW CODE: Rendering shift types dynamically based on the string value */}
+                                                {p.shift_type === 'graveyard' && <span className="text-[10px] bg-indigo-100 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded font-medium">GY</span>}
+                                                {p.shift_type === 'straight' && <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded font-medium">Straight</span>}
+                                                {(p.shift_type === 'day' || !p.shift_type) && <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded font-medium">Day</span>}
                                             </td>
                                             <td className="py-3">
                                                 {p.choice === 'none' ? (

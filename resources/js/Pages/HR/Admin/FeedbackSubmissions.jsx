@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; 
+import React, { useMemo, useState } from 'react'; 
 import { Head } from '@inertiajs/react';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getHRAdminLinks } from '@/Config/navigation';
@@ -10,6 +10,65 @@ export default function FeedbackSubmissions({ auth, submissions }) {
     // --- STATE FOR THE MODAL ---
     const [viewingFeedback, setViewingFeedback] = useState(null);
 
+    // --- SORTING STATE ---
+    const [sortField, setSortField] = useState('date_submitted');
+    const [sortDirection, setSortDirection] = useState('desc');
+
+    const toggleSort = (field) => {
+        if (sortField === field) {
+            setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortField(field);
+            setSortDirection(field === 'date_submitted' ? 'desc' : 'asc');
+        }
+    };
+
+    const renderHeaderSortButton = (field) => {
+        const isActive = sortField === field;
+
+        const upClass =
+            isActive && sortDirection === 'asc' ? 'text-gray-900' : 'text-gray-300';
+        const downClass =
+            isActive && sortDirection === 'desc' ? 'text-gray-900' : 'text-gray-300';
+
+        return (
+            <button
+                type="button"
+                onClick={() => toggleSort(field)}
+                className="ml-2 inline-flex items-center justify-center hover:opacity-80 transition"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="w-4 h-4"
+                >
+                    <g
+                        className={upClass}
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <path d="M7 17V7" />
+                        <path d="M4 10l3-3 3 3" />
+                    </g>
+
+                    <g
+                        className={downClass}
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <path d="M17 7v10" />
+                        <path d="M14 14l3 3 3-3" />
+                    </g>
+                </svg>
+            </button>
+        );
+    };
+
     const getTypeColor = (type) => {
         switch (String(type).toLowerCase()) {
             case 'recommendation': return 'bg-emerald-100 text-emerald-800';
@@ -17,6 +76,37 @@ export default function FeedbackSubmissions({ auth, submissions }) {
             default: return 'bg-blue-100 text-blue-800';
         }
     };
+
+    const sortedSubmissions = useMemo(() => {
+        const data = submissions?.data || [];
+
+        return [...data].sort((a, b) => {
+            let aValue = '';
+            let bValue = '';
+
+            switch (sortField) {
+                case 'date_submitted':
+                    aValue = new Date(a.created_at).getTime();
+                    bValue = new Date(b.created_at).getTime();
+                    return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+
+                case 'type':
+                    aValue = String(a.type || '').toLowerCase();
+                    bValue = String(b.type || '').toLowerCase();
+                    break;
+
+                default:
+                    return 0;
+            }
+
+            const comparison = aValue.localeCompare(bValue, undefined, {
+                numeric: true,
+                sensitivity: 'base',
+            });
+
+            return sortDirection === 'asc' ? comparison : -comparison;
+        });
+    }, [submissions, sortField, sortDirection]);
 
     return (
         <SidebarLayout activeModule="HR ADMIN" sidebarLinks={adminSidebarLinks}>
@@ -30,26 +120,33 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                             <h1 className="text-2xl font-semibold text-gray-900">Feedback Submissions</h1>
                             <p className="text-gray-500 text-sm mt-1">Review and manage feedback submitted by employees.</p>
                         </div>
-                        {/* THE SEARCH AND FILTER DROPDOWN HAVE BEEN COMPLETELY REMOVED FROM HERE */}
                     </div>
 
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-                        {/* THE SCROLLBAR FIX: max-h-[400px] and overflow-y-auto */}
                         <div className="overflow-x-auto overflow-y-auto max-h-[400px] relative w-full custom-scrollbar">
                             <table className="min-w-full divide-y divide-gray-200">
-                                {/* STICKY HEADER: Added sticky, top-0, and z-10 */}
                                 <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200">
                                     <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Submitted</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center">
+                                                <span>Date Submitted</span>
+                                                {renderHeaderSortButton('date_submitted')}
+                                            </div>
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center">
+                                                <span>Type</span>
+                                                {renderHeaderSortButton('type')}
+                                            </div>
+                                        </th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                                         <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {submissions?.data?.length > 0 ? (
-                                        submissions.data.map((item) => (
+                                    {sortedSubmissions.length > 0 ? (
+                                        sortedSubmissions.map((item) => (
                                             <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     {item.created_at_display}

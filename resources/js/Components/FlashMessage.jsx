@@ -2,67 +2,89 @@ import { usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 export default function FlashMessage() {
-    const { flash = {} } = usePage().props;
-
-    console.log("Inertia Props:", usePage().props);
+    // 1. Pull both flash and errors from Inertia props
+    const { flash = {}, errors = {} } = usePage().props;
 
     const [toast, setToast] = useState({ message: '', type: '' });
     const [visible, setVisible] = useState(false);
 
     useEffect(() => {
-        let currentMessage='';
-        let currentType='';
+        let currentMessage = '';
+        let currentType = '';
 
+        // 2. Check for Flash Success/Error first
         if (flash?.success) {
             currentMessage = flash.success;
             currentType = 'success';
         } else if (flash?.error) {
             currentMessage = flash.error;
             currentType = 'error';
+        } 
+        // 3. NEW: Check for Validation Errors (like your Role error)
+        else if (Object.keys(errors).length > 0) {
+            // Get the first error message from the object
+            currentMessage = Object.values(errors)[0];
+            currentType = 'error';
         }
         
         if (currentMessage) {
-            setToast({ message: currentMessage, type: currentType });
-            setVisible(true);
-            const timer = setTimeout(() => {
-                setVisible(false);
-            }, 3000);
+            showToast(currentMessage, currentType);
         }
+
+        // Custom Event Listener for manual triggers
         const handleCustomToast = (e) => {
-            setToast({ message: e.detail.message, type: e.detail.type });
-            setVisible(true);
-            setTimeout(() => setVisible(false), 3000);
+            showToast(e.detail.message, e.detail.type);
         };
+
         window.addEventListener('flash-toast', handleCustomToast);
-
         return () => window.removeEventListener('flash-toast', handleCustomToast);
-         }, [flash.success, flash.error]);
 
-         return (
-            <div
-            className={`fixed bottom-10 right-10 z-50 transform transition-all duration-500 ease-in-out ${
+    }, [flash, errors]); // Watch both flash and errors
+
+    // Helper to trigger the animation
+    const showToast = (message, type) => {
+        setToast({ message, type });
+        setVisible(true);
+        const timer = setTimeout(() => {
+            setVisible(false);
+        }, 4000);
+        return () => clearTimeout(timer);
+    };
+
+    return (
+        <div
+            className={`fixed bottom-10 right-10 z-[100] transform transition-all duration-500 ease-in-out ${
                 visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'
             }`}
         >
             {toast.message && (
                 <div 
-                    className={`flex items-center gap-3 rounded-lg px-6 py-4 shadow-xl ${
-                        toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                    className={`flex items-center gap-3 rounded-lg px-6 py-4 shadow-2xl border-l-4 ${
+                        toast.type === 'success' 
+                            ? 'bg-white text-green-800 border-green-500' 
+                            : 'bg-white text-red-800 border-red-500'
                     }`}
                 >
-                    {toast.type === 'success' ? (
-                        <svg className="h-6 w-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                    ) : (
-                        <svg className="h-6 w-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    )}
+                    <div className={`${toast.type === 'success' ? 'bg-green-100' : 'bg-red-100'} p-1.5 rounded-full`}>
+                        {toast.type === 'success' ? (
+                            <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        ) : (
+                            <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        )}
+                    </div>
                     
-                    <span className="text-sm font-semibold tracking-wide text-white">{toast.message}</span>
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-60">
+                            {toast.type === 'success' ? 'Success' : 'Notice'}
+                        </span>
+                        <span className="text-sm font-semibold text-gray-800">{toast.message}</span>
+                    </div>
                 </div>
             )}
         </div>
-        );
-}   
+    );
+}
