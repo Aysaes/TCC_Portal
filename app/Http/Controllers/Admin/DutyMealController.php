@@ -147,7 +147,8 @@ class DutyMealController extends Controller
             'alt_meal' => 'nullable|string|max:255',
             'participants' => 'required|array|min:1',
             'participants.*.id' => 'required|exists:users,id',
-            'participants.*.is_graveyard'=> 'required|boolean',
+            // UPDATED HERE: Validation rule changed to accept shift_type
+            'participants.*.shift_type'=> 'required|string|in:day,graveyard,straight',
         ]);
 
         try {
@@ -165,7 +166,8 @@ class DutyMealController extends Controller
                         'duty_meal_id' => $dutyMeal->id,
                         'user_id' => $staff['id'],
                         'choice' => 'none',
-                        'is_graveyard' => $staff['is_graveyard'],
+                        // UPDATED HERE: Saving shift_type instead of is_graveyard
+                        'shift_type' => $staff['shift_type'],
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
@@ -234,7 +236,8 @@ class DutyMealController extends Controller
         $meal->participants()->create([
             'user_id' => $request->user_id,
             'choice' => 'none', // Default to none so they can pick their own meal
-            'is_graveyard' => false, 
+            // UPDATED HERE: Default to 'day' shift instead of is_graveyard = false
+            'shift_type' => 'day', 
             'custom_request' => null,
         ]);
 
