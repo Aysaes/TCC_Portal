@@ -286,7 +286,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
     } = useForm({
         name: '',
         email: '',
-        password: '',
         role_id: '',
         department_id: '',
         position_id: '',
@@ -338,7 +337,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
     } = useForm({
         name: '',
         email: '',
-        password: '',
         role_id: '',
         department_id: '',
         position_id: '',
@@ -425,6 +423,27 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                 });
             }
         });
+    };
+
+    // ==========================================
+    // EMAIL SETUP / RESET ACTION
+    // ==========================================
+    const handleAccountAction = (employee) => {
+        setActiveDropdown(null); // Close the cog menu
+        
+        if (employee.has_password) {
+            // Phase 2: Send Password Reset
+            router.post(route('employees.send-reset', employee.id), {}, {
+                preserveScroll: true,
+                onSuccess: () => triggerToast(`Reset link sent to ${employee.email}`, 'success'),
+            });
+        } else {
+            // Phase 1: Send Account Activation
+            router.post(route('employees.send-activation', employee.id), {}, {
+                preserveScroll: true,
+                onSuccess: () => triggerToast(`Activation link sent to ${employee.email}`, 'success'),
+            });
+        }
     };
 
     const confirmDeleteRole = (role) => {
@@ -697,6 +716,18 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                         onClick={(e) => e.stopPropagation()}
                                                         className="absolute right-8 top-10 z-50 w-36 overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5"
                                                     >
+
+                                                        <button 
+                                                            className={`block w-full px-4 py-2 text-left text-sm font-medium transition-colors ${employee.has_password ? 'text-green-600 hover:bg-green-50' : 'text-blue-600 hover:bg-blue-50'}`}
+                                                            onClick={(e) => {
+                                                                e.preventDefault(); 
+                                                                e.stopPropagation(); 
+                                                                handleAccountAction(employee);
+                                                            }}
+                                                        >
+                                                            {employee.has_password ? 'Send Password Reset' : 'Send Activation Link'}
+                                                        </button>
+
                                                         <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-blue-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); openEditUserModal(employee);
                                                         }}>
@@ -758,6 +789,18 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                         onClick={(e) => e.stopPropagation()}
                                                         className="absolute right-0 top-10 z-50 w-36 overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5"
                                                     >
+
+                                                        <button 
+                                                            className={`block w-full px-4 py-2 text-left text-sm font-medium transition-colors ${employee.has_password ? 'text-green-600 hover:bg-green-50' : 'text-blue-600 hover:bg-blue-50'}`}
+                                                            onClick={(e) => {
+                                                                e.preventDefault(); 
+                                                                e.stopPropagation(); 
+                                                                handleAccountAction(employee);
+                                                            }}
+                                                        >
+                                                            {employee.has_password ? 'Send Password Reset' : 'Send Activation Link'}
+                                                        </button>
+
                                                         <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-blue-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); openEditUserModal(employee);
                                                         }}>
@@ -924,12 +967,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                 <InputLabel htmlFor="email" value="Email Address" />
                                 <TextInput id="email" type="email" className="mt-1 block w-full" value={userData.email} onChange={(e) => setUserData('email', e.target.value)} required />
                                 <InputError message={userErrors.email} className="mt-2" />
-                            </div>
-
-                            <div className="mt-4">
-                                <InputLabel htmlFor="password" value="Temporary Password" />
-                                <TextInput id="password" type="password" className="mt-1 block w-full" value={userData.password} onChange={(e) => setUserData('password', e.target.value)} required />
-                                <InputError message={userErrors.password} className="mt-2" />
                             </div>
 
                             <div className="mt-4">

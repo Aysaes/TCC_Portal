@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Position;
@@ -16,6 +17,8 @@ use App\Exports\UsersExport;
 use App\Exports\UsersTemplateExport;
 use App\Imports\UsersImport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Notifications\AccountActivation;
+use App\Notifications\AdminPasswordReset;
 use Inertia\Inertia;
 
 
@@ -45,7 +48,7 @@ class EmployeeController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|',
+            'password' => 'string|min:8|',
             'role_id' => 'required|exists:roles,id',
             'department_id' => 'required|exists:departments,id',
             'position_id' => 'required|exists:positions,id',
@@ -56,7 +59,7 @@ class EmployeeController extends Controller
             $user = User::create([
             'name' => trim($request->name),
             'email' => trim($request->email),
-            'password' => Hash::make($request->password),
+            'password' => null,
             'role_id' => $request->role_id,
             'department_id' => $request->department_id,
             'position_id' => $request->position_id,
@@ -278,5 +281,35 @@ public function import(Request $request)
             // 🔴 Triggers your RED toast automatically! (Changed from withErrors)
             return back()->with('error', 'Failed to import. Please check your Excel format.');
         }
+    }
+
+  public function sendActivationLink(User $user)
+    {
+
+        if ($user->has_password) {
+            return back()->with('error', 'This account is already active.');
+        }
+
+        /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
+        $broker = Password::broker();
+        $token = $broker->createToken($user);
+        
+        $user->notify(new AccountActivation($token));
+
+        return back()->with('success', 'Activation link sent to ' . $user->email);
+    }
+
+    public function sendResetLink(User $user)
+    {
+       
+
+
+        /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
+        $broker = Password::broker();
+        $token = $broker->createToken($user);
+        
+        $user->notify(new AdminPasswordReset($token));
+
+        return back()->with('success', 'Password reset link sent to ' . $user->email);
     }
 }

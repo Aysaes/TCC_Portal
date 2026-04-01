@@ -18,6 +18,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequestController;
+use App\Http\Controllers\Auth\SetupAccountController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -145,6 +146,18 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
+});
+
+// Admin Routes (Protect these with auth/admin middleware)
+Route::middleware(['auth'])->group(function () {
+    Route::post('/employees/{user}/send-activation', [EmployeeController::class, 'sendActivationLink'])->name('employees.send-activation');
+    Route::post('/employees/{user}/send-reset', [EmployeeController::class, 'sendResetLink'])->name('employees.send-reset');
+});
+
+// Guest Routes (For the user clicking the email link)
+Route::middleware(['guest'])->group(function () {
+    Route::get('/setup-account', [SetupAccountController::class, 'showSetupForm'])->name('setup.account');
+    Route::post('/setup-account', [SetupAccountController::class, 'setupPassword'])->name('setup.account.store');
 });
 
 

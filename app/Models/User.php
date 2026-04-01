@@ -31,6 +31,13 @@ class User extends Authenticatable
         'position_id',
     ];
 
+    protected $appends = ['has_password'];  
+
+    public function getHasPasswordAttribute()
+    {
+        return !is_null($this->password);
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *
