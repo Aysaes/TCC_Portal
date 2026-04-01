@@ -725,7 +725,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                                 handleAccountAction(employee);
                                                             }}
                                                         >
-                                                            {employee.has_password ? 'Send Password Reset' : 'Send Activation Link'}
+                                                            {employee.has_password ? 'Password Reset' : 'Activation Link'}
                                                         </button>
 
                                                         <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-blue-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
@@ -787,7 +787,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                 {activeDropdown === employee.id && (
                                                     <div
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="absolute right-0 top-10 z-50 w-36 overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5"
+                                                        className="absolute right-0 top-10 z-50 w-56 overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5"
                                                     >
 
                                                         <button 
@@ -798,7 +798,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                                 handleAccountAction(employee);
                                                             }}
                                                         >
-                                                            {employee.has_password ? 'Send Password Reset' : 'Send Activation Link'}
+                                                            {employee.has_password ? 'Password Reset' : 'Activation Link'}
                                                         </button>
 
                                                         <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-blue-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
