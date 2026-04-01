@@ -25,7 +25,6 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
     // --- UI FILTERS ---
     const [departmentFilter, setDepartmentFilter] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
-
     const [filterPosition, setFilterPosition] = useState('');
 
     const availablePositions = (departmentFilter === 'All') 
@@ -39,53 +38,23 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
     // --- LOOKUP HELPERS ---
     const getDepartmentName = (deptId) => {
         if (!deptId) return 'Unassigned';
-        const found = departments.find(d => d.id == deptId); // Using == to avoid type mismatch
+        const found = departments.find(d => d.id == deptId);
         return found ? found.name : 'Unassigned';
     };
 
     const getPositionName = (posId) => {
         if (!posId) return 'No Position';
-        const found = positions.find(pos => pos.id == posId); // Using == to avoid type mismatch
+        const found = positions.find(pos => pos.id == posId);
         return found ? found.name : 'No Position';
-    };
-
-    // --- HANDLERS ---
-    const toggleStaff = (employee) => {
-        const isAlreadySelected = data.participants.some(p => p.id === employee.id);
-        
-        if (isAlreadySelected) {
-            // Remove them
-            setData('participants', data.participants.filter(p => p.id !== employee.id));
-        } else {
-            // Add them, default graveyard to false
-            setData('participants', [...data.participants, { id: employee.id, name: employee.name, department: employee.department_id, position: employee.position_id,is_graveyard: false }]);
-        }
-    };
-
-    const toggleGraveyard = (employeeId) => {
-        setData('participants', data.participants.map(p => 
-            p.id === employeeId ? { ...p, is_graveyard: !p.is_graveyard } : p
-        ));
-    };
-
-    const submit = (e) => {
-        e.preventDefault();
-        post(route('admin.duty-meals.store'));
     };
 
     // --- FILTER LOGIC ---
     const filteredEmployees = employees.filter(emp => {
-
         const selectedBranchId = Number(data.branch_id);
-        
-        const matchesBranch = 
-            Number(emp.branch_id) === selectedBranchId || 
+        const matchesBranch = Number(emp.branch_id) === selectedBranchId || 
             (emp.assigned_branch_ids && emp.assigned_branch_ids.includes(selectedBranchId));
-
         const matchesDept = departmentFilter === 'All' || String(emp.department_id) === String(departmentFilter);
-
         const matchesPosition = filterPosition === '' || emp.position_id === parseInt(filterPosition);
-        
         
         const name = emp.name ? emp.name.toLowerCase() : '';
         const search = searchQuery.trim().toLowerCase();
@@ -93,6 +62,64 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
 
         return matchesBranch && matchesDept && matchesSearch && matchesPosition;
     });
+
+    // --- HANDLERS ---
+    const toggleStaff = (employee) => {
+        const isAlreadySelected = data.participants.some(p => p.id === employee.id);
+        
+        if (isAlreadySelected) {
+            setData('participants', data.participants.filter(p => p.id !== employee.id));
+        } else {
+            setData('participants', [...data.participants, { 
+                id: employee.id, 
+                name: employee.name, 
+                department: employee.department_id, 
+                position: employee.position_id,
+                shift_type: 'day' // Default shift
+            }]);
+        }
+    };
+
+    const changeShiftType = (employeeId, newShift) => {
+        setData('participants', data.participants.map(p => 
+            p.id === employeeId ? { ...p, shift_type: newShift } : p
+        ));
+    };
+
+    // Select All logic
+    const selectAllFiltered = () => {
+        const currentIds = new Set(data.participants.map(p => p.id));
+        const newParticipants = [...data.participants];
+        
+        filteredEmployees.forEach(emp => {
+            if (!currentIds.has(emp.id)) {
+                newParticipants.push({
+                    id: emp.id, 
+                    name: emp.name, 
+                    department: emp.department_id, 
+                    position: emp.position_id, 
+                    shift_type: 'day'
+                });
+            }
+        });
+        setData('participants', newParticipants);
+    };
+
+    // Deselect All logic
+    const deselectAllFiltered = () => {
+        const filteredIds = new Set(filteredEmployees.map(emp => emp.id));
+        setData('participants', data.participants.filter(p => !filteredIds.has(p.id)));
+    };
+
+    const submit = (e) => {
+        e.preventDefault();
+        post(route('admin.duty-meals.store'));
+    };
+
+    // NEW: Check if all currently visible employees are already selected
+    const allFilteredSelected = filteredEmployees.length > 0 && 
+        filteredEmployees.every(emp => data.participants.some(p => p.id === emp.id));
+
 
     return (
         <SidebarLayout activeModule="Duty Meals"
@@ -160,15 +187,41 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                     
                     {/* LEFT SIDE: Employee Pool (5 columns) */}
                     <div className="lg:col-span-5 bg-white rounded-lg shadow-sm border border-gray-100 p-5 flex flex-col h-[600px]">
-                        <h2 className="text-lg font-medium text-gray-900 mb-4">Employee Pool</h2>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-medium text-gray-900">Employee Pool</h2>
+                            {/* UPDATED: Single Smart Toggle Button */}
+                            <div className="flex gap-2 text-sm">
+                                <button 
+                                    type="button" 
+                                    onClick={allFilteredSelected ? deselectAllFiltered : selectAllFiltered} 
+                                    className={`inline-flex items-center px-2.5 py-1.5 border shadow-sm text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors
+                                        ${allFilteredSelected 
+                                            ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100 focus:ring-red-500' 
+                                            : 'border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:ring-indigo-500'}`}
+                                >
+                                    {allFilteredSelected ? (
+                                        <>
+                                            <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                            Deselect All
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                            Select All
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                         
                         {/* Filters */}
-                        <div className="flex gap-2 mb-4">
-                            <TextInput placeholder="Search name..." className="w-full text-sm"
-                                value={searchQuery} onChange={e => {setSearchQuery(e.target.value);
-                                                                    setFilterPosition('');
+                        <div className="flex gap-2 mb-4 w-full">
+                            <TextInput placeholder="Search name..." className="flex-1 text-sm min-w-[100px]"
+                                value={searchQuery} onChange={e => {
+                                    setSearchQuery(e.target.value);
+                                    setFilterPosition('');
                                 }} />
-                            <select className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                            <select className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm min-w-[100px]"
                                 value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
                                 <option value="All">All Depts</option>
                                 {departments.map(dept => (
@@ -177,7 +230,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                             </select>
 
                             <select value={filterPosition} onChange={(e) => setFilterPosition(e.target.value)}
-                            className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
+                            className="flex-1 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm min-w-[100px]">
                                 <option value="">All Positions</option>
                                 {availablePositions.map((pos) => (<option key={pos.id} value={pos.id}>{pos.name}</option>))}
                             </select>
@@ -236,7 +289,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                                 </div>
                             ) : (
                                 <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-white sticky top-0">
+                                    <thead className="bg-white sticky top-0 z-10">
                                         <tr>
                                             <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                                             <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Shift Type</th>
@@ -255,12 +308,25 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-3 whitespace-nowrap text-center">
-                                                    <button type="button" onClick={() => toggleGraveyard(p.id)}
-                                                        className={`inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white transition-colors focus:outline-none 
-                                                            ${p.is_graveyard ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-amber-500 hover:bg-amber-600'}`}
-                                                    >
-                                                        {p.is_graveyard ? '🌙 Graveyard' : '☀️ Day Shift'}
-                                                    </button>
+                                                    <div className="relative inline-block w-36">
+                                                        <select 
+                                                            value={p.shift_type || 'day'}
+                                                            onChange={(e) => changeShiftType(p.id, e.target.value)}
+                                                            className={`block w-full py-1.5 pl-3 pr-8 text-xs font-medium border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors cursor-pointer appearance-none
+                                                                ${p.shift_type === 'graveyard' ? 'border-indigo-300 text-indigo-800 bg-indigo-50 focus:ring-indigo-500 focus:border-indigo-500' : 
+                                                                  p.shift_type === 'straight' ? 'border-emerald-300 text-emerald-800 bg-emerald-50 focus:ring-emerald-500 focus:border-emerald-500' : 
+                                                                  'border-amber-300 text-amber-800 bg-amber-50 focus:ring-amber-500 focus:border-amber-500'}`}
+                                                        >
+                                                            <option value="day">☀️ Day Shift</option>
+                                                            <option value="graveyard">🌙 Graveyard</option>
+                                                            <option value="straight">⏱️ Straight Duty</option>
+                                                        </select>
+                                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                                            </svg>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-5 py-3 whitespace-nowrap text-right text-sm font-medium">
                                                     <button type="button" onClick={() => toggleStaff(p)} className="text-red-600 hover:text-red-900">
