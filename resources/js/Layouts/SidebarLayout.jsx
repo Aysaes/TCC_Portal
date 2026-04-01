@@ -396,7 +396,7 @@ export default function SidebarLayout({
                                     </Dropdown.Link>
                                 
                                 
-                                    {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations'].includes(user.role?.name) && (
+                                    {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations', 'Operations Manager'].includes(user.role?.name) && (
                                         <Dropdown.Link href={route('prpo.products.index')}>
                                             PR/PO Module
                                         </Dropdown.Link>

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Head, useForm } from '@inertiajs/react';
-import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getPRPOLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { Head, useForm } from '@inertiajs/react';
+import { useEffect, useRef, useState } from 'react';
 
 // =====================================================================
 // CUSTOM SEARCHABLE DROPDOWN COMPONENT
@@ -91,8 +91,17 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
 // =====================================================================
 // MAIN PAGE COMPONENT
 // =====================================================================
-export default function CreatePR({ auth, suppliers, products, branches = [], departments = [] }) {
+export default function CreatePR({ auth, suppliers, products, branches = [], departments = [],  userBranches = []}) {
     const today = new Date().toISOString().split('T')[0];
+
+    const userRole = auth.user.role?.name?.toLowerCase() || '';
+
+    const isUnrestricted = userRole === 'admin' || userRole.includes('director') || userRole.includes('procurement');
+    const isAssistant = userRole.includes('assistant');
+  
+   const availableBranches = isUnrestricted 
+        ? branches 
+        : branches.filter(b => userBranches.includes(b.name));
 
     const { data, setData, post, processing, errors } = useForm({
         branch: '', 
@@ -121,6 +130,12 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
         ]
     });
 
+    useEffect(() => {
+        if (!isUnrestricted && availableBranches.length === 1 && !data.branch) {
+            setData('branch', availableBranches[0].name);
+        }
+    }, [availableBranches, isUnrestricted]);
+
     const addItemRow = () => {
         setData('items', [...data.items, { 
             product_id: '', specifications: '', unit: '', qty_requested: '', qty_on_hand: '', reorder_level: '', supplier_id: '', est_unit_cost: '', total_cost: 0 
@@ -134,44 +149,42 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
     };
 
     const handleItemChange = (index, field, value) => {
-        const newItems = [...data.items];
+        const newItems = [...data.items]; 
         newItems[index][field] = value;
-        
-        // Auto-calculate total cost
-        if (field === 'qty_requested' || field === 'est_unit_cost') {
-            const qty = parseFloat(newItems[index]['qty_requested']) || 0;
-            const cost = parseFloat(newItems[index]['est_unit_cost']) || 0;
-            newItems[index]['total_cost'] = (qty * cost).toFixed(2);
-        }
 
-        // ✨ FIX: If Product is cleared, clear the Supplier. Otherwise, auto-fill it. ✨
+        // 🟢 1. Product Change Logic
         if (field === 'product_id') {
-            if (value === '') {
-                newItems[index]['supplier_id'] = ''; 
+            // Find the selected product safely
+            const selectedProduct = products.find(p => String(p.id) === String(value));
+            
+            if (selectedProduct) {
+                // ✨ RESTORED: Auto-fill the Supplier!
+                newItems[index].supplier_id = selectedProduct.supplier_id || '';
+
+                // ✨ Auto-fill Unit and Price
+                newItems[index].unit = selectedProduct.unit || '';
+                newItems[index].est_unit_cost = selectedProduct.price || 0; 
+                
+                // ✨ Calculate initial Total Cost based on current qty
+                const qty = parseFloat(newItems[index].qty_requested) || 0;
+                newItems[index].total_cost = qty * parseFloat(newItems[index].est_unit_cost);
             } else {
-                const selectedProduct = products.find(p => String(p.id) === String(value));
-                if (selectedProduct && selectedProduct.supplier_id) {
-                    newItems[index]['supplier_id'] = selectedProduct.supplier_id;
-                }
+                // If they wipe the search box, clear the row data
+                newItems[index].supplier_id = '';
+                newItems[index].unit = '';
+                newItems[index].est_unit_cost = 0;
+                newItems[index].total_cost = 0;
             }
         }
 
-        // ✨ FIX: If Supplier is cleared, clear the Product to break the lock! ✨
-        if (field === 'supplier_id') {
-            if (value === '') {
-                newItems[index]['product_id'] = ''; 
-            } else {
-                const currentProductId = newItems[index]['product_id'];
-                if (currentProductId) {
-                    const currentProduct = products.find(p => String(p.id) === String(currentProductId));
-                    if (currentProduct && String(currentProduct.supplier_id) !== String(value)) {
-                        newItems[index]['product_id'] = ''; 
-                    }
-                }
-            }
+        // 🟢 2. Quantity Change Logic (Dynamic Math)
+        if (field === 'qty_requested') {
+            const qty = parseFloat(value) || 0;
+            const cost = parseFloat(newItems[index].est_unit_cost) || 0;
+            newItems[index].total_cost = qty * cost;
         }
-        
-        setData('items', newItems);
+
+        setData('items', newItems); 
     };
 
     const submit = (e) => {
@@ -202,10 +215,23 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                         <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Branch <span className="text-red-500">*</span></label>
-                                <select value={data.branch} onChange={e => setData('branch', e.target.value)} className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.branch ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`} required>
+                                <select 
+                                    value={data.branch} 
+                                    onChange={e => setData('branch', e.target.value)} 
+                                    disabled={!isUnrestricted && availableBranches.length === 1} // 🟢 UPDATED
+                                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${!isUnrestricted && availableBranches.length === 1 ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''} ${errors.branch ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`} 
+                                    required
+                                >
                                     <option value="" disabled>Select Branch...</option>
-                                    {branches.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
+                                    {availableBranches.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
                                 </select>
+                                
+                                {!isUnrestricted && availableBranches.length === 1 && (
+                                    <p className="mt-1 text-xs text-indigo-500">Locked to your assigned branch.</p>
+                                )}
+                                {!isUnrestricted && availableBranches.length > 1 && (
+                                    <p className="mt-1 text-xs text-indigo-500">Please select from your assigned branches.</p>
+                                )}
                                 {errors.branch && <p className="mt-2 text-sm text-red-600">{errors.branch}</p>}
                             </div>
 
@@ -299,7 +325,7 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                                         <th className="px-2 py-3 text-left font-semibold text-gray-900 w-24">Qty Hand</th>
                                         <th className="px-2 py-3 text-left font-semibold text-gray-900 w-24">Reorder</th>
                                         <th className="px-2 py-3 text-left font-semibold text-gray-900 min-w-[200px]">Preferred Supplier</th>
-                                        <th className="px-2 py-3 text-left font-semibold text-gray-900 w-28">Est. Unit Cost</th>
+                                        <th className="px-2 py-3 text-left font-semibold text-gray-900 w-28">Unit Cost</th>
                                         <th className="px-2 py-3 text-left font-semibold text-gray-900 w-28">Total Cost</th>
                                         <th className="px-2 py-3 text-left font-semibold text-gray-900"></th>
                                     </tr>
@@ -336,7 +362,7 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                                                     <input type="text" value={item.specifications} onChange={(e) => handleItemChange(index, 'specifications', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2">
-                                                    <input type="text" value={item.unit} onChange={(e) => handleItemChange(index, 'unit', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                                    <input type="text" value={item.unit} readOnly placeholder="Auto"className="block w-full rounded-md border-gray-200 bg-gray-100 text-gray-500 text-xs shadow-sm cursor-not-allowed focus:ring-0"/>
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2">
                                                     <input type="number" min="0" value={item.qty_requested} onChange={(e) => handleItemChange(index, 'qty_requested', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
@@ -358,10 +384,20 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                                                 </td>
 
                                                 <td className="whitespace-nowrap px-2 py-2">
-                                                    <input type="number" min="0" step="0.01" value={item.est_unit_cost} onChange={(e) => handleItemChange(index, 'est_unit_cost', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                                    <div className="relative rounded-md shadow-sm">
+                                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                                                            <span className="text-gray-400 text-xs">₱</span>
+                                                        </div>
+                                                            <input type="number" value={item.est_unit_cost} readOnly placeholder="0.00" className="block w-full rounded-md border-gray-200 bg-gray-100 text-gray-500 pl-6 text-xs shadow-sm cursor-not-allowed focus:ring-0"/>
+                                                        </div>
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2">
-                                                    <input type="number" value={item.total_cost} readOnly className="block w-full rounded-md border-gray-100 bg-gray-50 text-xs shadow-sm focus:ring-0" />
+                                                    <div className="relative rounded-md shadow-sm">
+                                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                                                            <span className="text-indigo-400 font-bold text-xs">₱</span>
+                                                        </div>
+                                                            <input type="number" value={item.total_cost} readOnly className="block w-full rounded-md border-indigo-100 bg-indigo-50 text-indigo-700 font-bold pl-6 text-xs shadow-sm cursor-not-allowed focus:ring-0" />
+                                                        </div>
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2 text-right">
                                                     {data.items.length > 1 && (

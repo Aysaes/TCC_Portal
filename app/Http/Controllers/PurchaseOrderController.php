@@ -8,6 +8,7 @@ use App\Models\PurchaseRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PurchaseOrderController extends Controller
@@ -57,37 +58,76 @@ class PurchaseOrderController extends Controller
     // =====================================================================
     public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
+        // 1. Forgiving Validation (Removed strict array and mime checks that block FormData)
         $validated = $request->validate([
             'delivery_date' => 'nullable|date',
             'payment_terms' => 'nullable|string|max:255',
             'ship_to' => 'nullable|string|max:255',
             'discount_total' => 'nullable|numeric|min:0',
-            'vat_rate' => 'nullable|numeric|min:0|max:100', // e.g. 12 for 12%
-            'status' => 'required|in:drafted,pending_approval,approved,cancelled'
+            'vat_rate' => 'nullable|numeric|min:0|max:100', 
+            'status' => 'required|in:drafted,pending_approval,approved,cancelled',
+            'removed_item_ids' => 'nullable', // Relaxed array rule
+            'new_attachments' => 'nullable',  // Relaxed array rule
+            'new_attachments.*' => 'file|max:10240', // Max 10MB per file, any standard file type
         ]);
 
-        // 1. Calculate the new math based on negotiated discounts and VAT
-        $grossAmount = $purchaseOrder->gross_amount;
+        // 2. Process Removed Items
+        if ($request->filled('removed_item_ids')) {
+            $removedIds = is_array($request->removed_item_ids) 
+                ? $request->removed_item_ids 
+                : explode(',', $request->removed_item_ids); // Fallback for FormData strings
+                
+            $purchaseOrder->items()->whereIn('id', $removedIds)->update(['status' => 'removed']);
+        }
+
+        // 3. Process New File Uploads (Bulletproof Loop)
+        $attachments = $purchaseOrder->attachments ?? []; // Keep existing files
+        
+        if ($request->hasFile('new_attachments')) {
+            $files = $request->file('new_attachments');
+            
+            // Force it to be an array just in case FormData sent a single file weirdly
+            if (!is_array($files)) {
+                $files = [$files];
+            }
+
+            foreach ($files as $file) {
+                if ($file->isValid()) {
+                    // Save the file securely to the public disk
+                    $path = $file->store('po_attachments', 'public');
+                    
+                    // Add the new file to our array
+                    $attachments[] = [
+                        'original_name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                        'url' => Storage::url($path)
+                    ];
+                }
+            }
+        }
+
+        // 4. Recalculate the Math based ONLY on active items
+        $activeItems = $purchaseOrder->items()->where('status', 'active')->get();
+        $grossAmount = $activeItems->sum('net_payable');
+        
         $discount = $validated['discount_total'] ?? 0;
-        
         $netOfDiscount = $grossAmount - $discount;
-        
-        // Convert VAT percentage (e.g., 12) to a decimal (0.12)
         $vatDecimal = ($validated['vat_rate'] ?? 12) / 100;
         $vatTotal = $netOfDiscount * $vatDecimal;
-        
         $grandTotal = $netOfDiscount + $vatTotal;
 
-        // 2. Save the updates to the database
+        // 5. Save updates to the Database
         $purchaseOrder->update([
             'delivery_date' => $validated['delivery_date'],
             'payment_terms' => $validated['payment_terms'],
             'ship_to' => $validated['ship_to'],
+            'gross_amount' => $grossAmount,
             'discount_total' => $discount,
             'net_of_discount' => $netOfDiscount,
             'vat_total' => $vatTotal,
             'grand_total' => $grandTotal,
             'status' => $validated['status'],
+            'attachments' => empty($attachments) ? null : $attachments, // 🟢 Forces save!
         ]);
 
         $message = match($validated['status']) {
@@ -201,5 +241,22 @@ class PurchaseOrderController extends Controller
         });
 
         return back()->with('success', 'Purchase Orders drafted successfully! You can now review them.');
+    }
+
+    public function print(PurchaseOrder $purchaseOrder)
+    {
+        // 1. Load relationships, but ONLY grab active items!
+        $purchaseOrder->load([
+            'supplier', 
+            'preparedBy', 
+            'items' => fn($query) => $query->where('status', 'active')
+        ]);
+
+        // 2. Return the PDF view
+        // Note: If you use barryvdh/laravel-dompdf, you would do this instead:
+        // $pdf = \PDF::loadView('prpo.pdf.purchase-order', ['po' => $purchaseOrder]);
+        // return $pdf->stream($purchaseOrder->po_number . '.pdf');
+
+        return view('prpo.pdf.purchase-order', ['po' => $purchaseOrder]);
     }
 }

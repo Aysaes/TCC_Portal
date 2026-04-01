@@ -215,26 +215,31 @@ export const getHRAdminLinks = (auth) => {
 };
 
 export const getPRPOLinks = (auth) => {
-    return [
-        { 
-            label: 'Products Masterlist', 
-            href: route('prpo.products.index'),
-            active: route().current('prpo.products.index') 
-        },
-        { 
-            label: 'PR/PO Request',
-            href: route('prpo.purchase-requests.create'), // Updated!
-            active: route().current('prpo.purchase-requests.create'), 
-        },
-        {
-            label: 'Approval Board',
-            href: route('prpo.approval-board'),
-            active: route().current('prpo.approval-board'),
-        },
-        {
-            label: 'PO Generation',
-            href: route('prpo.purchase-orders.index'),
-            active: route().current('prpo.purchase-orders.index'),
-        }
+    const userRole = auth?.user?.role?.name?.toLowerCase().trim() || '';
+    
+    const canManagePO = userRole.includes('procurement') || userRole.includes('director') || userRole === 'admin';
+    
+    // 🟢 NEW: Only Inventory and DCSO/Admin can create PRs
+    const canCreatePR = userRole.includes('inventory') || userRole.includes('director') || userRole === 'admin';
+
+    const links = [
+        { label: 'Products Masterlist', href: route('prpo.products.index'), icon: '...' },
+        { label: 'Approval Board', href: route('prpo.approval-board'), icon: '...' },
     ];
+
+    // 🟢 Insert Create PR link conditionally
+    if (canCreatePR) {
+        // Insert it right after the Masterlist
+        links.splice(1, 0, { 
+            label: 'PR/PO Request', 
+            href: route('prpo.purchase-requests.create'), 
+            icon: '...' // Your PR icon
+        });
+    }
+
+    if (canManagePO) {
+        links.push({ label: 'PO Generation', href: route('prpo.purchase-orders.index'), icon: '...' });
+    }
+
+    return links;
 };

@@ -15,7 +15,13 @@ class PurchaseOrder extends Model
         'ship_to', 'shipping_address', 'attention', 'contact_no',
         'purpose', 'department', 'delivery_location', 'special_instructions',
         'gross_amount', 'discount_total', 'net_of_discount', 'vat_total', 'grand_total',
-        'status'
+        'status', 'attachments'
+    ];
+
+    protected $casts = [
+        'po_date' => 'date',
+        'delivery_date' => 'date',
+        'attachments' => 'array',
     ];
 
     // Relationships
