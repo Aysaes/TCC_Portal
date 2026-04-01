@@ -52,7 +52,7 @@ export default function PrintablePR({ pr }) {
                         </div>
                     </div>
                     <div className="text-right">
-                        <h2 className="text-3xl font-bold text-gray-300 mb-1">PR - {String(pr.id).padStart(5, '0')}</h2>
+                        <h2 className="text-3xl font-bold text-gray-300 mb-1">{pr.pr_number}</h2>
                         <p className="text-sm font-semibold">Date Prepared: <span className="font-normal">{pr.date_prepared}</span></p>
                         <p className="text-sm font-semibold">Date Needed: <span className="font-normal text-red-600">{pr.date_needed}</span></p>
                     </div>

@@ -173,11 +173,11 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                             ) : (
                                 requests.data.map((pr) => (
                                     <tr 
-                                        key={pr.id} 
+                                        key={pr.pr_number} 
                                         onClick={() => openModal(pr)} 
                                         className="hover:bg-gray-50 transition cursor-pointer"
                                     >
-                                        <td className="px-6 py-4 font-medium text-indigo-600 hover:text-indigo-900">#{pr.id} <br/><span className="text-xs text-gray-500">{pr.budget_ref}</span></td>
+                                        <td className="px-6 py-4 font-medium text-indigo-600 hover:text-indigo-900">{pr.pr_number}</td>
                                         <td className="px-6 py-4">{pr.user?.name || 'Unknown'}</td>
                                         <td className="px-6 py-4">{pr.branch} <br/><span className="text-xs text-gray-500">{pr.department}</span></td>
                                         <td className="px-6 py-4">{pr.date_needed}</td>
@@ -222,7 +222,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                             {/* Modal Header */}
                             <div className="flex items-center justify-between border-b px-6 py-4">
                                 <div>
-                                    <h3 className="text-lg font-bold text-gray-900">Purchase Request #{selectedPR.id}</h3>
+                                    <h3 className="text-lg font-bold text-gray-900">{selectedPR.pr_number}</h3>
                                     <p className="text-sm text-gray-500">Prepared by {selectedPR.user?.name} on {selectedPR.date_prepared}</p>
                                 </div>
                                 

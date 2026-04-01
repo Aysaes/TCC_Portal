@@ -34,15 +34,37 @@
 </head>
 <body>
 
+@php
+        $imagePath = resource_path('js/Assets/tcc_logo.png');
+        $logoData = '';
+        if(file_exists($imagePath)) {
+            $logoData = 'data:image/png;base64,' . base64_encode(file_get_contents($imagePath));
+        }
+@endphp
+
     <table class="header-table" style="width: 100%;">
         <tr>
-            <td>
-                <h1 class="company-title">The CAT Clinic</h1>
-                <div style="color: #6b7280; font-size: 12px;">Makati City, Metro Manila</div>
+            {{-- Logo Column --}}
+            @if($logoData)
+            <td style="width: 100px; vertical-align: middle;">
+                <img src="{{ $logoData }}" alt="TCC Logo" style="width: 90px; height: auto; border-radius: 4px;">
             </td>
-            <td>
-                <h2 class="doc-title">PURCHASE ORDER</h2>
-                <div style="text-align: right; font-weight: bold; margin-top: 5px;">PO #: {{ $po->po_number }}</div>
+            @endif
+            
+            {{-- Company Name Column --}}
+            @if($logoData)
+                <td style="vertical-align: middle; padding-left: 15px;">
+            @else
+                <td style="vertical-align: middle; padding-left: 0;">
+            @endif
+                <h1 class="company-title" style="margin: 0; line-height: 1.2;">The CAT Clinic</h1>
+                <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">Makati City, Metro Manila</div>
+            </td>
+
+            {{-- Document Title Column --}}
+            <td style="vertical-align: middle; text-align: right;">
+                <h2 class="doc-title" style="margin: 0;">PURCHASE ORDER</h2>
+                <div style="font-weight: bold; margin-top: 5px;">PO #: {{ $po->po_number }}</div>
             </td>
         </tr>
     </table>

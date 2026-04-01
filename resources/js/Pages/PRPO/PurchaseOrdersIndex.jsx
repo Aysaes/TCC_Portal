@@ -278,7 +278,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                             <div className="flex items-center justify-between border-b px-6 py-4 shrink-0 bg-gray-50 rounded-t-2xl">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                                        {modalView === 'PO' ? selectedPO.po_number : `Original PR #${selectedPO.purchase_request?.id}`}
+                                        {modalView === 'PO' ? selectedPO.po_number : `Original ${selectedPO.purchase_request?.pr_number}`}
                                         {modalView === 'PO' && formatStatus(selectedPO.status)}
                                     </h3>
                                     <p className="text-sm text-gray-500 mt-1">

@@ -187,7 +187,11 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
     const [isSupplierModalOpen, setSupplierModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState(null);
 
-    const { data: supData, setData: setSupData, post: postSup, put: putSup, processing: supProcessing, errors: supErrors, reset: resetSup, clearErrors: clearSupErrors } = useForm({ name: '' });
+    const { data: supData, setData: setSupData, post: postSup, put: putSup, processing: supProcessing, errors: supErrors, reset: resetSup, clearErrors: clearSupErrors } = useForm({ 
+        name: '',
+        contact_person: '',
+        contact_number: ''
+    });
 
     const closeSupplierModal = () => {
         setSupplierModalOpen(false);
@@ -211,9 +215,13 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
         }
     };
 
-    const editSupplierAction = (sup) => {
+   const editSupplierAction = (sup) => {
         setEditingSupplier(sup);
-        setSupData('name', sup.name);
+        setSupData({
+            name: sup.name,
+            contact_person: sup.contact_person || '',
+            contact_number: sup.contact_number || ''
+        });
     };
 
     const confirmDeleteSupplier = (sup) => {
@@ -536,6 +544,21 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
                             <TextInput id="sup_name" className="mt-1 block w-full" value={supData.name} onChange={(e) => setSupData('name', e.target.value)} required placeholder="e.g. MedCorp Inc." />
                             <InputError message={supErrors.name} className="mt-2" />
                         </div>
+
+                        <div>
+                                <InputLabel htmlFor="contact_person" value="Contact Person" />
+                                <TextInput id="contact_person" className="mt-1 block w-full" value={supData.contact_person} onChange={(e) => setSupData('contact_person', e.target.value)} placeholder="e.g. Jane Doe" />
+                                <InputError message={supErrors.contact_person} className="mt-2" />
+                            </div>
+
+                        
+                            <div>
+                                <InputLabel htmlFor="contact_number" value="Contact Number" />
+                                <TextInput id="contact_number" className="mt-1 block w-full" value={supData.contact_number} onChange={(e) => setSupData('contact_number', e.target.value)} placeholder="e.g. 0917-123-4567" />
+                                <InputError message={supErrors.contact_number} className="mt-2" />
+                            </div>
+
+                        
                         {editingSupplier && (
                             <SecondaryButton type="button" onClick={() => { setEditingSupplier(null); resetSup(); }} className="mb-1">Cancel</SecondaryButton>
                         )}

@@ -15,6 +15,14 @@ class PurchaseRequest extends Model
         'no_of_quotations', 'purpose_of_request', 'impact_if_not_procured', 'status'
     ];
 
+    protected $appends = ['pr_number'];
+
+    public function getPrNumberAttribute()
+    {
+        $year = $this->created_at ? $this->created_at->format('Y') : date('Y');
+        return 'PR-' . $year . '-' . str_pad($this->id, 4, '0', STR_PAD_LEFT);
+    }
+
     public function items()
     {
         return $this->hasMany(PurchaseRequestItem::class);
