@@ -42,6 +42,7 @@ class AccountActivation extends Notification
             ->greeting('Hello ' . $notifiable->name . '!')
             ->line('An administrator has created an account for you.')
             ->action('Set Your Password & Activate', $url)
+            ->line('⏳ For your security, this link will expire in 60 minutes.')
             ->line('If you did not expect this, please contact IT support.');
     }
 

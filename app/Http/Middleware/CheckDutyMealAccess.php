@@ -19,7 +19,7 @@ class CheckDutyMealAccess
         $rawRoleName = $request->user()?->role?->name ?? '';   
         $userRole = strtolower($rawRoleName);
 
-        $allowedRoles = ['admin', 'duty meal custodian'];
+        $allowedRoles = ['admin', 'duty meal custodian', 'director of corporate services and operations'];
 
         if (!in_array($userRole, $allowedRoles)) {
         abort(403, 'You do not have permission to access the Duty Meal module.');

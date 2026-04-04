@@ -31,11 +31,30 @@ class User extends Authenticatable
         'position_id',
     ];
 
-    protected $appends = ['has_password'];  
+    protected $with = ['role'];
+
+    protected $appends = ['has_password', 'has_global_access'];  
 
     public function getHasPasswordAttribute()
     {
         return !is_null($this->password);
+    }
+
+    public function getHasGlobalAccessAttribute()
+    {
+        if (!$this->role) {
+            return false;
+        }
+
+        $safeRoleName = strtolower(trim($this->role->name));
+
+        // Add ANY future top-level roles to this array!
+        $allowedRoles = [
+            'admin',
+            'director of corporate services and operations'
+        ];
+
+        return in_array($safeRoleName, $allowedRoles);
     }
 
     /**

@@ -223,8 +223,8 @@ export const getPRPOLinks = (auth) => {
     const canCreatePR = userRole.includes('inventory') || userRole.includes('director') || userRole === 'admin';
 
     const links = [
-        { label: 'Products Masterlist', href: route('prpo.products.index'), icon: '...' },
-        { label: 'Approval Board', href: route('prpo.approval-board'), icon: '...' },
+        { label: 'Products Masterlist', href: route('prpo.products.index'), active: route().current('prpo.products.index') },
+        { label: 'Approval Board', href: route('prpo.approval-board'), active: route().current('prpo.approval-board') },
     ];
 
     // 🟢 Insert Create PR link conditionally
@@ -233,12 +233,12 @@ export const getPRPOLinks = (auth) => {
         links.splice(1, 0, { 
             label: 'PR/PO Request', 
             href: route('prpo.purchase-requests.create'), 
-            icon: '...' // Your PR icon
+            active: route().current('prpo.purchase-requests.create'),
         });
     }
 
     if (canManagePO) {
-        links.push({ label: 'PO Generation', href: route('prpo.purchase-orders.index'), icon: '...' });
+        links.push({ label: 'PO Generation', href: route('prpo.purchase-orders.index'), active: route().current('prpo.purchase-orders.index')});
     }
 
     return links;

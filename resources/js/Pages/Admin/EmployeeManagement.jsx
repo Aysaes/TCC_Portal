@@ -657,6 +657,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                     </th>
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Branch</th>
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Is Rotating</th>
+                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Status</th>
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider text-center w-20">Action</th>
                                 </tr>
                             </thead>
@@ -699,6 +700,12 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                     {employee.is_rotating ? 'Yes' : 'No'}
                                                 </span>
                                             </td>
+
+                                            <td className="px-6 py-4 whitespace-nowrap">
+    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${employee.has_password ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'}`}>
+        {employee.has_password ? 'Active' : 'Pending Setup'}
+    </span>
+</td>
 
                                             <td className="px-6 py-4 whitespace-nowrap text-center relative">
                                                 <button
@@ -862,6 +869,14 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                 </div>
                                             </div>
                                         </div>
+                                        <div>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Status</div>
+        <div className="mt-1">
+            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${employee.has_password ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'}`}>
+                {employee.has_password ? 'Active' : 'Pending Setup'}
+            </span>
+        </div>
+    </div>
                                     </div>
                                 ))}
                             </div>

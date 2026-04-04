@@ -58,65 +58,71 @@ if (strtolower($roleName) !== 'admin') {
         }
 
         // 4. 🟢 EXACT ROLE-BASED FILTERING MATRIX
-        if (strtolower($roleName) !== 'admin') {
+       if (strtolower(trim($roleName)) !== 'admin') {
             
-            $positionsQuery->where(function ($query) use ($roleName, $userDepartmentId) {
+    $positionsQuery->where(function ($query) use ($roleName, $userDepartmentId) {
+        
+        // 🟢 Create a safe, lowercase, trimmed version of the role to prevent matching errors
+        $safeRole = strtolower(trim($roleName));
 
-                if ($roleName === 'Director of Corporate Services and Operations') {
-                    // DCSO: Accounting/Operational Depts OR exact specific roles
-                    $query->whereHas('department', function ($q) {
-                        $q->whereIn('name', ['Accounting', 'Operational']); // Fixed exact DB name
-                    })
-                    ->orWhereIn('name', ['Chief Veterinarian', 'Human Resources Business Partner', 'Marketing Manager']) // Fixed exact DB names
-                    ->orWhere(function ($subQuery) {
-                        $subQuery->where(function ($q) {
-                            $q->where('name', 'LIKE', '%TL%')
-                              ->orWhere('name', 'LIKE', '%Team Leader%');
-                        })->whereNotIn('name', [
-                            'Veterinary Technician Team Leader', // Exact DB name
-                            'Clinic Assistant TL'                // Exact DB name
-                        ]);
-                    });
-
-                } elseif ($roleName === 'Operations Manager') {
-                    // OM: Only Receptionist
-                    $query->where('name', 'Receptionist');
-
-                } elseif ($roleName === 'Chief Vet') {
-                    // Chief Vet: Veterinarians Dept OR specific TLs
-                    $query->whereHas('department', function ($q) {
-                        $q->where('name', 'Veterinarians'); // Exact DB name
-                    })
-                    ->orWhereIn('name', [
-                        'Veterinary Technician Team Leader', 
-                        'Clinic Assistant TL'
-                    ]);
-
-                } elseif ($roleName === 'Marketing Manager') {
-                    // Marketing Manager: Marketing Dept only
-                    $query->whereHas('department', function ($q) {
-                        $q->where('name', 'Marketing'); 
-                    });
-
-                } elseif ($roleName === 'HRBP') {
-                    // HRBP: Human Resources Dept only
-                    $query->whereHas('department', function ($q) {
-                        $q->where('name', 'Human Resources'); // Exact DB name
-                    });
-
-                } elseif (str_contains($roleName, 'TL')) {
-                    // All TLs: Only positions strictly under their own Department
-                    if ($userDepartmentId) {
-                        $query->where('department_id', $userDepartmentId);
-                    } else {
-                        $query->where('id', 0);
-                    }
-
-                } else {
-                    $query->where('id', 0);
-                }
+        if ($safeRole === 'director of corporate services and operations') {
+            // DCSO: Accounting/Operational Depts OR exact specific roles
+            $query->whereHas('department', function ($q) {
+                $q->whereIn('name', ['Accounting', 'Operational']); 
+            })
+            ->orWhereIn('name', ['Chief Veterinarian', 'Human Resources Business Partner', 'Marketing Manager']) 
+            ->orWhere(function ($subQuery) {
+                $subQuery->where(function ($q) {
+                    $q->where('name', 'LIKE', '%TL%')
+                      ->orWhere('name', 'LIKE', '%Team Leader%');
+                })->whereNotIn('name', [
+                    'Veterinary Technician Team Leader',
+                    'Clinic Assistant TL'
+                ]);
             });
+
+        } elseif ($safeRole === 'operations manager') {
+            // 🟢 OM: Only Receptionist and TCC Driver
+            $query->whereIn('name', ['Receptionist', 'TCC Driver']);
+
+        // (Added fallback check for 'chief veterinarian' just in case it isn't abbreviated in the DB)
+        } elseif ($safeRole === 'chief vet' || $safeRole === 'chief veterinarian') {
+            // Chief Vet: Veterinarians Dept OR specific TLs
+            $query->whereHas('department', function ($q) {
+                $q->where('name', 'Veterinarians');
+            })
+            ->orWhereIn('name', [
+                'Veterinary Technician Team Leader', 
+                'Clinic Assistant TL'
+            ]);
+
+        } elseif ($safeRole === 'marketing manager') {
+            // Marketing Manager: Marketing Dept only
+            $query->whereHas('department', function ($q) {
+                $q->where('name', 'Marketing'); 
+            });
+
+        // (Added fallback check for HRBP full name)
+        } elseif ($safeRole === 'hrbp' || $safeRole === 'human resources business partner') {
+            // HRBP: Human Resources Dept only
+            $query->whereHas('department', function ($q) {
+                $q->where('name', 'Human Resources');
+            });
+
+        } elseif (str_contains(strtoupper($safeRole), 'TL') || str_contains(strtoupper($safeRole), 'TEAM LEADER')) {
+            // All TLs: Only positions strictly under their own Department
+            if ($userDepartmentId) {
+                $query->where('department_id', $userDepartmentId);
+            } else {
+                $query->where('id', 0);
+            }
+
+        } else {
+            // Failsafe: if role doesn't match anything above, return nothing.
+            $query->where('id', 0);
         }
+    });
+}
 
         
 

@@ -13,11 +13,13 @@ class AdminMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next): Response
+   public function handle(Request $request, Closure $next): Response
     {
-        if(!request()->user() || request()->user()->role->name !== 'admin') {
-            abort(403, 'Unauthorized access. Admin privileges are required to access this module');
+        $user = $request->user();
 
+        // 🟢 Simply check the new global helper!
+        if (!$user || !$user->has_global_access) {
+            abort(403, 'Unauthorized access. Admin privileges are required to access this module.');
         }
 
         return $next($request);

@@ -41,6 +41,7 @@ class AdminPasswordReset extends Notification
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line('An administrator has requested a password reset for your account.')
             ->action('Reset Password', $url)
+            ->line('⏳ For your security, this link will expire in 60 minutes.')
             ->line('If you did not request this, please contact your administrator immediately.');
     }
 
