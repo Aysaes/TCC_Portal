@@ -346,8 +346,8 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                 </div>
             </div>
 
-            {/* THE CHOICES MODAL - MOBILE FRIENDLY & EDITABLE MEALS */}
-            <Modal show={!!selectedRoster} onClose={closeModal} maxWidth="3xl">
+            {/* THE CHOICES MODAL */}
+            <Modal show={!!selectedRoster} onClose={closeModal} maxWidth="2xl">
                 {selectedRoster && (
                     <div className="flex flex-col max-h-[90vh] sm:max-h-[85vh]">
                         {/* Styled Modal Header - Mobile Responsive */}
@@ -415,7 +415,6 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                         </div>
                                     )}
                                 </div>
-
                             </div>
                             <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 focus:outline-none p-1.5 rounded-full hover:bg-gray-200 transition bg-gray-100 sm:bg-transparent flex-shrink-0">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -424,7 +423,6 @@ export default function Index({ auth, dutymeals = [], employees = [], department
 
                         {/* Display the Staff Choices Table */}
                         <div className="overflow-y-auto flex-1 p-4 sm:p-6 w-full">
-                            {/* Overflow-X to prevent table from breaking modal width on mobile */}
                             <div className="border border-gray-200 rounded-lg overflow-x-auto shadow-sm w-full">
                                 <table className="min-w-full divide-y divide-gray-200 w-full">
                                     <thead className="bg-gray-50">
@@ -457,26 +455,38 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                     onClick={() => !selectedRoster.is_locked && setEditingShiftId(p.id)}
                                                 >
                                                     {editingShiftId === p.id ? (
-                                                        <select
-                                                            autoFocus
-                                                            value={p.shift_type || 'day'}
-                                                            onChange={(e) => {
-                                                                handleShiftUpdate(p.id, e.target.value);
-                                                                setEditingShiftId(null);
-                                                            }}
-                                                            onBlur={() => setEditingShiftId(null)}
-                                                            onClick={(e) => e.stopPropagation()} 
-                                                            className="block w-28 sm:w-36 py-1 pl-2 pr-6 text-xs font-medium border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 cursor-pointer"
-                                                        >
-                                                            <option value="day">☀️ Day Shift</option>
-                                                            <option value="straight">⏱️ Straight Duty</option>
-                                                            <option value="graveyard">🌙 Graveyard</option>
-                                                        </select>
+                                                        <div className="relative inline-block">
+                                                            <select
+                                                                autoFocus
+                                                                value={p.shift_type || ''} 
+                                                                onChange={(e) => {
+                                                                    handleShiftUpdate(p.id, e.target.value);
+                                                                    setEditingShiftId(null);
+                                                                }}
+                                                                onBlur={() => setEditingShiftId(null)}
+                                                                onClick={(e) => e.stopPropagation()} 
+                                                                className={`appearance-none inline-flex items-center py-0.5 pl-1.5 sm:pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-medium rounded border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                    ${!p.shift_type ? 'bg-gray-100 text-gray-800 border-gray-300 focus:ring-gray-400' :
+                                                                    p.shift_type === 'graveyard' ? 'bg-indigo-100 text-indigo-800 border-indigo-200 focus:ring-indigo-400' : 
+                                                                    p.shift_type === 'straight' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 focus:ring-emerald-400' : 
+                                                                    'bg-amber-100 text-amber-800 border-amber-200 focus:ring-amber-400'}`}
+                                                            >
+                                                                <option value="" disabled>Select Shift</option>
+                                                                <option value="day">☀️ Day Shift</option>
+                                                                <option value="straight">⏱️ Straight</option>
+                                                                <option value="graveyard">🌙 Graveyard</option>
+                                                            </select>
+                                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-current opacity-60">
+                                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                                            </div>
+                                                        </div>
                                                     ) : (
                                                         <div title="Click to edit shift" className="inline-block">
                                                             {p.shift_type === 'graveyard' && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">🌙 Graveyard</span>}
                                                             {p.shift_type === 'straight' && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">⏱️ Straight</span>}
-                                                            {(p.shift_type === 'day' || !p.shift_type) && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200">☀️ Day</span>}
+                                                            {p.shift_type === 'day' && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200">☀️ Day Shift</span>}
+                                                            
+                                                            {(!p.shift_type || p.shift_type === 'none') && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200 italic">Unassigned</span>}
                                                         </div>
                                                     )}
                                                 </td>
@@ -487,21 +497,29 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                     onClick={() => !selectedRoster.is_locked && setEditingChoiceId(p.id)}
                                                 >
                                                     {editingChoiceId === p.id ? (
-                                                        <select
-                                                            autoFocus
-                                                            value={p.choice || 'none'}
-                                                            onChange={(e) => {
-                                                                handleChoiceUpdate(p.id, e.target.value);
-                                                                setEditingChoiceId(null);
-                                                            }}
-                                                            onBlur={() => setEditingChoiceId(null)}
-                                                            onClick={(e) => e.stopPropagation()} 
-                                                            className="block w-24 sm:w-28 py-1 pl-2 pr-6 text-xs font-medium border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 cursor-pointer"
-                                                        >
-                                                            <option value="none" disabled>Select...</option>
-                                                            <option value="main">Main</option>
-                                                            <option value="alt">Alt</option>
-                                                        </select>
+                                                        <div className="relative inline-block">
+                                                            <select
+                                                                autoFocus
+                                                                value={p.choice || 'none'}
+                                                                onChange={(e) => {
+                                                                    handleChoiceUpdate(p.id, e.target.value);
+                                                                    setEditingChoiceId(null);
+                                                                }}
+                                                                onBlur={() => setEditingChoiceId(null)}
+                                                                onClick={(e) => e.stopPropagation()} 
+                                                                className={`appearance-none inline-flex items-center py-0.5 pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                    ${p.choice === 'none' ? 'bg-gray-100 text-gray-500 border-gray-200 focus:ring-gray-400' : 
+                                                                    p.choice === 'main' ? 'bg-blue-100 text-blue-800 border-blue-200 focus:ring-blue-400' : 
+                                                                    'bg-amber-100 text-amber-800 border-amber-200 focus:ring-amber-400'}`}
+                                                            >
+                                                                <option value="none" disabled>Pending</option>
+                                                                <option value="main">Main</option>
+                                                                <option value="alt">Alt</option>
+                                                            </select>
+                                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-current opacity-60">
+                                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                                            </div>
+                                                        </div>
                                                     ) : (
                                                         <div title="Click to edit meal choice">
                                                             {p.choice === 'none' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-medium bg-gray-100 text-gray-500 italic border border-gray-200">Pending</span>}
@@ -553,8 +571,8 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                 )}
             </Modal>
 
-            {/* --- THE NEW EMPLOYEE POOL MODAL --- */}
-            <Modal show={isPoolModalOpen} onClose={() => setIsPoolModalOpen(false)} maxWidth="2xl">
+            {/* --- THE NEW EMPLOYEE POOL MODAL (Standard Width: 3xl) --- */}
+            <Modal show={isPoolModalOpen} onClose={() => setIsPoolModalOpen(false)} maxWidth="3xl">
                 <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-medium text-gray-900">Add Staff to Roster</h2>
@@ -565,16 +583,16 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                         </button>
                     </div>
 
-                    {/* Filter Controls - Stacks cleanly on Mobile */}
-                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                    {/* Filter Controls - Now with more breathing room */}
+                    <div className="flex flex-col sm:flex-row gap-3 mb-4">
                         <TextInput 
                             placeholder="Search name..." 
-                            className="w-full sm:w-1/3 text-sm"
+                            className="w-full sm:flex-1 text-sm"
                             value={poolSearch} 
                             onChange={e => setPoolSearch(e.target.value)} 
                         />
                         <select 
-                            className="w-full sm:w-1/3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                            className="w-full sm:flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
                             value={poolDept} 
                             onChange={e => { setPoolDept(e.target.value); setPoolPos(''); }}
                         >
@@ -582,7 +600,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                             {departments.map(dept => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
                         </select>
                         <select 
-                            className="w-full sm:w-1/3 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm disabled:bg-gray-100"
+                            className="w-full sm:flex-1 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm disabled:bg-gray-100"
                             value={poolPos} 
                             onChange={e => setPoolPos(e.target.value)}
                             disabled={poolDept !== 'All' && availablePoolPositions.length === 0}
@@ -603,8 +621,8 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                         ) : (
                             <ul className="divide-y divide-gray-100">
                                 {filteredPoolEmployees.map(emp => (
-                                    <li key={emp.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 hover:bg-gray-50 transition gap-2 sm:gap-0">
-                                        <div>
+                                    <li key={emp.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 hover:bg-gray-50 transition gap-3 sm:gap-4">
+                                        <div className="flex-1">
                                             <p className="text-sm font-medium text-gray-900">{emp.name}</p>
                                             <p className="text-xs text-gray-500 mt-0.5">
                                                 {getDepartmentName(emp.department_id)} 
@@ -613,7 +631,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                             </p>
                                         </div>
                                         
-                                        <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
+                                        <div className="flex items-center gap-3 w-full sm:w-auto">
                                             <select
                                                 value={poolMealChoices[emp.id] || 'main'}
                                                 onChange={(e) => setPoolMealChoices({ ...poolMealChoices, [emp.id]: e.target.value })}
@@ -624,7 +642,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                             </select>
                                             <SecondaryButton 
                                                 onClick={() => handleEmergencyAdd(emp.id, poolMealChoices[emp.id] || 'main')}
-                                                className="text-xs px-3 py-1.5 justify-center sm:justify-start"
+                                                className="text-xs px-4 py-1.5 justify-center sm:justify-start whitespace-nowrap"
                                             >
                                                 + Add
                                             </SecondaryButton>
