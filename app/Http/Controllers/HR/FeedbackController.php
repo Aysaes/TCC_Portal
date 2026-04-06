@@ -4,9 +4,13 @@ namespace App\Http\Controllers\HR;
 
 use App\Http\Controllers\Controller;
 use App\Models\Feedback;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Illuminate\Support\Carbon;
+use App\Notifications\NewFeedbackAlert;
 
 class FeedbackController extends Controller
 {
@@ -47,28 +51,40 @@ class FeedbackController extends Controller
     }
 
     // Existing store method
-    public function store(Request $request)
+   public function store(Request $request)
     {
         $request->validate([
             'type' => 'required|string|max:50',
             'subject' => 'required|string|max:255',
             'message' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // Up to 5MB images allowed
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', 
         ]);
 
-        // Handle the image upload if one is provided
         $imagePath = null;
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('feedback_images', 'public');
         }
 
-        Feedback::create([
-            'user_id' => auth()->id(), 
+        // 🟢 1. Save the feedback to a variable
+        $feedback = Feedback::create([
+            'user_id' => Auth::id(), 
             'type' => $request->type,
             'subject' => $request->subject,
             'message' => $request->message,
-            'image_path' => $imagePath, // Save the path to the database
+            'image_path' => $imagePath,
         ]);
+
+        // 🟢 2. Find the HR Team (Admins, HR, HRBP)
+        $hrUsers = User::whereHas('role', function ($q) {
+            $q->whereIn('name', ['admin', 'HR', 'HRBP', 'Human Resources', 'Director of Corporate Services and Operations']);
+        })->orWhereHas('position', function ($q) {
+            $q->where('name', 'Human Resources');
+        })->get();
+
+        // 🟢 3. Fire the notification!
+        if ($hrUsers->isNotEmpty()) {
+            Notification::send($hrUsers, new NewFeedbackAlert($feedback->type, Auth::user()->name));
+        }
 
         return back()->with('success', 'Thank you! Your feedback has been securely submitted to HR.');
     }

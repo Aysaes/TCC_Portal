@@ -51,7 +51,14 @@ class HandleInertiaRequests extends Middleware
                     'department' => $user->department,
                     
                     'is_rotating' => $user->is_rotating,
+                    
+                    // 🟢 PROTECT OUR PREVIOUS WORK: Ensure the global access helper makes it to React!
+                    'has_global_access' => $user->has_global_access, 
                 ] : null,
+                
+                // 🟢 NEW: Here is the bridge for your notifications!
+                'notifications' => $user ? $user->unreadNotifications()->take(5)->get() : [],
+                'unreadNotificationsCount' => $user ? $user->unreadNotifications()->count() : 0,
             ],
 
             'flash' => [
@@ -59,8 +66,8 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn() => $request->session()->get('error'),
             ],
             'system' => [
-                'serverDate' => fn() => Carbon::now()->toDateString(),
-                'serverNow' => fn() => Carbon::now()->toIso8601String(),
+                'serverDate' => fn() => \Carbon\Carbon::now()->toDateString(),
+                'serverNow' => fn() => \Carbon\Carbon::now()->toIso8601String(),
                 'timezone' => config('app.timezone'),
             ],
         ];

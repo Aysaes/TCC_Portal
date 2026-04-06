@@ -20,7 +20,9 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\Auth\SetupAccountController;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -93,6 +95,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-duty-meals', [\App\Http\Controllers\Staff\DutyMealController::class, 'index'])->name('staff.duty-meals.index');
     Route::patch('/my-duty-meals/{participantId}/choice', [\App\Http\Controllers\Staff\DutyMealController::class, 'updateChoice'])->name('staff.duty-meals.choice');
     Route::patch('/staff/duty-meals/{id}/lock-in', [\App\Http\Controllers\Staff\DutyMealController::class, 'lockIn'])->name('staff.duty-meals.lock-in');
+
+    Route::post('/notifications/{id}/mark-as-read', function (Request $request, $id) {
+    /** @var \App\Models\User $user */
+    $user = $request->user();
+
+    if ($user) {
+        $notification = $user->notifications()->findOrFail($id);
+        $notification->markAsRead();
+    }
+
+    return back();
+})->middleware('auth')->name('notifications.read');
 });
 
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){

@@ -55,6 +55,12 @@ const Content = ({
 
     if (width === '48') {
         widthClasses = 'w-48';
+    } else if (width === '64') {
+        widthClasses = 'w-64';
+    } else if (width === '80') {
+        widthClasses = 'w-80'; // 🟢 This is the one our Notification bell needs!
+    } else if (width === '96') {
+        widthClasses = 'w-96';
     }
 
     return (

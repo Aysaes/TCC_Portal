@@ -8,11 +8,16 @@ use App\Models\Branch;
 use App\Models\Department;
 use App\Models\Position;
 use App\Models\User;
+use App\Notifications\ManpowerRequestAlert;
+use App\Notifications\ManpowerStatusAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
+
+
 use Exception;
 
 class ManpowerRequestController extends Controller
@@ -231,9 +236,56 @@ if (strtolower($user->role->name) !== 'admin' && !in_array($validated['branch_id
             Log::info('MARKER 4: Attempting to save to database...');
 
             // 4. Save to database
-            ManpowerRequest::create($validated);
+           $newRequest = ManpowerRequest::create($validated);
 
-            Log::info('MARKER 5: Successfully saved to database! Redirecting...');
+            Log::info('MARKER 5: Successfully saved to database! Routing Notification...');
+
+           // 5. 🟢 SEND THE NOTIFICATION TO THE FIRST APPROVER
+            if ($validated['status'] === 'Pending') {
+                $firstApproverRole = $workflowPath[0] ?? null;
+
+                if ($firstApproverRole) {
+                    $approversQuery = User::whereHas('role', function ($q) use ($firstApproverRole) {
+                        $q->where('name', $firstApproverRole);
+                    });
+
+                    // 🟢 NEW: Filter by branch for branch-level managers!
+                    // Global roles (DCSO, HR, OM) bypass this so they don't get filtered out.
+                    $globalRoles = ['Director of Corporate Services and Operations', 'HR', 'HRBP', 'Operations Manager'];
+                    
+                    if (!in_array($firstApproverRole, $globalRoles)) {
+                        $approversQuery->where(function ($query) use ($validated) {
+                            // Check their primary branch
+                            $query->where('branch_id', $validated['branch_id'])
+                                  // OR check their rotating branches
+                                  ->orWhereExists(function ($subquery) use ($validated) {
+                                      $subquery->select(DB::raw(1))
+                                               ->from('branch_user')
+                                               ->whereColumn('branch_user.user_id', 'users.id')
+                                               ->where('branch_user.branch_id', $validated['branch_id']);
+                                  });
+                        });
+                    }
+
+                    $approvers = $approversQuery->get();
+
+                    if ($approvers->isNotEmpty()) {
+                        Notification::send($approvers, new ManpowerRequestAlert($newRequest, $user->name));
+                        Log::info("Notification sent to {$approvers->count()} users with role: {$firstApproverRole} for Branch ID: {$validated['branch_id']}");
+                    } else {
+                        Log::warning("No users found with role {$firstApproverRole} at Branch ID {$validated['branch_id']}.");
+                    }
+                }
+            } elseif ($validated['status'] === 'Approved') {
+                // If it was auto-approved (like a DCSO request), notify HR directly
+                $hrUsers = User::whereHas('role', function ($q) {
+                    $q->where('name', 'HR')->orWhere('name', 'Human Resources');
+                })->get();
+
+                if ($hrUsers->isNotEmpty()) {
+                    Notification::send($hrUsers, new ManpowerRequestAlert($newRequest, $user->name));
+                }
+            }
 
             return redirect()->route('hr.manpower-requests.index')
                 ->with('success', $successMessage);
@@ -282,9 +334,25 @@ if (strtolower($user->role->name) !== 'admin' && !in_array($validated['branch_id
             // High-level roles pull everything. React will filter their specific "Action Required" tab.
             
         } else {
-            // Middle Managers see their own submissions OR requests where their role is in the workflow path
-            $query->where('user_id', $user->id)
-                  ->orWhereJsonContains('workflow_path', $userRole);
+            // 🟢 NEW: Get the Middle Manager's allowed branches
+            $primaryBranchId = $user->branch_id;
+            $rotatingBranchIds = DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray();
+            $allowedBranchIds = array_filter(array_unique(array_merge((array) $primaryBranchId, $rotatingBranchIds)));
+
+            // Middle Managers see their own submissions OR requests in their workflow path THAT MATCH THEIR BRANCH
+            $query->where(function ($q) use ($user, $userRole, $allowedBranchIds) {
+                // 1. Always show them requests they submitted themselves
+                $q->where('user_id', $user->id)
+                  // 2. Show requests waiting for their role, strictly filtered by their assigned branches
+                  ->orWhere(function ($subQ) use ($userRole, $allowedBranchIds) {
+                      $subQ->whereJsonContains('workflow_path', $userRole);
+                      
+                      // If they are an Operations Manager, they see all branches. Otherwise, restrict them!
+                      if ($userRole !== 'Operations Manager') {
+                          $subQ->whereIn('branch_id', $allowedBranchIds);
+                      }
+                  });
+            });
         }
 
         return Inertia::render('HR/Admin/ApprovalRequest', [
@@ -296,35 +364,93 @@ if (strtolower($user->role->name) !== 'admin' && !in_array($validated['branch_id
     // ----------------------------------------------------------------------
     // 3. THE 3-STAGE APPROVAL WORKFLOW
     // ----------------------------------------------------------------------
-   public function updateStatus(Request $request, ManpowerRequest $manpowerRequest)
+    public function updateStatus(Request $request, ManpowerRequest $manpowerRequest)
     {
         $request->validate([
             'status' => 'required|in:Approved,Rejected'
         ]);
 
+        $requesterName = $manpowerRequest->requester->name ?? 'An Employee';
+        $originalRequester = $manpowerRequest->requester;
+        
+        // 🟢 Grab the current manager's role so the user knows exactly WHO took action
+        $currentApproverRole = Auth::user()->role->name ?? 'Management';
+
         if ($request->status === 'Rejected') {
-            // Instant rejection kills the request
             $manpowerRequest->update(['status' => 'Rejected']);
+            
+            if ($originalRequester) {
+                // Tell the user exactly who rejected it
+                $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Rejected by {$currentApproverRole}."));
+            }
+
             return back()->with('success', "Request has been officially rejected.");
         } 
         
         if ($request->status === 'Approved') {
-            // Move to the next step in the array
             $nextStep = $manpowerRequest->current_step + 1;
             $workflowPath = $manpowerRequest->workflow_path;
+            
+            // 🟢 Calculate the progress for the user's notification
+            $totalSteps = count($workflowPath);
+            $humanReadableStep = $nextStep + 1; // +1 because arrays start at 0
 
-            // Check if the NEXT step is HR
             if (isset($workflowPath[$nextStep]) && $workflowPath[$nextStep] === 'HR') {
-                // DCSO just approved it. It moves to HR for safekeeping.
                 $manpowerRequest->update([
                     'current_step' => $nextStep,
-                    'status' => 'Approved' // The master status is now officially complete!
+                    'status' => 'Approved' 
                 ]);
+
+                // 1. Alert HR
+                $hrUsers = User::whereHas('role', function ($q) {
+                    $q->where('name', 'HR')->orWhere('name', 'Human Resources');
+                })->get();
+
+                if ($hrUsers->isNotEmpty()) {
+                    Notification::send($hrUsers, new ManpowerRequestAlert($manpowerRequest, $requesterName));
+                }
+
+                // 🟢 2. Tell the user it reached the absolute finish line
+                if ($originalRequester) {
+                    $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Fully Approved by {$currentApproverRole}! Forwarded to HR."));
+                }
+
                 return back()->with('success', "Final approval granted. Forwarded to HR for reference.");
+            
             } else {
-                // Just pass the baton to the next manager
                 $manpowerRequest->update(['current_step' => $nextStep]);
                 $nextRole = $workflowPath[$nextStep];
+
+                $nextApproversQuery = User::whereHas('role', function ($q) use ($nextRole) {
+                    $q->where('name', $nextRole);
+                });
+
+                $globalRoles = ['Director of Corporate Services and Operations', 'HR', 'HRBP', 'Operations Manager'];
+                
+                if (!in_array($nextRole, $globalRoles)) {
+                    $nextApproversQuery->where(function ($query) use ($manpowerRequest) {
+                        $query->where('branch_id', $manpowerRequest->branch_id)
+                              ->orWhereExists(function ($subquery) use ($manpowerRequest) {
+                                  $subquery->select(DB::raw(1))
+                                           ->from('branch_user')
+                                           ->whereColumn('branch_user.user_id', 'users.id')
+                                           ->where('branch_user.branch_id', $manpowerRequest->branch_id);
+                              });
+                    });
+                }
+
+                $nextApprovers = $nextApproversQuery->get();
+
+                if ($nextApprovers->isNotEmpty()) {
+                    Notification::send($nextApprovers, new ManpowerRequestAlert($manpowerRequest, $requesterName));
+                }
+
+                // 🟢 3. Give the user the exact progress breakdown!
+                if ($originalRequester) {
+                    $detailedMessage = "Approved by {$currentApproverRole}. Forwarded to {$nextRole} (Step {$humanReadableStep} of {$totalSteps}).";
+                    $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, $detailedMessage));
+                }
+
                 return back()->with('success', "Endorsed and forwarded to the {$nextRole}.");
             }
         }

@@ -1,9 +1,9 @@
-import SidebarLayout from '@/Layouts/SidebarLayout';
-import { getHRAdminLinks } from '@/Config/navigation';
-import { Head, router, usePage } from '@inertiajs/react';
-import { formatAppDate } from '@/Utils/date';
-import { useEffect, useMemo, useState } from 'react';
 import Modal from '@/Components/Modal';
+import { getHRAdminLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { formatAppDate } from '@/Utils/date';
+import { Head, router, usePage } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function HRAdminOverview({ auth, requests }) {
     const hrLinks = getHRAdminLinks(auth);
@@ -96,6 +96,11 @@ export default function HRAdminOverview({ auth, requests }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
 
+
+    // --- ACCEPT MODAL STATE ---
+    const [isAcceptModalOpen, setIsAcceptModalOpen] = useState(false);
+    const [acceptingId, setAcceptingId] = useState(null);
+
     // --- ACTION HANDLER ---
     const handleAction = (id, actionType) => {
         if (actionType === 'reject') {
@@ -105,12 +110,11 @@ export default function HRAdminOverview({ auth, requests }) {
             return;
         }
 
-        if (confirm('Are you sure you want to approve this request?')) {
-            router.patch(route('hr.admin.update-status', id), {
-                action: actionType
-            }, {
-                preserveScroll: true
-            });
+        // 🟢 NEW: Open the custom modal instead of window.confirm
+        if (actionType === 'accept') {
+            setAcceptingId(id);
+            setIsAcceptModalOpen(true);
+            return;
         }
     };
 
@@ -126,6 +130,19 @@ export default function HRAdminOverview({ auth, requests }) {
                 setIsRejectModalOpen(false);
                 setRejectingId(null);
                 setRejectReason('');
+            }
+        });
+    };
+
+    // 🟢 NEW: SUBMIT ACCEPTANCE ---
+    const submitAccept = () => {
+        router.patch(route('hr.admin.update-status', acceptingId), {
+            action: 'accept'
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsAcceptModalOpen(false);
+                setAcceptingId(null);
             }
         });
     };
@@ -529,6 +546,41 @@ export default function HRAdminOverview({ auth, requests }) {
                             </button>
                         </div>
                     </form>
+                </div>
+            </Modal>
+
+            {/* --- 🟢 NEW: ACCEPT CONFIRMATION MODAL --- */}
+            <Modal show={isAcceptModalOpen} onClose={() => setIsAcceptModalOpen(false)} maxWidth="sm">
+                <div className="p-6">
+                    <div className="flex items-center justify-between border-b pb-4 mb-5">
+                        <h2 className="text-xl font-bold text-gray-900">Confirm Approval</h2>
+                        <button onClick={() => setIsAcceptModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <p className="text-sm text-gray-700 mb-6 mt-2">
+                        Are you sure you want to approve this document request? The document will be moved to the next step in the workflow.
+                    </p>
+
+                    <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
+                        <button
+                            type="button"
+                            onClick={() => setIsAcceptModalOpen(false)}
+                            className="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={submitAccept}
+                            className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-indigo-500 transition-colors"
+                        >
+                            Confirm Accept
+                        </button>
+                    </div>
                 </div>
             </Modal>
 

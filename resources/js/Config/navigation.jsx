@@ -215,30 +215,50 @@ export const getHRAdminLinks = (auth) => {
 };
 
 export const getPRPOLinks = (auth) => {
+    // Safely grab the role and make it lowercase
     const userRole = auth?.user?.role?.name?.toLowerCase().trim() || '';
     
-    const canManagePO = userRole.includes('procurement') || userRole.includes('director') || userRole === 'admin';
-    
-    // 🟢 NEW: Only Inventory and DCSO/Admin can create PRs
-    const canCreatePR = userRole.includes('inventory') || userRole.includes('director') || userRole === 'admin';
+    // 🟢 Define exact role clusters
+    const isAdminOrDCSO = userRole === 'admin' || userRole.includes('director');
+    const isProcurement = userRole.includes('procurement');
+    const isInventory = userRole.includes('inventory');
 
-    const links = [
-        { label: 'Products Masterlist', href: route('prpo.products.index'), active: route().current('prpo.products.index') },
-        { label: 'Approval Board', href: route('prpo.approval-board'), active: route().current('prpo.approval-board') },
-    ];
+    const links = [];
 
-    // 🟢 Insert Create PR link conditionally
-    if (canCreatePR) {
-        // Insert it right after the Masterlist
-        links.splice(1, 0, { 
+    // 2. PR/PO Request (Admin, DCSO, Procurement, Inventory)
+    if (isAdminOrDCSO || isProcurement || isInventory) {
+        links.push({ 
             label: 'PR/PO Request', 
             href: route('prpo.purchase-requests.create'), 
-            active: route().current('prpo.purchase-requests.create'),
+            active: route().current('prpo.purchase-requests.*') 
         });
     }
 
-    if (canManagePO) {
-        links.push({ label: 'PO Generation', href: route('prpo.purchase-orders.index'), active: route().current('prpo.purchase-orders.index')});
+    // 3. Approval Board (Admin, DCSO, Procurement, Inventory)
+    if (isAdminOrDCSO || isProcurement || isInventory) {
+        links.push({ 
+            label: 'Approval Board', 
+            href: route('prpo.approval-board'), 
+            active: route().current('prpo.approval-board') || route().current('prpo.purchase-requests.update-status') 
+        });
+    }
+
+    // 4. PO Generation (ONLY Admin, DCSO, Procurement)
+    if (isAdminOrDCSO || isProcurement) {
+        links.push({ 
+            label: 'PO Generation', 
+            href: route('prpo.purchase-orders.index'), 
+            active: route().current('prpo.purchase-orders.*') 
+        });
+    }
+
+     // 1. Products Masterlist (ONLY Admin & DCSO)
+    if (isAdminOrDCSO) {
+        links.push({ 
+            label: 'Products Masterlist', 
+            href: route('prpo.products.index'), 
+            active: route().current('prpo.products.*') 
+        });
     }
 
     return links;

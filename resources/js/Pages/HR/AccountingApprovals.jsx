@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
-import SidebarLayout from '@/Layouts/SidebarLayout';
-import { getHRLinks } from '@/Config/navigation';
 import Modal from '@/Components/Modal';
+import { getHRLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 
 export default function AccountingApprovals({ auth, requests }) {
 
@@ -31,6 +31,9 @@ export default function AccountingApprovals({ auth, requests }) {
     const [rejectingId, setRejectingId] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
 
+    const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
+    const [releasingId, setReleasingId] = useState(null);
+
     // --- ACTION HANDLER ---
     const handleAction = (id, actionStatus) => {
         if (actionStatus === 'Rejected') {
@@ -40,12 +43,11 @@ export default function AccountingApprovals({ auth, requests }) {
             return;
         }
 
-        if (confirm(`Are you sure you want to mark this request as ${actionStatus}?`)) {
-            router.patch(route('hr.accounting.update', id), {
-                status: actionStatus
-            }, {
-                preserveScroll: true
-            });
+        // 🟢 NEW: Open the custom modal instead of window.confirm
+        if (actionStatus === 'Released') {
+            setReleasingId(id);
+            setIsReleaseModalOpen(true);
+            return;
         }
     };
 
@@ -61,6 +63,18 @@ export default function AccountingApprovals({ auth, requests }) {
                 setIsRejectModalOpen(false);
                 setRejectingId(null);
                 setRejectReason('');
+            }
+        });
+    };
+
+    const submitRelease = () => {
+        router.patch(route('hr.accounting.update', releasingId), {
+            status: 'Released'
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsReleaseModalOpen(false);
+                setReleasingId(null);
             }
         });
     };
@@ -294,6 +308,41 @@ export default function AccountingApprovals({ auth, requests }) {
                             </button>
                         </div>
                     </form>
+                </div>
+            </Modal>
+
+            {/* --- 🟢 NEW: RELEASE CONFIRMATION MODAL --- */}
+            <Modal show={isReleaseModalOpen} onClose={() => setIsReleaseModalOpen(false)} maxWidth="sm">
+                <div className="p-6">
+                    <div className="flex items-center justify-between border-b pb-4 mb-5">
+                        <h2 className="text-xl font-bold text-gray-900">Confirm Release</h2>
+                        <button onClick={() => setIsReleaseModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <p className="text-sm text-gray-700 mb-6 mt-2">
+                        Are you sure you want to mark this Form 2316 as Released? The employee will be notified immediately that their document is ready.
+                    </p>
+
+                    <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
+                        <button
+                            type="button"
+                            onClick={() => setIsReleaseModalOpen(false)}
+                            className="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={submitRelease}
+                            className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-500 transition-colors"
+                        >
+                            Confirm Release
+                        </button>
+                    </div>
                 </div>
             </Modal>
         </SidebarLayout>

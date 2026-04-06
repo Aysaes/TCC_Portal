@@ -7,10 +7,13 @@ use App\Models\Supplier;
 use App\Models\PurchaseRequest;
 use App\Models\Branch;
 use App\Models\Department;
+use App\Models\User;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\PRStatusUpdate;
 
 class PurchaseRequestController extends Controller
 {
@@ -35,6 +38,27 @@ class PurchaseRequestController extends Controller
             'departments' => $departments,
             'userBranches' => $userBranches,
         ]);
+    }
+
+
+    private function notifyNextApprovers($pr, $status)
+    {
+        $usersToNotify = User::whereHas('role', function ($q) use ($status) {
+            if ($status === 'pending_inv_tl') {
+                $q->where('name', 'like', '%inventory tl%');
+            } elseif ($status === 'pending_ops_manager') {
+                $q->where('name', 'like', '%operations%')->orWhere('name', 'like', '%ops manager%');
+            } elseif ($status === 'approved') {
+                $q->where('name', 'like', '%procurement%')->orWhere('name', 'like', '%director%');
+            }
+            $q->orWhere('name', 'admin'); // Admin always gets notified
+        })->get();
+
+        // Optional: If you want to strictly filter by branch here, you could, 
+        // but since the Approval Board already filters their view, a general ping is safe!
+        if ($usersToNotify->isNotEmpty()) {
+            Notification::send($usersToNotify, new PRStatusUpdate($pr, "Action Required: " . str_replace('_', ' ', strtoupper($status))));
+        }
     }
 
     // =====================================================================
@@ -108,40 +132,51 @@ class PurchaseRequestController extends Controller
             }
         });
 
+        $newPr = PurchaseRequest::latest()->first(); 
+        if ($newPr) {
+            $this->notifyNextApprovers($newPr, $initialStatus);
+        }
+
         return redirect()->route('prpo.approval-board')->with('success', 'Purchase Request submitted successfully!');
     }
     // =====================================================================
     // 3. APPROVAL BOARD (View Requests based on Role)
     // =====================================================================
-  public function approvalBoard(Request $request)
+    public function approvalBoard(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $userRole = strtolower($user->role->name ?? '');
         $userBranches = $user->branches()->pluck('name')->toArray(); 
         
-        $defaultView = str_contains($userRole, 'assistant') ? 'all' : 'action_needed';
-        $view = $request->query('view', $defaultView);
-
-        $query = PurchaseRequest::with(['user', 'items.product', 'items.supplier'])->latest();
+        $isAssistant = str_contains($userRole, 'assistant');
         $isAdmin = str_contains($userRole, 'admin');
 
-        if ($view === 'action_needed') {
+        // 🟢 If they are an assistant, FORCE 'my_requests'. Otherwise default to 'action_needed'
+        $view = $request->query('view', $isAssistant ? 'my_requests' : 'action_needed');
+        if ($isAssistant) {
+            $view = 'my_requests';
+        }
+
+        $query = PurchaseRequest::with(['user', 'items.product', 'items.supplier'])->latest();
+
+        // 🟢 1. MY REQUESTS (Strictly created by the logged-in user)
+        if ($view === 'my_requests') {
+            $query->where('user_id', $user->id);
+        } 
+        
+        // 🟢 2. ACTION NEEDED (Pending their specific approval)
+        elseif ($view === 'action_needed') {
             if ($isAdmin) {
                 $query->whereIn('status', ['pending_inv_tl', 'pending_ops_manager', 'approved']);
             } 
             elseif (str_contains($userRole, 'inventory tl')) {
                 $query->where('status', 'pending_inv_tl');
-                if (!empty($userBranches)) {
-                    $query->whereIn('branch', $userBranches); 
-                }
+                if (!empty($userBranches)) $query->whereIn('branch', $userBranches); 
             } 
             elseif (str_contains($userRole, 'operations') || str_contains($userRole, 'ops manager')) {
                 $query->where('status', 'pending_ops_manager');
-                // 🟢 FIXED: Ops Managers are now strictly locked to their assigned pivot table branches
-                if (!empty($userBranches)) {
-                    $query->whereIn('branch', $userBranches); 
-                }
+                if (!empty($userBranches)) $query->whereIn('branch', $userBranches); 
             } 
             elseif (str_contains($userRole, 'director') || str_contains($userRole, 'procurement')) {
                 $query->where('status', 'approved');
@@ -149,12 +184,32 @@ class PurchaseRequestController extends Controller
             else {
                 $query->whereRaw('1 = 0'); 
             }
-        } else {
-            // "ALL / MY REQUESTS" VIEW
-            if (!$isAdmin && str_contains($userRole, 'assistant')) {
-                $query->where('user_id', $user->id);
-            } elseif (!$isAdmin && !empty($userBranches)) {
-                // 🟢 FIXED: Both TLs and Ops Managers can only see "All" requests for their branches
+        } 
+        
+        // 🟢 3. FINISHED REQUESTS (Moved past their desk or finalized)
+        elseif ($view === 'finished') {
+            if ($isAdmin) {
+                $query->whereIn('status', ['po_generated', 'rejected', 'cancelled']);
+            } 
+            elseif (str_contains($userRole, 'inventory tl')) {
+                $query->whereIn('status', ['pending_ops_manager', 'approved', 'po_generated', 'rejected', 'cancelled']);
+                if (!empty($userBranches)) $query->whereIn('branch', $userBranches);
+            } 
+            elseif (str_contains($userRole, 'operations') || str_contains($userRole, 'ops manager')) {
+                $query->whereIn('status', ['approved', 'po_generated', 'rejected', 'cancelled']);
+                if (!empty($userBranches)) $query->whereIn('branch', $userBranches);
+            } 
+            elseif (str_contains($userRole, 'director') || str_contains($userRole, 'procurement')) {
+                $query->whereIn('status', ['po_generated', 'rejected', 'cancelled']);
+            } 
+            else {
+                $query->whereRaw('1 = 0'); 
+            }
+        }
+
+        // 🟢 4. ALL ACTIVE (For directors/admins)
+        elseif ($view === 'all') {
+            if (!$isAdmin && !empty($userBranches)) {
                 $query->whereIn('branch', $userBranches);
             }
         }
@@ -164,7 +219,9 @@ class PurchaseRequestController extends Controller
         return Inertia::render('PRPO/ApprovalBoard', [
             'requests' => $requests,
             'currentView' => $view,
-            'userBranches' => $userBranches, // 🟢 Passed to React for button security!
+            'userBranches' => $userBranches,
+            'isAssistant' => $isAssistant, 
+            'canSeeAll' => !$isAssistant && ($isAdmin || str_contains($userRole, 'director') || str_contains($userRole, 'procurement')),
         ]);
     }
 
@@ -177,17 +234,34 @@ class PurchaseRequestController extends Controller
             'action' => 'required|in:approve,reject'
         ]);
 
+        $originalRequester = $purchaseRequest->user;
+
         if ($validated['action'] === 'approve') {
-            // 🟢 The New Stepper Logic
             if ($purchaseRequest->status === 'pending_inv_tl') {
                 $purchaseRequest->status = 'pending_ops_manager';
             } elseif ($purchaseRequest->status === 'pending_ops_manager') {
-                $purchaseRequest->status = 'approved'; // Sends to Procurement for PO!
+                $purchaseRequest->status = 'approved'; 
             }
+            
             $message = 'Purchase request moved to the next approval stage.';
+            
+            // 🟢 1. Pass the baton to the next manager
+            $this->notifyNextApprovers($purchaseRequest, $purchaseRequest->status);
+            
+            // 🟢 2. Ping the original requester
+            if ($originalRequester) {
+                $statusText = $purchaseRequest->status === 'approved' ? 'Fully Approved! Sent to Procurement.' : 'Approved by TL. Sent to Ops Manager.';
+                $originalRequester->notify(new PRStatusUpdate($purchaseRequest, $statusText));
+            }
+
         } else {
             $purchaseRequest->status = 'rejected';
             $message = 'Purchase request has been rejected.';
+            
+            // 🟢 3. Tell the requester it was rejected
+            if ($originalRequester) {
+                $originalRequester->notify(new PRStatusUpdate($purchaseRequest, "Rejected by Management."));
+            }
         }
 
         $purchaseRequest->save();

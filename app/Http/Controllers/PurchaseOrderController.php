@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use App\Notifications\POStatusUpdate;
+use App\Notifications\PRStatusUpdate;
 
 class PurchaseOrderController extends Controller
 {
@@ -130,12 +134,47 @@ class PurchaseOrderController extends Controller
             'attachments' => empty($attachments) ? null : $attachments, // 🟢 Forces save!
         ]);
 
-        $message = match($validated['status']) {
-            'approved' => 'Purchase Order has been officially Approved by DCSO!',
-            'pending_approval' => 'Purchase Order submitted to DCSO for approval.',
-            'cancelled' => 'Purchase Order has been cancelled.',
-            default => 'Purchase Order draft updated successfully.'
-        };
+        $status = $validated['status'];
+        $originalRequester = $purchaseOrder->purchaseRequest->user ?? null;
+
+        if ($status === 'pending_approval') {
+            $message = 'Purchase Order submitted to DCSO for approval.';
+            
+            // Ping the Directors / Admins
+            $dcsoUsers = User::whereHas('role', function($q) {
+                $q->where('name', 'like', '%director%')->orWhere('name', 'admin');
+            })->get();
+            
+            if ($dcsoUsers->isNotEmpty()) {
+                Notification::send($dcsoUsers, new POStatusUpdate($purchaseOrder, "Requires DCSO Approval"));
+            }
+
+        } elseif ($status === 'approved') {
+            $message = 'Purchase Order has been officially Approved by DCSO!';
+            
+            // Ping Procurement so they know they can send it to the supplier
+            $procurementUsers = User::whereHas('role', function($q) {
+                $q->where('name', 'like', '%procurement%')->orWhere('name', 'admin');
+            })->get();
+            
+            if ($procurementUsers->isNotEmpty()) {
+                Notification::send($procurementUsers, new POStatusUpdate($purchaseOrder, "Officially Approved by DCSO!"));
+            }
+
+            // Ping the original employee who requested the items!
+            if ($originalRequester) {
+                $originalRequester->notify(new POStatusUpdate($purchaseOrder, "Great news! Your items have been officially ordered."));
+            }
+
+        } elseif ($status === 'cancelled') {
+            $message = 'Purchase Order has been cancelled.';
+            
+            if ($originalRequester) {
+                $originalRequester->notify(new POStatusUpdate($purchaseOrder, "Notice: The Purchase Order for your items was cancelled."));
+            }
+        } else {
+            $message = 'Purchase Order draft updated successfully.';
+        }
 
         return back()->with('success', $message);
     }
@@ -228,9 +267,8 @@ class PurchaseOrderController extends Controller
                     'vat_total' => $vatTotal,
                     'grand_total' => $grandTotal
                 ]);
-
             }
-            
+
             DB::table('purchase_requests')
                 ->where('id', $purchaseRequest->id)
                 ->update([
@@ -239,6 +277,11 @@ class PurchaseOrderController extends Controller
                 ]);
                 
         });
+
+        $originalRequester = $purchaseRequest->user;
+        if ($originalRequester) {
+            $originalRequester->notify(new PRStatusUpdate($purchaseRequest, "Your request is currently being processed into Purchase Orders."));
+        }
 
         return back()->with('success', 'Purchase Orders drafted successfully! You can now review them.');
     }

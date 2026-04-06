@@ -4,9 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use App\Notifications\AnnouncementAlert;
 use App\Models\Branch;
 use App\Models\PriorityLevel;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -58,6 +63,23 @@ class AnnouncementController extends Controller
         
         // Attach the branches via pivot table
         $announcement->branches()->sync($request->branch_ids);
+
+        // 🟢 NEW: SMART NOTIFICATION ROUTING
+        // Find all users whose primary branch OR rotating branch matches the announcement's branches
+        $targetBranchIds = $request->branch_ids;
+
+        $targetUsers = User::whereIn('branch_id', $targetBranchIds)
+            ->orWhereExists(function ($query) use ($targetBranchIds) {
+                $query->select(DB::raw(1))
+                      ->from('branch_user')
+                      ->whereColumn('branch_user.user_id', 'users.id')
+                      ->whereIn('branch_user.branch_id', $targetBranchIds);
+            })->get();
+
+        // Send the alert to those specific users!
+        if ($targetUsers->isNotEmpty()) {
+           Notification::send($targetUsers, new AnnouncementAlert($announcement->title, $announcement->author));
+        }
 
         return back()->with('success', 'Announcement posted successfully.');
     }

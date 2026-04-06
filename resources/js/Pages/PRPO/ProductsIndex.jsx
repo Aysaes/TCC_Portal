@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
 
-    const PRPOLinks = getPRPOLinks(auth.user.role?.name || 'employee', auth);
+    const PRPOLinks = getPRPOLinks(auth);
 
     const { data: importData, setData: setImportData, post: postImport, processing: importProcessing, errors: importErrors, reset: resetImport } = useForm({
         import_file: null,
@@ -331,7 +331,7 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
     };
 
     return (
-        <SidebarLayout user={auth.user} activeModule="PR/PO Module" sidebarLinks={PRPOLinks}>
+        <SidebarLayout activeModule="PR/PO Module" sidebarLinks={PRPOLinks}>
             <Head title="Products & Suppliers" />
 
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col h-[calc(100vh-140px)] overflow-hidden">

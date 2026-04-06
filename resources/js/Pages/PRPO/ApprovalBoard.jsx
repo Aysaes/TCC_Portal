@@ -5,11 +5,10 @@ import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function ApprovalBoard({ auth, requests, currentView, isApprover, canSeeAll, userBranches = [] }) {
+export default function ApprovalBoard({ auth, requests, currentView, isAssistant, canSeeAll, userBranches = [] }) {
     const sidebarLinks = getPRPOLinks(auth);
 
     const userRole = auth.user.role?.name?.toLowerCase().trim() || '';
-    const isAssistant = userRole.includes('assistant'); // 🟢 ADD THIS LINE
     const canManagePO = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin'].includes(userRole);
 
     const isInvTL = userRole.includes('inventory tl') || userRole === 'admin';
@@ -29,10 +28,9 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // SECURITY LOGIC: Role-based approval checking
-   const canApprove = (pr) => {
+    const canApprove = (pr) => {
         if (!pr) return false;
         
-        // Admins automatically bypass the branch check
         const hasBranchAccess = userRole === 'admin' || userBranches.includes(pr.branch);
 
         if (pr.status === 'pending_inv_tl' && isInvTL && hasBranchAccess) return true;
@@ -54,8 +52,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
         return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${mapped.color}`}>{mapped.label}</span>;
     };
 
-    // ACTION FIX: Using router.patch directly to send the payload correctly
-   const handleAction = (id, actionType) => {
+    const handleAction = (id, actionType) => {
         const isApprove = actionType === 'approve';
         
         setConfirmDialog({
@@ -71,14 +68,14 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                     preserveScroll: true,
                     onSuccess: () => { 
                         closeConfirmModal(); 
-                        closeModal(); // Close the detail modal too
+                        closeModal(); 
                     } 
                 });
             }
         });
     };
 
-   const handleGeneratePO = (id) => {
+    const handleGeneratePO = (id) => {
         setConfirmDialog({
             isOpen: true,
             title: 'Generate Purchase Orders',
@@ -107,22 +104,33 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
         setTimeout(() => setSelectedPR(null), 200); 
     };
 
+    // 🟢 NEW: Dynamic Header Text
+    const getHeaderContent = () => {
+        switch(currentView) {
+            case 'my_requests': return { title: 'My Purchase Requests', desc: 'Track the status of PRs you have submitted.' };
+            case 'action_needed': return { title: 'Pending Approvals', desc: 'Review and manage purchase requests awaiting your action.' };
+            case 'finished': return { title: 'Finished Requests', desc: 'History of purchase requests you have already processed.' };
+            case 'all': return { title: 'All Active PRs', desc: 'Overview of all purchase requests in the system.' };
+            default: return { title: 'PR Approval Board', desc: 'Review and manage purchase requests.' };
+        }
+    };
+    const headerContent = getHeaderContent();
+
     return (
         <SidebarLayout activeModule="PR/PO Module" sidebarLinks={sidebarLinks}>
-            <Head title="Approval Board" />
+            <Head title={headerContent.title} />
 
             <div className="mx-auto max-w-7xl py-6 relative">
                 <div className="mb-6 flex items-center justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900">PR Approval Board</h2>
-                        <p className="mt-1 text-sm text-gray-500">Review and manage pending purchase requests.</p>
+                        <h2 className="text-2xl font-bold text-gray-900">{headerContent.title}</h2>
+                        <p className="mt-1 text-sm text-gray-500">{headerContent.desc}</p>
                     </div>
                 </div>
 
-                {/* 🟢 NEW: Filter Tabs */}
-               <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
+                {/* 🟢 UPDATED: Filter Tabs */}
+                <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
                     
-                    {/* 1. My Requests (Always visible so people can track their own submissions) */}
                     <Link 
                         href={route('prpo.approval-board', { view: 'my_requests' })} 
                         className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${currentView === 'my_requests' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
@@ -130,17 +138,25 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                         My Requests
                     </Link>
 
-                    {/* 2. Approvals (Visible to EVERYONE EXCEPT Assistants) */}
+                    {/* Approvers get the Action Needed and Finished tabs */}
                     {!isAssistant && (
-                        <Link 
-                            href={route('prpo.approval-board', { view: 'action_needed' })} 
-                            className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'action_needed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-                        >
-                            Approvals {currentView !== 'action_needed' && <span className="h-2 w-2 rounded-full bg-red-500"></span>}
-                        </Link>
+                        <>
+                            <Link 
+                                href={route('prpo.approval-board', { view: 'action_needed' })} 
+                                className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'action_needed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                            >
+                                Approvals {currentView !== 'action_needed' && <span className="h-2 w-2 rounded-full bg-red-500"></span>}
+                            </Link>
+
+                            <Link 
+                                href={route('prpo.approval-board', { view: 'finished' })} 
+                                className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${currentView === 'finished' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                            >
+                                Finished Requests
+                            </Link>
+                        </>
                     )}
 
-                    {/* 3. All Active PRs (Visible to Managers/Admins based on your prop) */}
                     {canSeeAll && (
                         <Link 
                             href={route('prpo.approval-board', { view: 'all' })} 
@@ -168,7 +184,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                         <tbody className="divide-y divide-gray-200 bg-white">
                             {requests.data.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">No pending requests for your approval.</td>
+                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">No requests found for this view.</td>
                                 </tr>
                             ) : (
                                 requests.data.map((pr) => (
@@ -185,7 +201,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                                         <td className="px-6 py-4">{formatStatus(pr.status)}</td>
                                         
                                         <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                                            {canApprove(pr) && (
+                                            {canApprove(pr) && currentView === 'action_needed' && (
                                                 <>
                                                     <button 
                                                         onClick={() => handleAction(pr.id, 'approve')}
@@ -233,7 +249,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                                 </button>
                             </div>
 
-                            {/* Modal Body (RESTORED) */}
+                            {/* Modal Body */}
                             <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
                                 <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 rounded-lg bg-gray-50 p-4 text-sm">
                                     <div><span className="block font-semibold text-gray-900">Branch</span> {selectedPR.branch}</div>
@@ -299,7 +315,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                                 </div>
                             </div>
 
-                            {/* 🟢 NEW: Tracker Component */}
+                            {/* Tracker Component */}
                              <div className="mb-8 px-4 sm:px-12">
                                  <TrackingStepper currentStatus={selectedPR.status} type="PR" />
                              </div>
@@ -310,7 +326,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                                     Close Window
                                 </button>
                                 
-                                {canApprove(selectedPR) && (
+                                {canApprove(selectedPR) && currentView === 'action_needed' && (
                                     <>
                                         <button 
                                             onClick={() => handleAction(selectedPR.id, 'reject')}
@@ -327,7 +343,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                                     </>
                                 )}
 
-                                {selectedPR.status === 'approved' && canManagePO && (
+                                {selectedPR.status === 'approved' && canManagePO && currentView === 'action_needed' && (
                                     <button 
                                         onClick={() => handleGeneratePO(selectedPR.id)}
                                         className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 transition-all"
@@ -341,8 +357,6 @@ export default function ApprovalBoard({ auth, requests, currentView, isApprover,
                     </div>
                 )}
             </div>
-
-            {/* ... End of your main page div ... */}
 
             <ConfirmModal 
                 show={confirmDialog.isOpen}
