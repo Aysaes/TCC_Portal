@@ -29,9 +29,17 @@ export default function Index({ auth, dutymeals = [], employees = [], department
     
     const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false,});
         
-
     const [selectedRosterId, setSelectedRosterId] = useState(null);
-    const [openDropdownId, setOpenDropdownId] = useState(null); // Tracks which settings cog is open
+
+    // INLINE EDITING STATES
+    const [editingShiftId, setEditingShiftId] = useState(null); 
+    const [editingChoiceId, setEditingChoiceId] = useState(null); 
+    
+    // NEW: States for editing the main and alt meals
+    const [isEditingMeals, setIsEditingMeals] = useState(false);
+    const [editMealData, setEditMealData] = useState({ main: '', alt: '' });
+
+    const [poolMealChoices, setPoolMealChoices] = useState({});
 
     // Derive the selected roster directly from the fresh props
     const selectedRoster = dutymeals.find(m => String(m.id) === String(selectedRosterId));
@@ -40,18 +48,58 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         if (isPoolModalOpen) return; 
         
         setSelectedRosterId(null);
-        setOpenDropdownId(null);
+        setEditingShiftId(null);
+        setEditingChoiceId(null);
+        setIsEditingMeals(false); // Reset meal editing state
+    };
+
+    // --- LOOKUP HELPERS FOR UI ---
+    const getDepartmentName = (deptId) => {
+        if (!deptId) return 'Unassigned';
+        const found = departments.find(d => String(d.id) === String(deptId));
+        return found ? found.name : 'Unassigned';
+    };
+
+    const getPositionName = (posId) => {
+        if (!posId) return 'No Position';
+        const found = positions.find(pos => String(pos.id) === String(posId));
+        return found ? found.name : 'No Position';
+    };
+
+    const getEmployeeDetails = (userId) => {
+        return employees.find(emp => String(emp.id) === String(userId)) || {};
     };
 
     // --- ACTION HANDLERS ---
-    const handleAction = (actionRoute, id) => {
-        router.patch(route(actionRoute, id), {}, { preserveScroll: true });
-        setOpenDropdownId(null); // Close dropdown after clicking
+    const startEditingMeals = () => {
+        setEditMealData({ main: selectedRoster.main_meal, alt: selectedRoster.alt_meal || '' });
+        setIsEditingMeals(true);
+    };
+
+    const saveMeals = () => {
+        if (!selectedRoster) return;
+        router.patch(route('admin.duty-meals.update-meals', selectedRoster.id), {
+            main_meal: editMealData.main,
+            alt_meal: editMealData.alt
+        }, {
+            preserveScroll: true,
+            onSuccess: () => setIsEditingMeals(false)
+        });
+    };
+
+    const handleChoiceUpdate = (participantId, newChoice) => {
+        router.patch(route('admin.participants.update-choice', participantId), {
+            choice: newChoice
+        }, { preserveScroll: true });
+    };
+
+    const handleShiftUpdate = (participantId, newShiftType) => {
+        router.patch(route('admin.participants.update-shift', participantId), { 
+            shift_type: newShiftType 
+        }, { preserveScroll: true });
     };
 
    const handleRemove = (employeeName, participantId) => {
-        
-        setOpenDropdownId(null); // Close the settings dropdown first
         setConfirmDialog({
             isOpen: true,
             title: 'Remove Staff from Roster',
@@ -79,7 +127,6 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         
         if (selectedRoster?.participants.some(p => p.user?.id === emp.id)) return false;
 
-        
         const matchesSearch = emp.name.toLowerCase().includes(poolSearch.toLowerCase());
         const matchesDept = poolDept === 'All' || String(emp.department_id) === String(poolDept);
         const matchesPos = poolPos === '' || String(emp.position_id) === String(poolPos);
@@ -87,26 +134,18 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         return matchesSearch && matchesDept && matchesPos;
     });
 
-   const handleEmergencyAdd = (employeeId) => {
-        if (!selectedRoster || !selectedRoster.id) {
-            console.error("CRASH PREVENTED: selectedRoster is missing!", selectedRoster);
-            alert("Error: No roster selected. Please close the modal and select the duty meal again.");
-            return;
-        }
-
-        if (!employeeId) {
-            console.error("CRASH PREVENTED: employeeId is missing!");
-            return;
-        }
+   const handleEmergencyAdd = (employeeId, choice) => {
+        if (!selectedRoster || !selectedRoster.id) return;
 
         router.post(route('admin.duty-meals.add-participant', selectedRoster.id), {
-            user_id: employeeId
+            user_id: employeeId,
+            choice: choice || 'main' 
         }, {
             preserveScroll: true,
             preserveState: true, 
             onSuccess: () => {
                 setPoolSearch(''); 
-               
+                setPoolMealChoices(prev => ({ ...prev, [employeeId]: 'main' }));
             },
         });
     };
@@ -135,33 +174,23 @@ export default function Index({ auth, dutymeals = [], employees = [], department
             const mealDate = new Date(m.duty_date);
             mealDate.setHours(0, 0, 0, 0);
 
-            if (dateFilterType === 'today') {
-                return mealDate.getTime() === today.getTime();
-            }
-            if (dateFilterType === 'this_week') {
-                return mealDate >= startOfWeek && mealDate <= endOfWeek;
-            }
-            if (dateFilterType === 'this_month') {
-                return mealDate.getMonth() === today.getMonth() && mealDate.getFullYear() === today.getFullYear();
-            }
+            if (dateFilterType === 'today') return mealDate.getTime() === today.getTime();
+            if (dateFilterType === 'this_week') return mealDate >= startOfWeek && mealDate <= endOfWeek;
+            if (dateFilterType === 'this_month') return mealDate.getMonth() === today.getMonth() && mealDate.getFullYear() === today.getFullYear();
             if (dateFilterType === 'custom') {
                 const start = customStartDate ? new Date(customStartDate).setHours(0,0,0,0) : -Infinity;
                 const end = customEndDate ? new Date(customEndDate).setHours(0,0,0,0) : Infinity;
                 return mealDate.getTime() >= start && mealDate.getTime() <= end;
             }
-            
             return true;
         });
 
         return filtered;
     }, [dutymeals, overviewBranch, dateFilterType, customStartDate, customEndDate, system?.serverDate]);
 
-    // 👇 2. STATS CRUNCHER: Calculate the numbers based ONLY on the filtered list above!
+    // STATS CRUNCHER
     const stats = useMemo(() => {
-        let totalMeals = 0;
-        let totalMain = 0;
-        let totalAlt = 0;
-        let totalSpecial = 0;
+        let totalMeals = 0; let totalMain = 0; let totalAlt = 0; let totalSpecial = 0;
 
         filteredDutyMeals.forEach(meal => {
             meal.participants.forEach(p => {
@@ -173,7 +202,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         });
 
         return { totalMeals, totalMain, totalAlt, totalSpecial };
-    }, [filteredDutyMeals]); // This watches the block above it
+    }, [filteredDutyMeals]); 
 
     return (
         <SidebarLayout activeModule="Duty Meals"
@@ -186,15 +215,15 @@ export default function Index({ auth, dutymeals = [], employees = [], department
 
             {/* --- OVERVIEW DASHBOARD --- */}
             <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                     <h2 className="text-lg font-medium text-gray-900">Overview Statistics</h2>
                     <div className="flex flex-wrap items-center gap-2">
-                        {/* 👇 The Date Quick-Filter Dropdown */}
+                        {/* The Date Quick-Filter Dropdown */}
                         <select
                             value={dateFilterType}
                             onChange={(e) => {
                                 setDateFilterType(e.target.value);
-                                setCustomStartDate(''); // Reset custom dates when switching modes
+                                setCustomStartDate(''); 
                                 setCustomEndDate('');
                             }}
                             className="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-medium text-gray-700 bg-white"
@@ -206,31 +235,25 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                             <option value="custom">Custom Range...</option>
                         </select>
 
-                        {/* 👇 Show Date Pickers ONLY if "Custom Range" is selected */}
                         {dateFilterType === 'custom' && (
-                            <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-md border border-gray-200">
+                            <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-md border border-gray-200 w-full sm:w-auto">
                                 <input 
-                                    type="date" 
-                                    value={customStartDate}
-                                    onChange={(e) => setCustomStartDate(e.target.value)}
-                                    className="text-sm border-gray-300 rounded-md shadow-sm py-1.5 focus:border-indigo-500 focus:ring-indigo-500"
+                                    type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)}
+                                    className="text-sm border-gray-300 rounded-md shadow-sm py-1.5 focus:border-indigo-500 focus:ring-indigo-500 w-full sm:w-auto"
                                 />
                                 <span className="text-xs text-gray-500 font-medium">to</span>
                                 <input 
-                                    type="date" 
-                                    value={customEndDate}
-                                    onChange={(e) => setCustomEndDate(e.target.value)}
-                                    className="text-sm border-gray-300 rounded-md shadow-sm py-1.5 focus:border-indigo-500 focus:ring-indigo-500"
+                                    type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)}
+                                    className="text-sm border-gray-300 rounded-md shadow-sm py-1.5 focus:border-indigo-500 focus:ring-indigo-500 w-full sm:w-auto"
                                 />
                             </div>
                         )}
 
-                        {/* Your Existing Branch Filter */}
                         {branches.length > 1 && (
                             <select
                                 value={overviewBranch}
                                 onChange={(e) => setOverviewBranch(e.target.value)}
-                                className="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-medium text-gray-700 bg-white"
+                                className="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-medium text-gray-700 bg-white w-full sm:w-auto"
                             >
                                 <option value="All">All Branches</option>
                                 {branches.map(b => (
@@ -241,62 +264,55 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Card 1: Total Meals */}
-                    <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm flex items-center">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-lg border border-gray-100 p-4 sm:p-5 shadow-sm flex items-center">
                         <div className="mr-4 rounded-full bg-blue-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Total Participants</p>
-                            <p className="text-2xl font-bold text-gray-900">{stats.totalMeals}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total Participants</p>
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalMeals}</p>
                         </div>
                     </div>
-
-                    {/* Card 2: Main Meals */}
-                    <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm flex items-center">
+                    <div className="bg-white rounded-lg border border-gray-100 p-4 sm:p-5 shadow-sm flex items-center">
                         <div className="mr-4 rounded-full bg-indigo-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z" />
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Main Orders</p>
-                            <p className="text-2xl font-bold text-gray-900">{stats.totalMain}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Main Orders</p>
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalMain}</p>
                         </div>
                     </div>
-
-                    {/* Card 3: Alt Meals */}
-                    <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm flex items-center">
+                    <div className="bg-white rounded-lg border border-gray-100 p-4 sm:p-5 shadow-sm flex items-center">
                         <div className="mr-4 rounded-full bg-amber-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Alt Orders</p>
-                            <p className="text-2xl font-bold text-gray-900">{stats.totalAlt}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Alt Orders</p>
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalAlt}</p>
                         </div>
                     </div>
-
-                    {/* Card 4: Special Requests */}
-                    <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm flex items-center">
+                    <div className="bg-white rounded-lg border border-gray-100 p-4 sm:p-5 shadow-sm flex items-center">
                         <div className="mr-4 rounded-full bg-rose-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Special Requests</p>
-                            <p className="text-2xl font-bold text-gray-900">{stats.totalSpecial}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Special Requests</p>
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalSpecial}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* HEADER SECTION (Unchanged) */}
+            {/* HEADER SECTION */}
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h2 className="text-lg font-medium text-gray-900">Duty Meal Rosters</h2>
@@ -306,9 +322,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
             {/* TABLE SECTION*/}
             <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
-                   
                     <table className="min-w-full divide-y divide-gray-200">
-                        
                         <tbody className="bg-white divide-y divide-gray-200">
                             {filteredDutyMeals.length === 0 ? (
                                 <tr>
@@ -335,138 +349,250 @@ export default function Index({ auth, dutymeals = [], employees = [], department
             {/* THE CHOICES MODAL */}
             <Modal show={!!selectedRoster} onClose={closeModal} maxWidth="2xl">
                 {selectedRoster && (
-                    <div className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    {selectedRoster.branch?.name} - {formatAppDate(selectedRoster.duty_date, system?.timezone)}
-                                    
+                    <div className="flex flex-col max-h-[90vh] sm:max-h-[85vh]">
+                        {/* Styled Modal Header - Mobile Responsive */}
+                        <div className="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-200 flex justify-between items-start rounded-t-lg">
+                            <div className="w-full pr-4">
+                                <h2 className="text-base sm:text-lg font-bold text-gray-900 flex flex-wrap items-center gap-2">
+                                    <span>{selectedRoster.branch?.name}</span>
+                                    <span className="text-gray-400 hidden sm:inline">-</span>
+                                    <span>{formatAppDate(selectedRoster.duty_date, system?.timezone)}</span>
                                     
                                     {selectedRoster.is_locked && (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            <svg className="mr-1 h-3 w-3 text-black" fill="currentColor" viewBox="0 0 20 20">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1 sm:mt-0">
+                                            <svg className="mr-1 h-3 w-3 text-red-800" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                                             </svg>
                                             Locked
                                         </span>
                                     )}
                                 </h2>
-                            {/* Added an X button for easier closing */}
-                            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">✕</button>
-                        </div>
-
-                        {/* Display the Staff Choices */}
-                   
-                        <div className="max-h-[50vh] overflow-y-auto overflow-x-visible pb-24 pr-2">
-                            <table className="min-w-full">
-                                <thead>
-                                    <tr className="text-left text-xs text-gray-500 uppercase">
-                                        <th className="py-2">Staff Name</th>
-                                        <th className="py-2">Shift</th>
-                                        <th className="py-2">Choice</th>
-                                        <th className="py-2 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {selectedRoster.participants.map((p) => (
-                                        <tr key={p.id} className="hover:bg-gray-50">
-                                            <td className="py-3 text-sm font-medium text-gray-900">{p.user?.name}</td>
-                                            <td className="py-3">
-                                                {/* NEW CODE: Rendering shift types dynamically based on the string value */}
-                                                {p.shift_type === 'graveyard' && <span className="text-[10px] bg-indigo-100 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded font-medium">GY</span>}
-                                                {p.shift_type === 'straight' && <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded font-medium">Straight</span>}
-                                                {(p.shift_type === 'day' || !p.shift_type) && <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded font-medium">Day</span>}
-                                            </td>
-                                            <td className="py-3">
-                                                {p.choice === 'none' ? (
-                                                    <span className="text-gray-400 italic text-xs">Pending...</span>
-                                                ) : (
-                                                    <div>
-                                                        <span className={`font-bold text-xs uppercase ${p.choice === 'main' ? 'text-indigo-600' : 'text-amber-600'}`}>
-                                                            {p.choice}
-                                                        </span>
-                                                        
-                                                        {p.custom_request && (
-                                                            <div className="text-[10px] text-gray-500 italic mt-0.5 leading-tight">
-                                                                Note: {p.custom_request}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            <td className="py-3 text-right relative">
-                                                {!selectedRoster.is_locked && (
+                                
+                                {/* Edit Meals Section */}
+                                <div className="mt-2 min-h-[30px]">
+                                    {isEditingMeals ? (
+                                        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                            <input 
+                                                type="text" 
+                                                value={editMealData.main} 
+                                                onChange={e => setEditMealData({...editMealData, main: e.target.value})} 
+                                                className="text-xs border-gray-300 rounded shadow-sm focus:ring-indigo-500 py-1.5 px-2 w-full sm:w-48" 
+                                                placeholder="Main Meal" 
+                                            />
+                                            <input 
+                                                type="text" 
+                                                value={editMealData.alt} 
+                                                onChange={e => setEditMealData({...editMealData, alt: e.target.value})} 
+                                                className="text-xs border-gray-300 rounded shadow-sm focus:ring-amber-500 py-1.5 px-2 w-full sm:w-48" 
+                                                placeholder="Alt Meal (Optional)" 
+                                            />
+                                            <div className="flex gap-2 mt-1 sm:mt-0">
+                                                <button onClick={saveMeals} className="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs hover:bg-indigo-700 font-medium transition">
+                                                    Save
+                                                </button>
+                                                <button onClick={() => setIsEditingMeals(false)} className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs hover:bg-gray-300 font-medium transition">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center flex-wrap gap-2 group">
+                                            <p className="text-xs sm:text-sm text-gray-600">
+                                                <span className="font-medium text-indigo-600">Main:</span> {selectedRoster.main_meal} &nbsp;<span className="text-gray-300">|</span>&nbsp; 
+                                                <span className="font-medium text-amber-600">Alt:</span> {selectedRoster.alt_meal || 'None'}
+                                            </p>
+                                            {!selectedRoster.is_locked && (
                                                 <button 
-                                                    onClick={() => setOpenDropdownId(openDropdownId === p.id ? null : p.id)}
-                                                    className="rounded-full p-1 text-black transition-colors hover:bg-gray-100 hover:text-black"
+                                                    onClick={startEditingMeals} 
+                                                    className="text-gray-400 hover:text-indigo-600 transition-colors p-1 rounded-full hover:bg-gray-200 opacity-100 sm:opacity-0 sm:group-hover:opacity-100" 
+                                                    title="Edit Meal Options"
                                                 >
-                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                     </svg>
                                                 </button>
-                                                )}
-                                                {openDropdownId === p.id && (
-                                                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1 text-left">
-                                                        {p.choice === 'none' && (
-                                                            <button 
-                                                                onClick={() => handleAction('admin.participants.default-main', p.id)}
-                                                                className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 text-left"
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 focus:outline-none p-1.5 rounded-full hover:bg-gray-200 transition bg-gray-100 sm:bg-transparent flex-shrink-0">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+
+                        {/* Display the Staff Choices Table */}
+                        <div className="overflow-y-auto flex-1 p-4 sm:p-6 w-full">
+                            <div className="border border-gray-200 rounded-lg overflow-x-auto shadow-sm w-full">
+                                <table className="min-w-full divide-y divide-gray-200 w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-3 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                                            <th className="px-3 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
+                                            <th className="px-3 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Choice</th>
+                                            <th className="px-3 sm:px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-100">
+                                        {selectedRoster.participants.map((p) => {
+                                            const empDetails = getEmployeeDetails(p.user?.id);
+                                            return (
+                                            <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                                                {/* Employee Name & Titles */}
+                                                <td className="px-3 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap">
+                                                    <div className="text-xs sm:text-sm font-medium text-gray-900">{p.user?.name}</div>
+                                                    <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
+                                                        {getDepartmentName(empDetails.department_id)} 
+                                                        <span className="mx-1 text-gray-300 hidden sm:inline">•</span> 
+                                                        <br className="sm:hidden" />
+                                                        {getPositionName(empDetails.position_id)}
+                                                    </div>
+                                                </td>
+                                                
+                                                {/* INLINE EDIT: Shift Badge */}
+                                                <td 
+                                                    className={`px-3 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap ${!selectedRoster.is_locked ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                                                    onClick={() => !selectedRoster.is_locked && setEditingShiftId(p.id)}
+                                                >
+                                                    {editingShiftId === p.id ? (
+                                                        <div className="relative inline-block">
+                                                            <select
+                                                                autoFocus
+                                                                value={p.shift_type || ''} 
+                                                                onChange={(e) => {
+                                                                    handleShiftUpdate(p.id, e.target.value);
+                                                                    setEditingShiftId(null);
+                                                                }}
+                                                                onBlur={() => setEditingShiftId(null)}
+                                                                onClick={(e) => e.stopPropagation()} 
+                                                                className={`appearance-none inline-flex items-center py-0.5 pl-1.5 sm:pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-medium rounded border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                    ${!p.shift_type ? 'bg-gray-100 text-gray-800 border-gray-300 focus:ring-gray-400' :
+                                                                    p.shift_type === 'graveyard' ? 'bg-indigo-100 text-indigo-800 border-indigo-200 focus:ring-indigo-400' : 
+                                                                    p.shift_type === 'straight' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 focus:ring-emerald-400' : 
+                                                                    'bg-amber-100 text-amber-800 border-amber-200 focus:ring-amber-400'}`}
                                                             >
-                                                                Force 'Main Meal'
-                                                            </button>
-                                                        )}
+                                                                <option value="" disabled>Select Shift</option>
+                                                                <option value="day">☀️ Day Shift</option>
+                                                                <option value="straight">⏱️ Straight</option>
+                                                                <option value="graveyard">🌙 Graveyard</option>
+                                                            </select>
+                                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-current opacity-60">
+                                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div title="Click to edit shift" className="inline-block">
+                                                            {p.shift_type === 'graveyard' && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">🌙 Graveyard</span>}
+                                                            {p.shift_type === 'straight' && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">⏱️ Straight</span>}
+                                                            {p.shift_type === 'day' && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200">☀️ Day Shift</span>}
+                                                            
+                                                            {(!p.shift_type || p.shift_type === 'none') && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200 italic">Unassigned</span>}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* INLINE EDIT: Choice Badge */}
+                                                <td 
+                                                    className={`px-3 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap ${!selectedRoster.is_locked ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                                                    onClick={() => !selectedRoster.is_locked && setEditingChoiceId(p.id)}
+                                                >
+                                                    {editingChoiceId === p.id ? (
+                                                        <div className="relative inline-block">
+                                                            <select
+                                                                autoFocus
+                                                                value={p.choice || 'none'}
+                                                                onChange={(e) => {
+                                                                    handleChoiceUpdate(p.id, e.target.value);
+                                                                    setEditingChoiceId(null);
+                                                                }}
+                                                                onBlur={() => setEditingChoiceId(null)}
+                                                                onClick={(e) => e.stopPropagation()} 
+                                                                className={`appearance-none inline-flex items-center py-0.5 pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                    ${p.choice === 'none' ? 'bg-gray-100 text-gray-500 border-gray-200 focus:ring-gray-400' : 
+                                                                    p.choice === 'main' ? 'bg-blue-100 text-blue-800 border-blue-200 focus:ring-blue-400' : 
+                                                                    'bg-amber-100 text-amber-800 border-amber-200 focus:ring-amber-400'}`}
+                                                            >
+                                                                <option value="none" disabled>Pending</option>
+                                                                <option value="main">Main</option>
+                                                                <option value="alt">Alt</option>
+                                                            </select>
+                                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-current opacity-60">
+                                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div title="Click to edit meal choice">
+                                                            {p.choice === 'none' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-medium bg-gray-100 text-gray-500 italic border border-gray-200">Pending</span>}
+                                                            {p.choice === 'main' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wider">Main</span>}
+                                                            {p.choice === 'alt' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">Alt</span>}
+                                                            
+                                                            {p.custom_request && (
+                                                                <div className="text-[9px] sm:text-[10px] text-gray-500 italic mt-1 leading-tight max-w-[80px] sm:max-w-[120px] truncate" title={p.custom_request}>
+                                                                    Note: {p.custom_request}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* Styled Action Column */}
+                                                <td className="px-3 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap text-right text-sm font-medium">
+                                                    {!selectedRoster.is_locked && (
                                                         <button 
+                                                            type="button" 
                                                             onClick={(e) => {
                                                                  e.preventDefault();
                                                                  e.stopPropagation();
                                                                 handleRemove(p.user?.name, p.id)}}
-                                                            className="w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 text-left border-t border-gray-100 mt-1 rounded-md transition"
+                                                            className="rounded-full p-1 sm:p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none"
+                                                            title="Remove from Roster"
                                                         >
-                                                            Remove from Roster
+                                                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
                                                         </button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )})}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
                         {!selectedRoster.is_locked && (
-                        <div className="mt-6 border-t pt-4 flex justify-end">
-                            <PrimaryButton onClick={() => setIsPoolModalOpen(true)}>
-                                + Add Staff from Pool
-                            </PrimaryButton>
-                        </div>
+                            <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-end rounded-b-lg">
+                                <PrimaryButton className="w-full sm:w-auto text-center justify-center" onClick={() => setIsPoolModalOpen(true)}>
+                                    + Add Staff from Pool
+                                </PrimaryButton>
+                            </div>
                         )}
                     </div>
                 )}
             </Modal>
 
-            {/* --- THE NEW EMPLOYEE POOL MODAL --- */}
-            <Modal show={isPoolModalOpen} onClose={() => setIsPoolModalOpen(false)} maxWidth="2xl">
-                <div className="p-6">
+            {/* --- THE NEW EMPLOYEE POOL MODAL (Standard Width: 3xl) --- */}
+            <Modal show={isPoolModalOpen} onClose={() => setIsPoolModalOpen(false)} maxWidth="3xl">
+                <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-medium text-gray-900">Add Staff to Roster</h2>
-                        <button onClick={() => setIsPoolModalOpen(false)} className="text-gray-400 hover:text-gray-500">
-                            <span className="sr-only">Close</span>
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <button onClick={() => setIsPoolModalOpen(false)} className="text-gray-400 hover:text-gray-600 focus:outline-none p-1 rounded-full hover:bg-gray-100 transition bg-gray-100 sm:bg-transparent">
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     </div>
 
-                    {/* Filter Controls */}
-                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                    {/* Filter Controls - Now with more breathing room */}
+                    <div className="flex flex-col sm:flex-row gap-3 mb-4">
                         <TextInput 
                             placeholder="Search name..." 
-                            className="w-full sm:w-1/3 text-sm"
+                            className="w-full sm:flex-1 text-sm"
                             value={poolSearch} 
                             onChange={e => setPoolSearch(e.target.value)} 
                         />
                         <select 
-                            className="w-full sm:w-1/3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                            className="w-full sm:flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
                             value={poolDept} 
                             onChange={e => { setPoolDept(e.target.value); setPoolPos(''); }}
                         >
@@ -474,7 +600,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                             {departments.map(dept => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
                         </select>
                         <select 
-                            className="w-full sm:w-1/3 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm disabled:bg-gray-100"
+                            className="w-full sm:flex-1 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm disabled:bg-gray-100"
                             value={poolPos} 
                             onChange={e => setPoolPos(e.target.value)}
                             disabled={poolDept !== 'All' && availablePoolPositions.length === 0}
@@ -484,10 +610,9 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                         </select>
                     </div>
 
-                    {/* Scrollable Results List */}
-                    <div className="bg-white border border-gray-200 rounded-md h-72 overflow-y-auto">
+                    <div className="bg-white border border-gray-200 rounded-md h-[350px] sm:h-[400px] overflow-y-auto">
                         {filteredPoolEmployees.length === 0 ? (
-                            <div className="p-8 text-center text-sm text-gray-500 flex flex-col items-center">
+                            <div className="p-8 text-center text-sm text-gray-500 flex flex-col items-center justify-center h-full">
                                 <svg className="h-10 w-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                 </svg>
@@ -496,21 +621,32 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                         ) : (
                             <ul className="divide-y divide-gray-100">
                                 {filteredPoolEmployees.map(emp => (
-                                    <li key={emp.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
-                                        <div>
+                                    <li key={emp.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 hover:bg-gray-50 transition gap-3 sm:gap-4">
+                                        <div className="flex-1">
                                             <p className="text-sm font-medium text-gray-900">{emp.name}</p>
-                                            <p className="text-xs text-gray-500">
-                                                {emp.department?.name || 'Unassigned'} 
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                {getDepartmentName(emp.department_id)} 
                                                 <span className="mx-1 text-gray-300">•</span> 
-                                                {emp.position?.name || 'No Position'}
+                                                {getPositionName(emp.position_id)}
                                             </p>
                                         </div>
-                                        <SecondaryButton 
-                                            onClick={() => handleEmergencyAdd(emp.id)}
-                                            className="text-xs"
-                                        >
-                                            + Add
-                                        </SecondaryButton>
+                                        
+                                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                                            <select
+                                                value={poolMealChoices[emp.id] || 'main'}
+                                                onChange={(e) => setPoolMealChoices({ ...poolMealChoices, [emp.id]: e.target.value })}
+                                                className="text-xs border-gray-300 rounded shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5 pl-2 pr-6 flex-1 sm:flex-none"
+                                            >
+                                                <option value="main">Main Meal</option>
+                                                <option value="alt">Alt Meal</option>
+                                            </select>
+                                            <SecondaryButton 
+                                                onClick={() => handleEmergencyAdd(emp.id, poolMealChoices[emp.id] || 'main')}
+                                                className="text-xs px-4 py-1.5 justify-center sm:justify-start whitespace-nowrap"
+                                            >
+                                                + Add
+                                            </SecondaryButton>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>
@@ -520,15 +656,15 @@ export default function Index({ auth, dutymeals = [], employees = [], department
             </Modal>
 
              {/* Global Confirmation Modal */}
-                        <ConfirmModal 
-                            show={confirmDialog.isOpen}
-                            onClose={closeConfirmModal}
-                            title={confirmDialog.title}
-                            message={confirmDialog.message}
-                            confirmText={confirmDialog.confirmText}
-                            confirmColor={confirmDialog.confirmColor}
-                            onConfirm={confirmDialog.onConfirm}
-                        />
+             <ConfirmModal 
+                show={confirmDialog.isOpen}
+                onClose={closeConfirmModal}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText={confirmDialog.confirmText}
+                confirmColor={confirmDialog.confirmColor}
+                onConfirm={confirmDialog.onConfirm}
+            />
         </SidebarLayout>
     );
 }

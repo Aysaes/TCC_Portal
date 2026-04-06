@@ -12,11 +12,7 @@ class DutyMealParticipant extends Model
         'user_id',
         'choice',
         'custom_request',
-        'is_graveyard',
-    ];
-
-    protected $casts = [
-        'is_graveyard' => 'boolean',
+        'shift_type',
     ];
 
     public function dutyMeal(): BelongsTo

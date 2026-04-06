@@ -13,19 +13,28 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
     const dutyMealsLinks = getDutyMealLinks();
     const { system } = usePage().props;
     
+    // --- SMART DEFAULT BRANCH LOGIC ---
+    // If the user's primary branch exists in the dropdown, select it. 
+    // Otherwise, pick the first available branch. If no branches, leave blank.
+    const defaultBranch = branches.length > 0 
+        ? (branches.find(b => b.id === auth?.user?.branch_id)?.id || branches[0].id) 
+        : '';
+
     // --- FORM STATE ---
     const { data, setData, post, processing, errors } = useForm({
-        branch_id: '',
+        branch_id: defaultBranch,
         duty_date: '',
         main_meal: '',
         alt_meal: '',
         participants: [] 
     });
 
-    // --- UI FILTERS ---
+    // --- UI FILTERS & STATES ---
     const [departmentFilter, setDepartmentFilter] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterPosition, setFilterPosition] = useState('');
+    
+    const [editingShiftId, setEditingShiftId] = useState(null);
 
     const availablePositions = (departmentFilter === 'All') 
         ? positions 
@@ -116,7 +125,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
         post(route('admin.duty-meals.store'));
     };
 
-    // NEW: Check if all currently visible employees are already selected
+    // Check if all currently visible employees are already selected
     const allFilteredSelected = filteredEmployees.length > 0 && 
         filteredEmployees.every(emp => data.participants.some(p => p.id === emp.id));
 
@@ -159,9 +168,15 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                     
                     <div>
                         <InputLabel htmlFor="branch_id" value="Branch" />
-                        <select id="branch_id" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            value={data.branch_id} onChange={e => setData('branch_id', e.target.value)} required>
-                            <option value="" disabled>Select a branch...</option>
+                        <select 
+                            id="branch_id" 
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 
+                                ${branches.length <= 1 ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
+                            value={data.branch_id} 
+                            onChange={e => setData('branch_id', e.target.value)} 
+                            disabled={branches.length <= 1}
+                            required
+                        >
                             {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
                         <InputError message={errors.branch_id} className="mt-2" />
@@ -189,7 +204,6 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                     <div className="lg:col-span-5 bg-white rounded-lg shadow-sm border border-gray-100 p-5 flex flex-col h-[600px]">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-lg font-medium text-gray-900">Employee Pool</h2>
-                            {/* UPDATED: Single Smart Toggle Button */}
                             <div className="flex gap-2 text-sm">
                                 <button 
                                     type="button" 
@@ -292,7 +306,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                                     <thead className="bg-white sticky top-0 z-10">
                                         <tr>
                                             <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
-                                            <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Shift Type</th>
+                                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
                                             <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                                         </tr>
                                     </thead>
@@ -307,30 +321,57 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                                                         {getPositionName(p.position)}
                                                     </div>
                                                 </td>
-                                                <td className="px-5 py-3 whitespace-nowrap text-center">
-                                                    <div className="relative inline-block w-36">
-                                                        <select 
-                                                            value={p.shift_type || 'day'}
-                                                            onChange={(e) => changeShiftType(p.id, e.target.value)}
-                                                            className={`block w-full py-1.5 pl-3 pr-8 text-xs font-medium border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors cursor-pointer appearance-none
-                                                                ${p.shift_type === 'graveyard' ? 'border-indigo-300 text-indigo-800 bg-indigo-50 focus:ring-indigo-500 focus:border-indigo-500' : 
-                                                                  p.shift_type === 'straight' ? 'border-emerald-300 text-emerald-800 bg-emerald-50 focus:ring-emerald-500 focus:border-emerald-500' : 
-                                                                  'border-amber-300 text-amber-800 bg-amber-50 focus:ring-amber-500 focus:border-amber-500'}`}
-                                                        >
-                                                            <option value="day">☀️ Day Shift</option>
-                                                            <option value="graveyard">🌙 Graveyard</option>
-                                                            <option value="straight">⏱️ Straight Duty</option>
-                                                        </select>
-                                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                                                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                                            </svg>
+                                                
+                                                {/* Inline Editable Badges matching the 1st image */}
+                                                <td 
+                                                    className="px-5 py-3 whitespace-nowrap cursor-pointer hover:bg-gray-100 transition-colors"
+                                                    onClick={() => setEditingShiftId(p.id)}
+                                                >
+                                                    {editingShiftId === p.id ? (
+                                                        <div className="relative inline-block">
+                                                            <select 
+                                                                autoFocus
+                                                                value={p.shift_type || 'day'}
+                                                                onChange={(e) => {
+                                                                    changeShiftType(p.id, e.target.value);
+                                                                    setEditingShiftId(null);
+                                                                }}
+                                                                onBlur={() => setEditingShiftId(null)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className={`appearance-none inline-flex items-center py-0.5 pl-1.5 sm:pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-medium rounded border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                    ${!p.shift_type ? 'bg-gray-100 text-gray-800 border-gray-300 focus:ring-gray-400' :
+                                                                    p.shift_type === 'graveyard' ? 'bg-indigo-100 text-indigo-800 border-indigo-200 focus:ring-indigo-400' : 
+                                                                    p.shift_type === 'straight' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 focus:ring-emerald-400' : 
+                                                                    'bg-amber-100 text-amber-800 border-amber-200 focus:ring-amber-400'}`}
+                                                            >
+                                                                <option value="day">☀️ Day Shift</option>
+                                                                <option value="straight">⏱️ Straight</option>
+                                                                <option value="graveyard">🌙 Graveyard</option>
+                                                            </select>
+                                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-current opacity-60">
+                                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    ) : (
+                                                        <div title="Click to edit shift">
+                                                            {p.shift_type === 'graveyard' && <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">🌙 Graveyard</span>}
+                                                            {p.shift_type === 'straight' && <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">⏱️ Straight</span>}
+                                                            {(p.shift_type === 'day' || !p.shift_type) && <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200">☀️ Day Shift</span>}
+                                                        </div>
+                                                    )}
                                                 </td>
+
+                                                {/* Cleaned up action row with icon */}
                                                 <td className="px-5 py-3 whitespace-nowrap text-right text-sm font-medium">
-                                                    <button type="button" onClick={() => toggleStaff(p)} className="text-red-600 hover:text-red-900">
-                                                        Remove
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => toggleStaff(p)} 
+                                                        className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none"
+                                                        title="Remove from Roster"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
                                                     </button>
                                                 </td>
                                             </tr>

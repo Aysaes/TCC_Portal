@@ -181,9 +181,16 @@ Route::middleware(['auth', CheckDutyMealAccess::class])->group(function () {
     Route::get('/admin/duty-meals', [DutyMealController::class, 'index'])->name('admin.duty-meals.index');
     Route::get('/admin/duty-meals/create', [DutyMealController::class, 'create'])->name('admin.duty-meals.create');
     Route::post('/admin/duty-meals', [DutyMealController::class, 'store'])->name('admin.duty-meals.store');
-
+    
+    Route::patch('admin/duty-meals/{id}/update-meals', [DutyMealController::class, 'updateMeals'])
+    ->name('admin.duty-meals.update-meals');
     // Duty Meal Participant Actions
-    Route::patch('/admin/duty-meals/participants/{id}/default-main', [DutyMealController::class, 'defaultParticipantToMain'])->name('admin.participants.default-main');
+    Route::patch('admin/participants/{id}/update-choice', [DutyMealController::class, 'updateParticipantChoice'])
+    ->name('admin.participants.update-choice');
+    
+    // NEW: Route for inline shift editing
+    Route::patch('admin/participants/{id}/update-shift', [DutyMealController::class, 'updateParticipantShift'])
+    ->name('admin.participants.update-shift');
     Route::delete('/admin/duty-meals/participants/{id}', [DutyMealController::class, 'removeParticipant'])->name('admin.participants.remove');
     Route::post('/duty-meals/{id}/add-participant', [DutyMealController::class, 'addParticipant'])->name('admin.duty-meals.add-participant');
 

@@ -187,16 +187,23 @@ class DutyMealController extends Controller
     }
 
    
-    public function defaultParticipantToMain($id)
+   public function updateParticipantChoice(Request $request, $id)
     {
+        $request->validate([
+            'choice' => 'required|in:main,alt'
+        ]);
+
         $participant = DutyMealParticipant::findOrFail($id);
 
-        if ($participant->choice !== 'none') {
-           return back()->with('error', 'Staff member has already selected a meal.');
-        }
+        // Optional: If you only want to allow forcing a choice when they haven't picked yet, 
+        // you can uncomment the following 3 lines. Otherwise, it overrides their current choice.
+        // if ($participant->choice !== 'none') {
+        //     return back()->with('error', 'Staff member has already selected a meal.');
+        // }
 
-        $participant->update(['choice' => 'main']);
-        return back()->with('success', 'Meal choice forced to Main.');
+        $participant->update(['choice' => $request->choice]);
+        
+        return back()->with('success', "Meal choice successfully set to {$request->choice}.");
     }
 
 
@@ -242,6 +249,49 @@ class DutyMealController extends Controller
         ]);
 
         return back()->with('success', 'Staff member successfully added to the roster!');
+    }
+
+    public function updateParticipantShift(Request $request, $id)
+    {
+        $request->validate([
+            'shift_type' => 'required|string|in:day,graveyard,straight'
+        ]);
+
+        $participant = DutyMealParticipant::findOrFail($id);
+        
+        // Ensure the meal isn't locked before making changes
+        $meal = DutyMeal::findOrFail($participant->duty_meal_id);
+        if ($meal->is_locked) {
+            return back()->with('error', 'This roster is locked and cannot be edited.');
+        }
+
+        // Update the shift
+        $participant->update([
+            'shift_type' => $request->shift_type
+        ]);
+        
+        return back()->with('success', 'Shift successfully updated.');
+    }
+
+    public function updateMeals(Request $request, $id)
+    {
+        $request->validate([
+            'main_meal' => 'required|string|max:255',
+            'alt_meal' => 'nullable|string|max:255',
+        ]);
+
+        $meal = DutyMeal::findOrFail($id);
+
+        if ($meal->is_locked) {
+            return back()->with('error', 'This roster is locked and cannot be edited.');
+        }
+
+        $meal->update([
+            'main_meal' => $request->main_meal,
+            'alt_meal' => $request->alt_meal,
+        ]);
+
+        return back()->with('success', 'Meal options successfully updated.');
     }
 
     public function archive(Request $request)
