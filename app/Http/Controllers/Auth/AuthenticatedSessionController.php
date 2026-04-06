@@ -73,6 +73,22 @@ class AuthenticatedSessionController extends Controller
 
         // Proceed with normal authentication flow
         $request->authenticate();
+
+        // 🟢 THE KILL SWITCH CHECK
+        if ($request->user()->status === 'Disabled') {
+            
+            // Immediately log them back out
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            // Kick them back to the login screen with an error
+            throw ValidationException::withMessages([
+                'email' => 'This account has been disabled. Please contact the administrator.',
+            ]);
+        }
+
+        // If they are active, let them in!
         $request->session()->regenerate();
 
         return redirect()->intended('/dashboard');

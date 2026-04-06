@@ -425,6 +425,28 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         });
     };
 
+    // For Disable/Enable Toggle
+    const confirmToggleStatus = (employee) => {
+        setActiveDropdown(null);
+        const isDisabling = employee.status !== 'Disabled';
+        
+        setConfirmDialog({
+            isOpen: true,
+            title: isDisabling ? 'Disable Account' : 'Enable Account',
+            message: isDisabling 
+                ? `Are you sure you want to disable access for ${employee.name}? \n\nThey will immediately be locked out of the system.`
+                : `Are you sure you want to re-enable access for ${employee.name}?`,
+            confirmText: isDisabling ? 'Disable Account' : 'Enable Account',
+            confirmColor: isDisabling ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500',
+            onConfirm: () => {
+                router.patch(route('admin.users.toggle-status', employee.id), {}, {
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
+            }
+        });
+    };
+
     // ==========================================
     // EMAIL SETUP / RESET ACTION
     // ==========================================
@@ -703,13 +725,17 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
                                             <td className="px-6 py-4 whitespace-nowrap">
     <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
-        employee.status === 'Password reset' 
-            ? 'bg-red-50 text-red-700 ring-red-600/20' 
-            : employee.has_password 
-                ? 'bg-green-50 text-green-700 ring-green-600/20' 
-                : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+        employee.status === 'Disabled'
+            ? 'bg-gray-100 text-gray-600 ring-gray-500/20'
+            : employee.status === 'Password reset' 
+                ? 'bg-red-50 text-red-700 ring-red-600/20' 
+                : employee.has_password 
+                    ? 'bg-green-50 text-green-700 ring-green-600/20' 
+                    : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
     }`}>
-        {employee.status === 'Password reset' ? 'Password Reset' : (employee.has_password ? 'Active' : 'Pending Setup')}
+        {employee.status === 'Disabled' ? 'Disabled' : 
+         employee.status === 'Password reset' ? 'Password Reset' : 
+         (employee.has_password ? 'Active' : 'Pending Setup')}
     </span>
 </td>
 
@@ -751,6 +777,14 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                         }}>
                                                             Device Reset
                                                         </Link>
+                                                        <button 
+    className="block w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors" 
+    onClick={(e) => {
+        e.preventDefault(); e.stopPropagation(); confirmToggleStatus(employee);
+    }}
+>
+    {employee.status === 'Disabled' ? 'Enable Account' : 'Disable Account'}
+</button>
                                                         <Link as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); confirmDeleteUser(employee);
                                                         }}>

@@ -13,7 +13,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Carbon\Carbon;
+use App\Notifications\DutyMealRosterCreated;
 
 class DutyMealController extends Controller
 {
@@ -175,6 +177,16 @@ class DutyMealController extends Controller
 
                 DutyMealParticipant::insert($participantsData);
             });
+            // 🟢 NEW: Notify all participants that they have been added to a roster
+            $userIds = array_column($validated['participants'], 'id');
+            $employeesToNotify = User::whereIn('id', $userIds)->get();
+            
+            // We need to grab the newly created DutyMeal so we can pass the date to the notification
+            $newDutyMeal = DutyMeal::latest()->first();
+
+            if ($employeesToNotify->isNotEmpty() && $newDutyMeal) {
+                Notification::send($employeesToNotify, new DutyMealRosterCreated($newDutyMeal));
+            }
 
             return redirect()->route('admin.duty-meals.index')->with('success', 'Duty roster created successfully!');
 

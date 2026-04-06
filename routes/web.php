@@ -137,6 +137,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::get('/employees/export', [EmployeeController::class, 'export'])->name('.employees.export');
     Route::get('/employees/import-template', [EmployeeController::class, 'downloadTemplate'])->name('.employees.template');
     Route::post('/employees/import', [EmployeeController::class, 'import'])->name('.employees.import');
+     Route::patch('/admin/users/{user}/toggle-status', [EmployeeController::class, 'toggleStatus'])->name('.users.toggle-status');
 
     // --- Company Content Management ---
     Route::get('/company-content', [CompanyContentController::class, 'index'])->name('.company-content.index');
@@ -164,6 +165,8 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
+
+   
 });
 
 // Admin Routes (Protect these with auth/admin middleware)

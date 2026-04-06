@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Models\User;
 use App\Http\Controllers\Controller;
 use App\Models\DutyMealParticipant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
+use App\Notifications\MealChoiceUpdated;
 
 class DutyMealController extends Controller
 {
@@ -95,6 +98,18 @@ class DutyMealController extends Controller
             'choice' => $request->choice,
             'custom_request' => $request->custom_request,
         ]);
+
+        // 🟢 4. NEW: Notify the Admins / Duty Meal Custodians
+        // Load the user relationship so the notification can extract their name!
+        $participant->load('user'); 
+
+        $adminUsers = User::whereHas('role', function ($q) {
+            $q->whereIn('name', ['Admin', 'Duty Meal Custodian', 'Director of Corporate Services and Operations']);
+        })->get();
+
+        if ($adminUsers->isNotEmpty()) {
+            Notification::send($adminUsers, new MealChoiceUpdated($participant));
+        }
 
         return back()->with('success', 'Your meal choice has been locked in!');
     }

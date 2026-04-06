@@ -455,11 +455,11 @@ export default function SidebarLayout({
                                         </Dropdown.Link>
                                     )}
                                 
-                                    {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations'].includes(user.role?.name) && (
-                                        <Dropdown.Link href={route('admin.duty-meals.index')}>
-                                            Duty Meal Module
-                                        </Dropdown.Link>
-                                    )}
+                                    {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL'].includes(user.role?.name) && (
+    <Dropdown.Link href={route('admin.duty-meals.index')}>
+        Duty Meal Module
+    </Dropdown.Link>
+)}
                             </Dropdown.Content>
                         </Dropdown>
 
