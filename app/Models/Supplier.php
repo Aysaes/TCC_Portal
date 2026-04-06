@@ -12,7 +12,8 @@ class Supplier extends Model
     protected $fillable = [
         'name',
         'contact_person',
-        'contact_number'
+        'contact_number',
+        'status',
     ];
 
     // A Supplier has many Products

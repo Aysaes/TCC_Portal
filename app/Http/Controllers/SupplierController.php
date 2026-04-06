@@ -46,4 +46,29 @@ class SupplierController extends Controller
             return back()->withErrors(['error' => 'An error occurred while deleting the supplier.']);
         }
     }
+
+    public function toggleStatus(Supplier $supplier)
+    {
+        try {
+            if ($supplier->status === 'Disabled') {
+                $supplier->update(['status' => null]);
+                
+                // 🟢 CASCADE: Re-enable all products handled by this supplier
+                $supplier->products()->update(['status' => null]);
+                
+                $message = "Supplier '{$supplier->name}' and all their products have been re-enabled.";
+            } else {
+                $supplier->update(['status' => 'Disabled']);
+                
+                // 🟢 CASCADE: Disable all products handled by this supplier
+                $supplier->products()->update(['status' => 'Disabled']);
+                
+                $message = "Supplier '{$supplier->name}' and all their products have been disabled.";
+            }
+
+            return back()->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update supplier status: ' . $e->getMessage());
+        }
+    }
 }

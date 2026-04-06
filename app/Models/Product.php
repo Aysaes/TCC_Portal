@@ -15,6 +15,7 @@ class Product extends Model
         'details',
         'unit',
         'price',
+        'status', 
     ];
 
     // A Product belongs to one Supplier

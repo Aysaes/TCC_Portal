@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Auth\Events\PasswordReset;
+use App\Notifications\PasswordResetSuccess;
 use Inertia\Inertia;
 
 class SetupAccountController extends Controller
@@ -31,14 +34,27 @@ class SetupAccountController extends Controller
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
                 $user->password = Hash::make($password);
+                
+                // 🟢 Safety catch: Guarantee the red badge is cleared
+                $user->status = null; 
                 $user->save();
+                
                 event(new PasswordReset($user));
+
+                // 🟢 NEW: Notify the Admin team
+                $admins = User::whereHas('role', function ($q) {
+                    $q->where('name', 'Admin');
+                })->get();
+
+                if ($admins->isNotEmpty()) {
+                    Notification::send($admins, new PasswordResetSuccess($user));
+                }
             }
         );
 
         if ($status === Password::PASSWORD_RESET) {
             return redirect()->route('login')->with('success', 'Password set successfully! You may now log in.');
-        }
+        }   
 
         return back()->withErrors(['email' => __($status)]);
     }

@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\Rule;
 use App\Notifications\PRStatusUpdate;
 
 class PurchaseRequestController extends Controller
@@ -26,8 +27,18 @@ class PurchaseRequestController extends Controller
         $user = Auth::user();
         $userBranches = $user->branches()->pluck('name')->toArray();
 
-        $suppliers = Supplier::select('id', 'name')->get();
-        $products = Product::select('id', 'name', 'supplier_id', 'details', 'unit', 'price')->get();
+        $suppliers = Supplier::where(function($query) {
+        $query->where('status', '!=', 'Disabled')
+              ->orWhereNull('status');
+    })
+    ->select('id', 'name')
+    ->get();
+        $products = Product::where(function($query) {
+        $query->where('status', '!=', 'Disabled')
+              ->orWhereNull('status');
+    })
+    ->select('id', 'name', 'supplier_id', 'details', 'unit', 'price')
+    ->get();
         $branches = Branch::select('id', 'name')->get();
         $departments = Department::select('id', 'name')->get();
 
@@ -82,8 +93,18 @@ class PurchaseRequestController extends Controller
             
             // Validate the array of items
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.supplier_id' => 'nullable|exists:suppliers,id',
+            'items.*.product_id' => [
+    'required',
+    Rule::exists('products', 'id')->where(function ($query) {
+        $query->where('status', '!=', 'Disabled')->orWhereNull('status');
+    }),
+],
+            'items.*.supplier_id' => [
+    'nullable',
+    Rule::exists('suppliers', 'id')->where(function ($query) {
+        $query->where('status', '!=', 'Disabled')->orWhereNull('status');
+    }),
+],
             'items.*.specifications' => 'nullable|string|max:255',
             'items.*.unit' => 'nullable|string|max:50',
             'items.*.qty_requested' => 'required|numeric|min:0',
@@ -228,14 +249,29 @@ class PurchaseRequestController extends Controller
     // =====================================================================
     // 4. UPDATE STATUS (Approve / Reject Logic)
     // =====================================================================
-    public function updateStatus(Request $request, PurchaseRequest $purchaseRequest)
+  public function updateStatus(Request $request, PurchaseRequest $purchaseRequest)
     {
+        // 🟢 1. Added 'cancel' to the allowed actions
         $validated = $request->validate([
-            'action' => 'required|in:approve,reject'
+            'action' => 'required|in:approve,reject,cancel' 
         ]);
 
         $originalRequester = $purchaseRequest->user;
 
+        // 🟢 2. Handle the Cancellation
+        if ($validated['action'] === 'cancel') {
+            // Security check: Only the owner can cancel it
+            if ($originalRequester && $originalRequester->id !== Auth::id()) {
+                abort(403, 'You can only cancel your own purchase requests.');
+            }
+            
+            $purchaseRequest->status = 'cancelled';
+            $purchaseRequest->save();
+            
+            return back()->with('success', 'Your purchase request has been cancelled.');
+        }
+
+        // 3. Handle Standard Approvals
         if ($validated['action'] === 'approve') {
             if ($purchaseRequest->status === 'pending_inv_tl') {
                 $purchaseRequest->status = 'pending_ops_manager';
@@ -245,20 +281,18 @@ class PurchaseRequestController extends Controller
             
             $message = 'Purchase request moved to the next approval stage.';
             
-            // 🟢 1. Pass the baton to the next manager
             $this->notifyNextApprovers($purchaseRequest, $purchaseRequest->status);
             
-            // 🟢 2. Ping the original requester
             if ($originalRequester) {
                 $statusText = $purchaseRequest->status === 'approved' ? 'Fully Approved! Sent to Procurement.' : 'Approved by TL. Sent to Ops Manager.';
                 $originalRequester->notify(new PRStatusUpdate($purchaseRequest, $statusText));
             }
 
+        // 4. Handle Standard Rejections
         } else {
             $purchaseRequest->status = 'rejected';
             $message = 'Purchase request has been rejected.';
             
-            // 🟢 3. Tell the requester it was rejected
             if ($originalRequester) {
                 $originalRequester->notify(new PRStatusUpdate($purchaseRequest, "Rejected by Management."));
             }

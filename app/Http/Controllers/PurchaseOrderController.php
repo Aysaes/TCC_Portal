@@ -72,7 +72,10 @@ class PurchaseOrderController extends Controller
             'status' => 'required|in:drafted,pending_approval,approved,cancelled',
             'removed_item_ids' => 'nullable', // Relaxed array rule
             'new_attachments' => 'nullable',  // Relaxed array rule
-            'new_attachments.*' => 'file|max:10240', // Max 10MB per file, any standard file type
+            'new_attachments.*' => 'file|max:10240',
+            'items' => 'nullable|array',
+            'items.*.id' => 'required_with:items',
+            'items.*.notes' => 'nullable|string|max:255', // Max 10MB per file, any standard file type
         ]);
 
         // 2. Process Removed Items
@@ -82,6 +85,14 @@ class PurchaseOrderController extends Controller
                 : explode(',', $request->removed_item_ids); // Fallback for FormData strings
                 
             $purchaseOrder->items()->whereIn('id', $removedIds)->update(['status' => 'removed']);
+        }
+
+       if ($request->has('items')) {
+            foreach ($request->items as $itemData) {
+                PurchaseOrderItem::where('id', $itemData['id'])
+                    ->where('purchase_order_id', $purchaseOrder->id)
+                    ->update(['notes' => $itemData['notes'] ?? null]);
+            }
         }
 
         // 3. Process New File Uploads (Bulletproof Loop)

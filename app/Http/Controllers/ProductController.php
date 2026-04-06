@@ -119,4 +119,21 @@ public function update(Request $request, Product $product)
 
         return Excel::download(new ProductsExport($supplierId, $search), $fileName);
     }
+
+    public function toggleStatus(Product $product)
+    {
+        try {
+            if ($product->status === 'Disabled') {
+                $product->update(['status' => null]);
+                $message = "Product '{$product->name}' has been re-enabled.";
+            } else {
+                $product->update(['status' => 'Disabled']);
+                $message = "Product '{$product->name}' has been disabled.";
+            }
+
+            return back()->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update product status: ' . $e->getMessage());
+        }
+    }
 }

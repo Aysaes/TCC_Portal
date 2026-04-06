@@ -54,13 +54,18 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
 
     const handleAction = (id, actionType) => {
         const isApprove = actionType === 'approve';
+        const isCancel = actionType === 'cancel';
         
+        // 🟢 Dynamic titles and colors
+        let title = isApprove ? 'Approve' : (isCancel ? 'Cancel' : 'Reject');
+        let confirmColor = isApprove ? 'bg-green-600 hover:bg-green-500' : (isCancel ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-500');
+
         setConfirmDialog({
             isOpen: true,
-            title: `${isApprove ? 'Approve' : 'Reject'} Request`,
-            message: `Are you sure you want to ${actionType} this purchase request?`,
-            confirmText: isApprove ? 'Approve' : 'Reject',
-            confirmColor: isApprove ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500',
+            title: `${title} Request`,
+            message: isCancel ? 'Are you sure you want to cancel this purchase request?' : `Are you sure you want to ${actionType} this purchase request?`,
+            confirmText: title,
+            confirmColor: confirmColor,
             onConfirm: () => {
                 router.patch(route('prpo.purchase-requests.update-status', id), 
                 { action: actionType }, 
@@ -322,6 +327,16 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
 
                             {/* Modal Footer (Actions) */}
                             <div className="flex items-center justify-end gap-3 rounded-b-xl border-t bg-gray-50 px-6 py-4">
+
+                                {currentView === 'my_requests' && ['pending_inv_tl', 'pending_ops_manager', 'approved'].includes(selectedPR.status) && (
+                                    <button 
+                                        onClick={() => handleAction(selectedPR.id, 'cancel')}
+                                        className="rounded-md bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 transition-colors"
+                                    >
+                                        Cancel Request
+                                    </button>
+                                )}
+
                                 <button onClick={closeModal} className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2">
                                     Close Window
                                 </button>

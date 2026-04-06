@@ -240,6 +240,47 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
         });
     };
 
+    const confirmToggleSupplierStatus = (sup) => {
+        const isDisabling = sup.status !== 'Disabled';
+        
+        setConfirmDialog({
+            isOpen: true,
+            title: isDisabling ? 'Disable Supplier' : 'Enable Supplier',
+            message: isDisabling 
+                ? `Are you sure you want to disable ${sup.name}? \n\n⚠️ ALL products handled by this supplier will also be disabled and hidden from new Purchase Requests.`
+                : `Are you sure you want to re-enable ${sup.name}? \n\nAll their associated products will become active again.`,
+            confirmText: isDisabling ? 'Disable Supplier' : 'Enable Supplier',
+            confirmColor: isDisabling ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500',
+            onConfirm: () => {
+                router.patch(route('prpo.suppliers.toggle-status', sup.id), {}, {
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
+            }
+        });
+    };
+
+    const confirmToggleProductStatus = (product) => {
+        setActiveDropdown(null);
+        const isDisabling = product.status !== 'Disabled';
+        
+        setConfirmDialog({
+            isOpen: true,
+            title: isDisabling ? 'Disable Product' : 'Enable Product',
+            message: isDisabling 
+                ? `Are you sure you want to disable ${product.name}? \n\nIt will no longer be available for new Purchase Requests.`
+                : `Are you sure you want to re-enable ${product.name}?`,
+            confirmText: isDisabling ? 'Disable Product' : 'Enable Product',
+            confirmColor: isDisabling ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500',
+            onConfirm: () => {
+                router.patch(route('prpo.products.toggle-status', product.id), {}, {
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
+            }
+        });
+    };
+
     // ==========================================
     // 4. ADD/EDIT PRODUCT MODAL & LOGIC
     // ==========================================
@@ -490,6 +531,7 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
                                         </div>
                                     </th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Price</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
                                     <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-20">Actions</th>
                                 </tr>
                             </thead>
@@ -507,7 +549,15 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
                                             <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={product.details}>{product.details}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{product.unit || <span className="text-gray-400 italic">N/A</span>}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">₱{parseFloat(product.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-
+                                            <td className="px-6 py-4 whitespace-nowrap">
+    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+        product.status === 'Disabled' 
+            ? 'bg-gray-100 text-gray-600 ring-gray-500/20' 
+            : 'bg-green-50 text-green-700 ring-green-600/20'
+    }`}>
+        {product.status === 'Disabled' ? 'Disabled' : 'Active'}
+    </span>
+</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center relative">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === product.id ? null : product.id); }}
@@ -520,6 +570,14 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
                                                 {!isBatchSelection && activeDropdown === product.id && (
                                                     <div onClick={(e) => e.stopPropagation()} className="absolute right-8 top-10 z-50 w-32 overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
                                                         <button className="block w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-gray-100 font-medium" onClick={() => { setActiveDropdown(null); openProductModal(product); }}>Edit</button>
+                                                        <button 
+        className="block w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors" 
+        onClick={(e) => {
+            e.preventDefault(); e.stopPropagation(); confirmToggleProductStatus(product);
+        }}
+    >
+        {product.status === 'Disabled' ? 'Enable' : 'Disable'}
+    </button>
                                                         <button className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100 font-medium" onClick={() => confirmDeleteProduct(product)}>Delete</button>
                                                     </div>
                                                 )}
@@ -571,11 +629,31 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
                     <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
                         <ul className="divide-y divide-gray-200">
                             {suppliers.map((sup) => (
-                                <li key={sup.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
-                                    <span className="text-sm text-gray-800">{sup.name}</span>
-                                    <div className="flex gap-3">
-                                        <button onClick={() => editSupplierAction(sup)} className="text-xs font-medium text-blue-600 hover:text-blue-900">Edit</button>
-                                        <button onClick={() => confirmDeleteSupplier(sup)} className="text-xs font-medium text-red-600 hover:text-red-900">Delete</button>
+                                <li key={sup.id} className={`flex items-center justify-between p-3 transition-colors ${sup.status === 'Disabled' ? 'bg-gray-100/50' : 'hover:bg-gray-50'}`}>
+                                    
+                                    {/* Supplier Info (Grayed out if disabled) */}
+                                    <div className="flex flex-col">
+                                        <span className={`text-sm font-semibold ${sup.status === 'Disabled' ? 'text-gray-400' : 'text-gray-800'}`}>
+                                            {sup.name}
+                                            {sup.status === 'Disabled' && (
+                                                <span className="ml-2 text-[10px] uppercase font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
+                                                    Disabled
+                                                </span>
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-3 items-center">
+                                        <button 
+                                            type="button"
+                                            onClick={() => confirmToggleSupplierStatus(sup)} 
+                                            className={`text-xs font-bold ${sup.status === 'Disabled' ? 'text-green-600 hover:text-green-800' : 'text-gray-500 hover:text-gray-800'}`}
+                                        >
+                                            {sup.status === 'Disabled' ? 'Enable' : 'Disable'}
+                                        </button>
+                                        <button type="button" onClick={() => editSupplierAction(sup)} className="text-xs font-medium text-blue-600 hover:text-blue-900">Edit</button>
+                                        <button type="button" onClick={() => confirmDeleteSupplier(sup)} className="text-xs font-medium text-red-600 hover:text-red-900">Delete</button>
                                     </div>
                                 </li>
                             ))}

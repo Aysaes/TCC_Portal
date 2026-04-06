@@ -46,6 +46,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
         discount_total: 0,
         vat_rate: 12,
         status: 'drafted',
+        items: [], 
     });
 
     const [liveTotals, setLiveTotals] = useState({ gross: 0, actualDiscount: 0, net: 0, vat: 0, grand: 0 });
@@ -87,6 +88,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
             discount_total: po.discount_total || 0,
             vat_rate: 12, 
             status: po.status,
+            items: po.items,
         });
         setIsModalOpen(true);
     };
@@ -139,8 +141,14 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
         setNewFiles(Array.from(e.target.files));
     };
 
-    // 🟢 UI Helpers for Active vs Removed items
-    const activeItems = selectedPO?.items?.filter(item => !removedItemIds.includes(item.id) && item.status !== 'removed') || [];
+   const handleItemNoteChange = (itemId, newNote) => {
+        setData('items', data.items.map(item => 
+            item.id === itemId ? { ...item, notes: newNote } : item
+        ));
+    };
+
+    // 🟢 UPDATED: Point this to data.items instead of selectedPO.items
+    const activeItems = data.items?.filter(item => !removedItemIds.includes(item.id) && item.status !== 'removed') || [];
     const removedItems = selectedPO?.items?.filter(item => removedItemIds.includes(item.id) || item.status === 'removed') || [];
 
     // 🟢 NEW: Handle Checkbox Selection
@@ -406,6 +414,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                                                     </th>
                                                                 )}
                                                                 <th className="px-4 py-2 font-semibold text-left">Description</th>
+                                                                <th className="px-4 py-2 font-semibold text-left min-w-[150px]">Notes</th>
                                                                 <th className="px-4 py-2 font-semibold text-center w-20">Qty</th>
                                                                 <th className="px-4 py-2 font-semibold text-right w-28">Unit Price</th>
                                                                 <th className="px-4 py-2 font-semibold text-right w-32">Line Total</th>
@@ -427,6 +436,16 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                                                         </td>
                                                                     )}
                                                                     <td className="px-4 py-3 font-medium text-gray-900">{item.description}</td>
+                                                                    <td className="px-4 py-3">
+    <input 
+        type="text" 
+        value={item.notes || ''} 
+        onChange={(e) => handleItemNoteChange(item.id, e.target.value)}
+        disabled={selectedPO.status !== 'drafted' || !isProcurement}
+        placeholder="e.g. 15+1 Freebie"
+        className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent disabled:p-0 disabled:text-gray-600 font-medium"
+    />
+</td>
                                                                     <td className="px-4 py-3 text-center">{item.qty} {item.unit}</td>
                                                                     <td className="px-4 py-3 text-right">₱{item.unit_price}</td>
                                                                     <td className="px-4 py-3 text-right font-medium">₱{item.net_payable}</td>

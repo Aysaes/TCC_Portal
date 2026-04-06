@@ -90,10 +90,11 @@
         <thead>
             <tr>
                 <th style="width: 5%;">#</th>
-                <th style="width: 45%;">Description</th>
-                <th class="text-center" style="width: 15%;">Quantity</th>
+                <th style="width: 30%;">Description</th>
+                <th style="width: 20%;">Notes / Freebies</th>
+                <th class="text-center" style="width: 12%;">Quantity</th>
                 <th class="text-right" style="width: 15%;">Unit Price</th>
-                <th class="text-right" style="width: 20%;">Line Total</th>
+                <th class="text-right" style="width: 18%;">Line Total</th>
             </tr>
         </thead>
         <tbody>
@@ -106,6 +107,16 @@
                         <br><span style="font-size: 11px; color: #6b7280;">{{ $item->specifications }}</span>
                     @endif
                 </td>
+                
+                {{-- 🟢 NEW NOTES COLUMN --}}
+                <td>
+                    @if($item->notes)
+                        <span style="font-size: 12px; color: #4f46e5; font-weight: bold;">{{ $item->notes }}</span>
+                    @else
+                        <span style="color: #9ca3af;">-</span>
+                    @endif
+                </td>
+
                 <td class="text-center">{{ $item->qty }} {{ $item->unit }}</td>
                 <td class="text-right">₱{{ number_format($item->unit_price, 2) }}</td>
                 <td class="text-right font-bold">₱{{ number_format($item->net_payable, 2) }}</td>
