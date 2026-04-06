@@ -19,6 +19,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\Auth\SetupAccountController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,9 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Inertia::render('Auth/Login', []);
 });
+
+Route::post('/forgot-password-notify', [AuthenticatedSessionController::class, 'requestPasswordReset'])
+    ->name('password.request.admin');
 
 // Keep this protective wrapper exactly as it is!
 Route::middleware(['auth', 'verified'])->group(function () {

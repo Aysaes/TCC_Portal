@@ -10,10 +10,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Notifications\PasswordResetAlert;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -89,4 +91,30 @@ class AuthenticatedSessionController extends Controller
 
         return redirect('/');
     }
+
+    public function requestPasswordReset(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email|exists:users,email'
+    ], [
+        'email.exists' => 'We could not find an account with that email address.'
+    ]);
+
+    // 1. Find the user
+    $user = User::where('email', $request->email)->first();
+
+    // 2. Change their status to "Password reset"
+    $user->update(['status' => 'Password reset']);
+
+    // 3. Find the Admins and notify them
+    $admins = User::whereHas('role', function ($q) {
+        $q->where('name', 'Admin');
+    })->get();
+
+    if ($admins->isNotEmpty()) {
+        Notification::send($admins, new PasswordResetAlert($user));
+    }
+
+    return back()->with('status', 'The Admin team has been notified to reset your password.');
+}
 }

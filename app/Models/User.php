@@ -29,6 +29,7 @@ class User extends Authenticatable
         'authorized_device_ids',
         'department_id',
         'position_id',
+        'status',
     ];
 
     protected $with = ['role'];

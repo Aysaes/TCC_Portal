@@ -309,7 +309,9 @@ public function import(Request $request)
         $token = $broker->createToken($user);
         
         $user->notify(new AdminPasswordReset($token));
+        
+        $user->update(['status' => null]);
 
-        return back()->with('success', 'Password reset link sent to ' . $user->email);
+        return back()->with('success', 'Reset link sent to ' . $user->email);
     }
 }

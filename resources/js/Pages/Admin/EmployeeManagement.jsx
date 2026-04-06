@@ -702,8 +702,14 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                             </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap">
-    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${employee.has_password ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'}`}>
-        {employee.has_password ? 'Active' : 'Pending Setup'}
+    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+        employee.status === 'Password reset' 
+            ? 'bg-red-50 text-red-700 ring-red-600/20' 
+            : employee.has_password 
+                ? 'bg-green-50 text-green-700 ring-green-600/20' 
+                : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+    }`}>
+        {employee.status === 'Password reset' ? 'Password Reset' : (employee.has_password ? 'Active' : 'Pending Setup')}
     </span>
 </td>
 
@@ -871,12 +877,18 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                         </div>
                                         <div>
         <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Status</div>
-        <div className="mt-1">
-            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${employee.has_password ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'}`}>
-                {employee.has_password ? 'Active' : 'Pending Setup'}
-            </span>
-        </div>
+    <div className="mt-1">
+        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+            employee.status === 'Password reset' 
+                ? 'bg-red-50 text-red-700 ring-red-600/20' 
+                : employee.has_password 
+                    ? 'bg-green-50 text-green-700 ring-green-600/20' 
+                    : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+        }`}>
+            {employee.status === 'Password reset' ? 'Password Reset' : (employee.has_password ? 'Active' : 'Pending Setup')}
+        </span>
     </div>
+</div>
                                     </div>
                                 ))}
                             </div>
