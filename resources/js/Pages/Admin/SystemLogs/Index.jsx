@@ -131,7 +131,7 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                             onChange={(e) => setSearch(e.target.value)}
                         />
 
-                        {/* ORIGINAL MODULES */}
+                        {/* MODULES */}
                         <select
                             className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full"
                             value={moduleFilter}
@@ -139,12 +139,13 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                         >
                             <option value="">All Modules</option>
                             <option value="Auth">Authentication</option>
-                            <option value="Employee Management">Employee Management</option>
+                            <option value="User Management">User Management</option>
+                            <option value="Org Chart">Org Chart</option>
                             <option value="Announcements">Announcements</option>
                             <option value="Company Content">Company Content</option>
                         </select>
 
-                        {/* Actions */}
+                        {/* ACTIONS (FIXED EXACT MATCHES) */}
                         <select
                             className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full"
                             value={actionFilter}
@@ -153,9 +154,10 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                             <option value="">All Actions</option>
                             <option value="Login">Login</option>
                             <option value="Failed Login">Failed Login</option>
-                            <option value="Create">Create</option>
+                            <option value="Logout">Logout</option>
                             <option value="Update">Update</option>
                             <option value="Delete">Delete</option>
+                            <option value="Create">Create</option>
                         </select>
 
                         {/* STATUS FILTER */}
