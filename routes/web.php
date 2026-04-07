@@ -120,7 +120,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     
     Route::get('/dashboard', function(){
         // Count users where the status is exactly 'Active'
-        $totalActiveEmployees = \App\Models\User::where('status', 'Active')->count();
+        $totalActiveEmployees = \App\Models\User::whereIn('status', ['Active', 'Password reset'])->count();
         
         // Count all existing branches
         $totalBranches = \App\Models\Branch::count();

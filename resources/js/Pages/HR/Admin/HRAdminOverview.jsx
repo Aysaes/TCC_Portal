@@ -280,19 +280,21 @@ export default function HRAdminOverview({ auth, requests }) {
                                     <table className="min-w-full divide-y divide-gray-200 text-left text-sm text-gray-600">
                                         <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200 shadow-sm text-gray-500 uppercase tracking-wider text-[11px] font-bold">
                                             <tr>
-                                                <th className="px-6 py-4">
-                                                    <div className="flex items-center">
-                                                        <span>Requestor</span>
-                                                        {renderHeaderSortButton('requestor')}
-                                                    </div>
-                                                </th>
-
+                                                {/* --- SWAPPED HEADER BEGIN --- */}
                                                 <th className="px-6 py-4">
                                                     <div className="flex items-center">
                                                         <span>Date</span>
                                                         {renderHeaderSortButton('date')}
                                                     </div>
                                                 </th>
+
+                                                <th className="px-6 py-4">
+                                                    <div className="flex items-center">
+                                                        <span>Requestor</span>
+                                                        {renderHeaderSortButton('requestor')}
+                                                    </div>
+                                                </th>
+                                                {/* --- SWAPPED HEADER END --- */}
 
                                                 <th className="px-6 py-4">
                                                     <div className="flex items-center">
@@ -314,14 +316,16 @@ export default function HRAdminOverview({ auth, requests }) {
                                                     onClick={() => openViewModal(req)}
                                                     className="hover:bg-gray-50 cursor-pointer transition-colors group"
                                                 >
+                                                    {/* --- SWAPPED TABLE DATA BEGIN --- */}
+                                                    <td className="px-6 py-4 font-medium text-gray-500 whitespace-nowrap">
+                                                        {formatAppDate(req.created_at, system?.timezone)}
+                                                    </td>
+
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="font-bold text-gray-900">{req.user?.name || 'Unknown User'}</div>
                                                         <div className="text-xs text-gray-500">{req.user?.email || ''}</div>
                                                     </td>
-
-                                                    <td className="px-6 py-4 font-medium text-gray-500 whitespace-nowrap">
-                                                        {formatAppDate(req.created_at, system?.timezone)}
-                                                    </td>
+                                                    {/* --- SWAPPED TABLE DATA END --- */}
 
                                                     <td className="px-6 py-4 font-bold text-indigo-900 whitespace-nowrap">
                                                         {req.type === 'COE' ? 'COE' : 'Form 2316'}
