@@ -1,30 +1,93 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 export default forwardRef(function TextInput(
-    { type = 'text', className = '', isFocused = false, ...props },
-    ref,
+    {
+        type = 'text',
+        className = '',
+        isFocused = false,
+        ...props
+    },
+    ref
 ) {
-    const localRef = useRef(null);
+    const input = useRef(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     useImperativeHandle(ref, () => ({
-        focus: () => localRef.current?.focus(),
+        focus: () => input.current?.focus(),
     }));
 
     useEffect(() => {
         if (isFocused) {
-            localRef.current?.focus();
+            input.current?.focus();
         }
     }, [isFocused]);
 
+    const isPassword = type === 'password';
+
     return (
-        <input
-            {...props}
-            type={type}
-            className={
-                'rounded-xl border-gray-300 bg-white/95 text-gray-900 placeholder:text-gray-500 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 ' +
-                className
-            }
-            ref={localRef}
-        />
+        <div className="relative w-full">
+            <input
+                {...props}
+                ref={input}
+                type={isPassword ? (showPassword ? 'text' : 'password') : type}
+                className={`border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm ${isPassword ? 'pr-12' : ''} ${className}`}
+            />
+
+            {isPassword && (
+                <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                    tabIndex={-1}
+                >
+                    {showPassword ? (
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.8}
+                            stroke="currentColor"
+                            className="h-5 w-5"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M3 3l18 18"
+                            />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M10.477 10.469a3 3 0 004.243 4.243"
+                            />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M9.88 5.09A9.953 9.953 0 0112 4.5c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-2.215 3.592M6.228 6.228A9.956 9.956 0 002.458 11.5c1.274 4.057 5.064 7 9.542 7 1.61 0 3.13-.38 4.478-1.056"
+                            />
+                        </svg>
+                    ) : (
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.8}
+                            stroke="currentColor"
+                            className="h-5 w-5"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M2.458 12C3.732 7.943 7.522 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S3.732 16.057 2.458 12z"
+                            />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"
+                            />
+                        </svg>
+                    )}
+                </button>
+            )}
+        </div>
     );
 });
