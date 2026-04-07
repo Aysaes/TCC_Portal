@@ -7,7 +7,6 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import { getAdminLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { formatAppDate } from '@/Utils/date';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useRef, useState } from 'react';
 
@@ -20,6 +19,116 @@ export default function Announcements({ auth, announcements = [], branches = [],
     const [selectedPriorityId, setSelectedPriorityId] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+
+    const startDatePickerRef = useRef(null);
+    const endDatePickerRef = useRef(null);
+
+    // --- DATE HELPERS (MM/DD/YYYY display, YYYY-MM-DD picker value) ---
+    const formatDateInput = (value) => {
+        const digits = value.replace(/\D/g, '').slice(0, 8);
+
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+        return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    };
+
+    const isoToMMDDYYYY = (iso) => {
+        if (!iso) return '';
+        const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return '';
+        const [, yyyy, mm, dd] = match;
+        return `${mm}/${dd}/${yyyy}`;
+    };
+
+    const mmddyyyyToISO = (value) => {
+        const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!match) return '';
+
+        const [, mm, dd, yyyy] = match;
+        const month = Number(mm);
+        const day = Number(dd);
+        const year = Number(yyyy);
+
+        if (
+            Number.isNaN(month) ||
+            Number.isNaN(day) ||
+            Number.isNaN(year) ||
+            month < 1 ||
+            month > 12 ||
+            day < 1 ||
+            day > 31
+        ) {
+            return '';
+        }
+
+        const date = new Date(year, month - 1, day);
+
+        if (
+            date.getFullYear() !== year ||
+            date.getMonth() !== month - 1 ||
+            date.getDate() !== day
+        ) {
+            return '';
+        }
+
+        const safeMonth = String(month).padStart(2, '0');
+        const safeDay = String(day).padStart(2, '0');
+
+        return `${year}-${safeMonth}-${safeDay}`;
+    };
+
+    const parseMMDDYYYY = (value, endOfDay = false) => {
+        if (!value) return null;
+
+        const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!match) return null;
+
+        const [, mm, dd, yyyy] = match;
+        const month = Number(mm);
+        const day = Number(dd);
+        const year = Number(yyyy);
+
+        if (
+            Number.isNaN(month) ||
+            Number.isNaN(day) ||
+            Number.isNaN(year) ||
+            month < 1 ||
+            month > 12 ||
+            day < 1 ||
+            day > 31
+        ) {
+            return null;
+        }
+
+        const date = new Date(year, month - 1, day);
+
+        if (
+            date.getFullYear() !== year ||
+            date.getMonth() !== month - 1 ||
+            date.getDate() !== day
+        ) {
+            return null;
+        }
+
+        if (endOfDay) {
+            date.setHours(23, 59, 59, 999);
+        } else {
+            date.setHours(0, 0, 0, 0);
+        }
+
+        return date;
+    };
+
+    const openNativePicker = (ref) => {
+        if (!ref?.current) return;
+
+        if (typeof ref.current.showPicker === 'function') {
+            ref.current.showPicker();
+        } else {
+            ref.current.focus();
+            ref.current.click();
+        }
+    };
 
     // --- SAFE COLOR CONVERTER ---
     const normalizeHexColor = (hexColor) => {
@@ -106,15 +215,13 @@ export default function Announcements({ auth, announcements = [], branches = [],
                     itemDate.setHours(0, 0, 0, 0);
 
                     if (startDate) {
-                        const start = new Date(startDate);
-                        start.setHours(0, 0, 0, 0);
-                        if (itemDate < start) matchesDate = false;
+                        const start = parseMMDDYYYY(startDate, false);
+                        if (!start || itemDate < start) matchesDate = false;
                     }
 
                     if (endDate) {
-                        const end = new Date(endDate);
-                        end.setHours(23, 59, 59, 999);
-                        if (createdAt > end) matchesDate = false;
+                        const end = parseMMDDYYYY(endDate, true);
+                        if (!end || createdAt > end) matchesDate = false;
                     }
                 }
             }
@@ -418,25 +525,71 @@ export default function Announcements({ auth, announcements = [], branches = [],
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="filter_start_date" value="Start Date" />
-                                <input
-                                    id="filter_start_date"
-                                    type="date"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                />
+                                <InputLabel htmlFor="filter_start_date_display" value="Start Date" />
+                                <div className="relative mt-1">
+                                    <input
+                                        id="filter_start_date_display"
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                        placeholder="MM/DD/YYYY"
+                                        className="block w-full rounded-md border-gray-300 pr-11 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(formatDateInput(e.target.value))}
+                                    />
+                                    <input
+                                        ref={startDatePickerRef}
+                                        type="date"
+                                        value={mmddyyyyToISO(startDate)}
+                                        onChange={(e) => setStartDate(isoToMMDDYYYY(e.target.value))}
+                                        className="pointer-events-none absolute right-0 top-0 h-full w-0 opacity-0"
+                                        tabIndex={-1}
+                                        aria-hidden="true"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => openNativePicker(startDatePickerRef)}
+                                        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-500 hover:text-gray-700"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-5 w-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M4.5 6.75h15a.75.75 0 01.75.75v11.25a.75.75 0 01-.75.75h-15a.75.75 0 01-.75-.75V7.5a.75.75 0 01.75-.75z" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="filter_end_date" value="End Date" />
-                                <input
-                                    id="filter_end_date"
-                                    type="date"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                />
+                                <InputLabel htmlFor="filter_end_date_display" value="End Date" />
+                                <div className="relative mt-1">
+                                    <input
+                                        id="filter_end_date_display"
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                        placeholder="MM/DD/YYYY"
+                                        className="block w-full rounded-md border-gray-300 pr-11 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(formatDateInput(e.target.value))}
+                                    />
+                                    <input
+                                        ref={endDatePickerRef}
+                                        type="date"
+                                        value={mmddyyyyToISO(endDate)}
+                                        onChange={(e) => setEndDate(isoToMMDDYYYY(e.target.value))}
+                                        className="pointer-events-none absolute right-0 top-0 h-full w-0 opacity-0"
+                                        tabIndex={-1}
+                                        aria-hidden="true"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => openNativePicker(endDatePickerRef)}
+                                        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-500 hover:text-gray-700"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-5 w-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M4.5 6.75h15a.75.75 0 01.75.75v11.25a.75.75 0 01-.75.75h-15a.75.75 0 01-.75-.75V7.5a.75.75 0 01.75-.75z" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -538,7 +691,12 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                                         <div className="flex flex-1 flex-col p-5">
                                                             <h3 className="pr-16 text-lg font-bold text-gray-900">{item.title}</h3>
                                                             <p className="mb-3 text-xs text-gray-500">
-                                                                By {item.author} • {formatAppDate(item.created_at, system?.timezone)}
+                                                                By {item.author} • {new Date(item.created_at).toLocaleDateString('en-US', {
+                                                                    timeZone: system?.timezone || 'Asia/Manila',
+                                                                    month: '2-digit',
+                                                                    day: '2-digit',
+                                                                    year: 'numeric',
+                                                                })}
                                                             </p>
                                                             
                                                             {/* Branch Tags */}

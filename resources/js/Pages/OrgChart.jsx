@@ -1,7 +1,7 @@
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { getDashboardLinks } from '@/Config/navigation';
 import { Head } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /*
 |--------------------------------------------------------------------------
@@ -19,7 +19,7 @@ const EMPLOYEE_SECTIONS = [
                 subRoles: ['Veterinarians'],
             },
             {
-                title: 'Veterinary Technology Department',
+                title: 'Veterinary Technician Department',
                 leadRoles: ['Vet Tech TL'],
                 subRoles: ['Vet Tech'],
             },
@@ -39,7 +39,7 @@ const EMPLOYEE_SECTIONS = [
                 subRoles: ['Veterinarians'],
             },
             {
-                title: 'Veterinary Technology Department',
+                title: 'Veterinary Technician Department',
                 leadRoles: ['Vet Tech TL'],
                 subRoles: ['Vet Tech'],
             },
@@ -59,7 +59,7 @@ const EMPLOYEE_SECTIONS = [
                 subRoles: ['Veterinarians'],
             },
             {
-                title: 'Veterinary Technology Department',
+                title: 'Veterinary Technician Department',
                 leadRoles: ['Vet Tech TL'],
                 subRoles: ['Vet Tech'],
             },
@@ -220,6 +220,14 @@ const MANCOMM_POSITIONS = [
 
 /*
 |--------------------------------------------------------------------------
+| ORG CHART ASSET
+|--------------------------------------------------------------------------
+*/
+
+const ORG_CHART_SVG_PATH = '/storage/org_chart/org-chart.svg';
+
+/*
+|--------------------------------------------------------------------------
 | UI HELPERS
 |--------------------------------------------------------------------------
 */
@@ -333,6 +341,241 @@ function SideCarousel({ title, children }) {
 
 /*
 |--------------------------------------------------------------------------
+| ORG CHART VIEWER
+|--------------------------------------------------------------------------
+*/
+
+function OrgChartMapViewer() {
+    const containerRef = useRef(null);
+    const imageRef = useRef(null);
+
+    const [scale, setScale] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+    const [isImageReady, setIsImageReady] = useState(false);
+    const fitViewRef = useRef({ scale: 1, x: 0, y: 0 });
+
+    const dragRef = useRef({
+        startX: 0,
+        startY: 0,
+        originX: 0,
+        originY: 0,
+    });
+
+    const MIN_SCALE = 0.2;
+    const MAX_SCALE = 4;
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+    const applyFitToScreen = () => {
+        const container = containerRef.current;
+        if (!container || !imageSize.width || !imageSize.height) return;
+
+        const horizontalPadding = 8;
+        const verticalPadding = 8;
+
+        const availableWidth = Math.max(container.clientWidth - horizontalPadding * 2, 1);
+        const availableHeight = Math.max(container.clientHeight - verticalPadding * 2, 1);
+
+        const widthScale = availableWidth / imageSize.width;
+        const heightScale = availableHeight / imageSize.height;
+
+        const fitScale = Math.min(widthScale, heightScale) * 0.98;
+
+        const x = Math.max((container.clientWidth - imageSize.width * fitScale) / 2, 0);
+        const y = Math.max((container.clientHeight - imageSize.height * fitScale) / 2, 0);
+
+        fitViewRef.current = { scale: fitScale, x, y };
+        setScale(fitScale);
+        setPosition({ x, y });
+    };
+
+    const resetView = () => {
+        const { scale: fitScale, x, y } = fitViewRef.current;
+        setScale(fitScale);
+        setPosition({ x, y });
+    };
+
+    const zoomAtPoint = (clientX, clientY, deltaScale) => {
+        const container = containerRef.current;
+        if (!container || !isImageReady) return;
+
+        const rect = container.getBoundingClientRect();
+        const nextScale = clamp(scale * deltaScale, MIN_SCALE, MAX_SCALE);
+
+        if (nextScale === scale) return;
+
+        const offsetX = clientX - rect.left;
+        const offsetY = clientY - rect.top;
+
+        const worldX = (offsetX - position.x) / scale;
+        const worldY = (offsetY - position.y) / scale;
+
+        const nextX = offsetX - worldX * nextScale;
+        const nextY = offsetY - worldY * nextScale;
+
+        setScale(nextScale);
+        setPosition({ x: nextX, y: nextY });
+    };
+
+    const handleWheel = (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+        zoomAtPoint(e.clientX, e.clientY, zoomFactor);
+    };
+
+    const handleMouseDown = (e) => {
+        if (!isImageReady) return;
+        e.preventDefault();
+        setIsDragging(true);
+        dragRef.current = {
+            startX: e.clientX,
+            startY: e.clientY,
+            originX: position.x,
+            originY: position.y,
+        };
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isDragging) return;
+
+        const dx = e.clientX - dragRef.current.startX;
+        const dy = e.clientY - dragRef.current.startY;
+
+        setPosition({
+            x: dragRef.current.originX + dx,
+            y: dragRef.current.originY + dy,
+        });
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    const handleMouseLeave = () => {
+        setIsDragging(false);
+    };
+
+    const zoomIn = () => {
+        const container = containerRef.current;
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        zoomAtPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.15);
+    };
+
+    const zoomOut = () => {
+        const container = containerRef.current;
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        zoomAtPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, 0.87);
+    };
+
+    useEffect(() => {
+        const handleWindowMouseUp = () => setIsDragging(false);
+        window.addEventListener('mouseup', handleWindowMouseUp);
+        return () => window.removeEventListener('mouseup', handleWindowMouseUp);
+    }, []);
+
+    useEffect(() => {
+        if (!isImageReady) return;
+
+        applyFitToScreen();
+
+        const container = containerRef.current;
+        if (!container || typeof ResizeObserver === 'undefined') return;
+
+        const observer = new ResizeObserver(() => {
+            applyFitToScreen();
+        });
+
+        observer.observe(container);
+
+        return () => observer.disconnect();
+    }, [isImageReady, imageSize.width, imageSize.height]);
+
+    const handleImageLoad = () => {
+        const img = imageRef.current;
+        if (!img) return;
+
+        setImageSize({
+            width: img.naturalWidth || img.width || 0,
+            height: img.naturalHeight || img.height || 0,
+        });
+        setIsImageReady(true);
+    };
+
+    return (
+        <div className="mb-12 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Organizational Chart</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                        Scroll to zoom, drag to move, or use the controls.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={zoomOut}
+                        className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                    >
+                        −
+                    </button>
+                    <button
+                        type="button"
+                        onClick={zoomIn}
+                        className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                    >
+                        +
+                    </button>
+                    <button
+                        type="button"
+                        onClick={resetView}
+                        className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                    >
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <div
+                ref={containerRef}
+                className={`relative h-[420px] overflow-hidden bg-gray-50 md:h-[560px] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
+            >
+                <div
+                    className="absolute left-0 top-0 will-change-transform"
+                    style={{
+                        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                        transformOrigin: '0 0',
+                    }}
+                >
+                    <img
+                        ref={imageRef}
+                        src={ORG_CHART_SVG_PATH}
+                        alt="Organizational Chart"
+                        draggable={false}
+                        onLoad={handleImageLoad}
+                        className="block max-w-none select-none"
+                    />
+                </div>
+
+                <div className="pointer-events-none absolute bottom-4 right-4 rounded-xl bg-white/90 px-3 py-2 text-xs font-medium text-gray-600 shadow-sm border border-gray-200">
+                    Zoom: {Math.round(scale * 100)}%
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
 | MAIN COMPONENT
 |--------------------------------------------------------------------------
 */
@@ -414,12 +657,15 @@ export default function OrgChart({ auth, members }) {
         <SidebarLayout
             activeModule="General"
             sidebarLinks={dashboardLinks}
-            header={<h2 className="text-xl font-semibold text-gray-800">Enployee Directory</h2>}
+            header={<h2 className="text-xl font-semibold text-gray-800">Employee Directory</h2>}
         >
             <Head title="Employee Directory" />
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-4 lg:px-8">
+                    {/* ORG CHART SVG VIEWER */}
+                    <OrgChartMapViewer />
+
                     {/* PEOPLE SECTIONS */}
                     <div className="mb-12">
                         {/* EXECUTIVE COMMITTEE */}

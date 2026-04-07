@@ -742,7 +742,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                         </div>
                                     </th>
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Branch</th>
-                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Is Rotating</th>
                                     
                                     {/* NEW SORTABLE STATUS HEADER */}
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">
@@ -759,7 +758,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredUsers.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500 font-medium">
+                                        <td colSpan="6" className="px-6 py-12 text-center text-gray-500 font-medium">
                                             No employees found.
                                         </td>
                                     </tr>
@@ -789,22 +788,17 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                     <span className="text-gray-400 italic">N/A</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${employee.is_rotating ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-gray-50 text-gray-600 ring-gray-500/10'}`}>
-                                                    {employee.is_rotating ? 'Yes' : 'No'}
-                                                </span>
-                                            </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap">
-    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
-        employee.status === 'Disabled' ? 'bg-gray-100 text-gray-600 ring-gray-500/20' : 
-        employee.status === 'Password Reset' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
-        employee.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
-        'bg-yellow-50 text-yellow-800 ring-yellow-600/20' // Pending Setup
-    }`}>
-        {employee.status}
-    </span>
-</td>
+                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+                                                    employee.status === 'Disabled' ? 'bg-gray-100 text-gray-600 ring-gray-500/20' : 
+                                                    employee.status === 'Password Reset' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
+                                                    employee.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
+                                                    'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+                                                }`}>
+                                                    {employee.status}
+                                                </span>
+                                            </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap text-center relative">
                                                 <button
@@ -824,7 +818,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                     >
 
                                                         <button 
-                                                            className={`block w-full px-4 py-2 text-left text-sm font-medium transition-colors ${employee.has_password ? 'text-green-600 hover:bg-green-50' : 'text-blue-600 hover:bg-blue-50'}`}
+                                                            className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors"
                                                             onClick={(e) => {
                                                                 e.preventDefault(); 
                                                                 e.stopPropagation(); 
@@ -834,25 +828,25 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                             {employee.has_password ? 'Password Reset' : 'Activation Link'}
                                                         </button>
 
-                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-blue-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
+                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); openEditUserModal(employee);
                                                         }}>
                                                             Edit
                                                         </Link>
-                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-orange-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
+                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); confirmDeviceReset(employee);
                                                         }}>
                                                             Device Reset
                                                         </Link>
                                                         <button 
-                                                            className="block w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors" 
+                                                            className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" 
                                                             onClick={(e) => {
                                                                 e.preventDefault(); e.stopPropagation(); confirmToggleStatus(employee);
                                                             }}
                                                         >
                                                             {employee.status === 'Disabled' ? 'Enable Account' : 'Disable Account'}
                                                         </button>
-                                                        <Link as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
+                                                        <Link as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); confirmDeleteUser(employee);
                                                         }}>
                                                             Delete
@@ -905,7 +899,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                     >
 
                                                         <button 
-                                                            className={`block w-full px-4 py-2 text-left text-sm font-medium transition-colors ${employee.has_password ? 'text-green-600 hover:bg-green-50' : 'text-blue-600 hover:bg-blue-50'}`}
+                                                            className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors"
                                                             onClick={(e) => {
                                                                 e.preventDefault(); 
                                                                 e.stopPropagation(); 
@@ -915,17 +909,17 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                             {employee.has_password ? 'Password Reset' : 'Activation Link'}
                                                         </button>
 
-                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-blue-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
+                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); openEditUserModal(employee);
                                                         }}>
                                                             Edit
                                                         </Link>
-                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-orange-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
+                                                        <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); confirmDeviceReset(employee);
                                                         }}>
                                                             Device Reset
                                                         </Link>
-                                                        <Link as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
+                                                        <Link as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); confirmDeleteUser(employee);
                                                         }}>
                                                             Delete
@@ -966,29 +960,20 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                     )}
                                                 </div>
                                             </div>
-
-                                            <div>
-                                                <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Is Rotating</div>
-                                                <div className="mt-1">
-                                                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${employee.is_rotating ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-gray-50 text-gray-600 ring-gray-500/10'}`}>
-                                                        {employee.is_rotating ? 'Yes' : 'No'}
-                                                    </span>
-                                                </div>
-                                            </div>
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-3">Status</div>
-    <div className="mt-1">
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
-            employee.status === 'Disabled' ? 'bg-gray-100 text-gray-600 ring-gray-500/20' : 
-            employee.status === 'Password Reset' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
-            employee.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
-            'bg-yellow-50 text-yellow-800 ring-yellow-600/20' // Pending Setup
-        }`}>
-            {employee.status}
-        </span>
-    </div>
-</div>
+                                            <div className="mt-1">
+                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+                                                    employee.status === 'Disabled' ? 'bg-gray-100 text-gray-600 ring-gray-500/20' : 
+                                                    employee.status === 'Password Reset' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
+                                                    employee.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
+                                                    'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+                                                }`}>
+                                                    {employee.status}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -999,7 +984,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
             <Modal show={isPositionModalOpen} onClose={closePositionModal} maxWidth="2xl">
                 <div className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">Manage Positions</h2>
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Edit Positions</h2>
 
                     <form onSubmit={submitPosition} className="mb-6 flex flex-col md:flex-row items-start md:items-end gap-3 rounded-md bg-gray-50 p-4 border border-gray-100">
                         <div className="flex-grow w-full md:w-auto">

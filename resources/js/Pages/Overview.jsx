@@ -436,7 +436,7 @@ export default function Overview({ auth, announcements, contents }) {
 
                     <section>
                         <h3 className="mb-6 text-lg font-bold uppercase tracking-wide text-gray-700">
-                            Company Direction
+                            About Us
                         </h3>
 
                         {(mission || vision) && (
