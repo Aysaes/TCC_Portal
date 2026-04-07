@@ -2,7 +2,8 @@ import { getAdminLinks } from "@/Config/navigation";
 import SidebarLayout from "@/Layouts/SidebarLayout";
 import { Head } from "@inertiajs/react";
 
-export default function AdminDashboard() {
+// Accept the new props passed from our Laravel route, setting a default of 0 just in case
+export default function AdminDashboard({ totalActiveEmployees = 0, totalBranches = 0 }) {
 
     const adminLinks = getAdminLinks();
 
@@ -30,15 +31,17 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* Placeholder for future admin stats */}
+                    {/* Admin stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                            <div className="text-gray-500 text-sm font-medium">Total Employees</div>
-                            <div className="mt-2 text-3xl font-bold text-gray-900">24</div>
+                            <div className="text-gray-500 text-sm font-medium">Total Active Employees</div>
+                            {/* Dynamically render the total active employees */}
+                            <div className="mt-2 text-3xl font-bold text-gray-900">{totalActiveEmployees}</div>
                         </div>
                         <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                             <div className="text-gray-500 text-sm font-medium">Active Branches</div>
-                            <div className="mt-2 text-3xl font-bold text-gray-900">3</div>
+                            {/* Dynamically render the total branches */}
+                            <div className="mt-2 text-3xl font-bold text-gray-900">{totalBranches}</div>
                         </div>
                         <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                             <div className="text-gray-500 text-sm font-medium">System Status</div>
