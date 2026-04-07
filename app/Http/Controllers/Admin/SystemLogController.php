@@ -11,51 +11,57 @@ class SystemLogController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Start a database query, fetching the user relationship
         $query = SystemLog::with('user')->latest();
 
-        // 2. Apply Search Filter
+        // 1. Search Filter
         if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                  ->orWhereHas('user', function ($userQ) use ($search) {
-                      $userQ->where('name', 'like', "%{$search}%");
+            $query->where(function($q) use ($request) {
+                $q->where('description', 'like', '%' . $request->search . '%')
+                  ->orWhere('ip_address', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('user', function($userQuery) use ($request) {
+                      $userQuery->where('name', 'like', '%' . $request->search . '%');
                   });
             });
         }
 
-        // 3. Apply Module Filter
+        // 2. Module Filter (with custom Authentication logic)
         if ($request->filled('module')) {
-            $query->where('module', $request->input('module'));
+            if ($request->module === 'Authentication') {
+                // If "Authentication" is selected, group these actions together
+                $query->where(function($q) {
+                    $q->where('module', 'Authentication')
+                      ->orWhere('module', 'Auth') // Captures older logs if they were named 'Auth'
+                      ->orWhereIn('action', ['Login', 'Failed Login', 'Logout']);
+                });
+            } else {
+                $query->where('module', $request->module);
+            }
         }
 
-        // 4. Apply Action Filter (Fixed: Simple Exact Match!)
+        // 3. Action Filter
         if ($request->filled('action')) {
-            $query->where('action', $request->input('action'));
+            $query->where('action', $request->action);
         }
 
-        // 5. Apply Status Filter
+        // 4. Status Filter
         if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
+            $query->where('status', $request->status);
         }
 
-        // 6. Apply Date Range Filters
+        // 5. Date Range Filters
         if ($request->filled('start_date')) {
-            $query->whereDate('created_at', '>=', $request->input('start_date'));
+            $query->whereDate('created_at', '>=', $request->start_date);
         }
 
         if ($request->filled('end_date')) {
-            $query->whereDate('created_at', '<=', $request->input('end_date'));
+            $query->whereDate('created_at', '<=', $request->end_date);
         }
 
-        // 7. Paginate the results and keep the URL query string intact
-        $logs = $query->paginate(10)->withQueryString();
+        $logs = $query->paginate(15)->withQueryString();
 
-        // 8. Send the filtered data back to your React component
         return Inertia::render('Admin/SystemLogs/Index', [
             'logs' => $logs,
-            'filters' => $request->only(['search', 'module', 'action', 'status', 'start_date', 'end_date'])
+            'filters' => $request->only(['search', 'module', 'action', 'status', 'start_date', 'end_date']),
         ]);
     }
 }
