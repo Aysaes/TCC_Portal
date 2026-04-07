@@ -119,7 +119,17 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::get('/logs', [SystemLogController::class, 'index'])->name('.logs.index');
     
     Route::get('/dashboard', function(){
-        return Inertia::render('Admin/AdminDashboard');
+        // Count users where the status is exactly 'Active'
+        $totalActiveEmployees = \App\Models\User::where('status', 'Active')->count();
+        
+        // Count all existing branches
+        $totalBranches = \App\Models\Branch::count();
+
+        // Pass the variables to the Inertia frontend
+        return Inertia::render('Admin/AdminDashboard', [
+            'totalActiveEmployees' => $totalActiveEmployees,
+            'totalBranches' => $totalBranches,
+        ]);
     })->name('.dashboard');
 
     // Employee Management
