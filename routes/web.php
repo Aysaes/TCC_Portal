@@ -10,6 +10,7 @@ use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\CheckDutyMealAccess;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\AnnouncementController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\DutyMealController;
 use App\Http\Controllers\Admin\OrgChartController;
 use App\Http\Controllers\HrRequestController;
@@ -112,6 +113,8 @@ Route::middleware('auth')->group(function () {
     return back();
 })->middleware('auth')->name('notifications.read');
 });
+
+Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
 
