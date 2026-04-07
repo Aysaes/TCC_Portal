@@ -58,9 +58,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             case 'position':
                 return employee.position?.name || '';
             case 'status':
-                if (employee.status === 'Disabled') return 'Disabled';
-                if (employee.status === 'Password reset') return 'Password Reset';
-                return employee.has_password ? 'Active' : 'Pending Setup';
+                 return employee.status || 'Unknown';
             default:
                 return '';
         }
@@ -798,20 +796,15 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                             </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
-                                                    employee.status === 'Disabled'
-                                                        ? 'bg-gray-100 text-gray-600 ring-gray-500/20'
-                                                        : employee.status === 'Password reset' 
-                                                            ? 'bg-red-50 text-red-700 ring-red-600/20' 
-                                                            : employee.has_password 
-                                                                ? 'bg-green-50 text-green-700 ring-green-600/20' 
-                                                                : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
-                                                }`}>
-                                                    {employee.status === 'Disabled' ? 'Disabled' : 
-                                                     employee.status === 'Password reset' ? 'Password Reset' : 
-                                                     (employee.has_password ? 'Active' : 'Pending Setup')}
-                                                </span>
-                                            </td>
+    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+        employee.status === 'Disabled' ? 'bg-gray-100 text-gray-600 ring-gray-500/20' : 
+        employee.status === 'Password Reset' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
+        employee.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
+        'bg-yellow-50 text-yellow-800 ring-yellow-600/20' // Pending Setup
+    }`}>
+        {employee.status}
+    </span>
+</td>
 
                                             <td className="px-6 py-4 whitespace-nowrap text-center relative">
                                                 <button
@@ -985,18 +978,17 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-3">Status</div>
-                                            <div className="mt-1">
-                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
-                                                    employee.status === 'Password reset' 
-                                                        ? 'bg-red-50 text-red-700 ring-red-600/20' 
-                                                        : employee.has_password 
-                                                            ? 'bg-green-50 text-green-700 ring-green-600/20' 
-                                                            : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
-                                                }`}>
-                                                    {employee.status === 'Password reset' ? 'Password Reset' : (employee.has_password ? 'Active' : 'Pending Setup')}
-                                                </span>
-                                            </div>
-                                        </div>
+    <div className="mt-1">
+        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+            employee.status === 'Disabled' ? 'bg-gray-100 text-gray-600 ring-gray-500/20' : 
+            employee.status === 'Password Reset' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
+            employee.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
+            'bg-yellow-50 text-yellow-800 ring-yellow-600/20' // Pending Setup
+        }`}>
+            {employee.status}
+        </span>
+    </div>
+</div>
                                     </div>
                                 ))}
                             </div>

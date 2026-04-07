@@ -49,6 +49,7 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'string|min:8|',
+            'status' => 'Pending Setup',
             'role_id' => 'required|exists:roles,id',
             'department_id' => 'required|exists:departments,id',
             'position_id' => 'required|exists:positions,id',
@@ -300,43 +301,43 @@ public function import(Request $request)
     }
 
     public function sendResetLink(User $user)
-    {
-       
+{
+    /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
+    $broker = Password::broker();
+    $token = $broker->createToken($user);
+    
+    $user->notify(new AdminPasswordReset($token));
+    
+    // CHANGE THIS LINE:
+    $user->update(['status' => 'Password Reset']);
 
-
-        /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
-        $broker = Password::broker();
-        $token = $broker->createToken($user);
-        
-        $user->notify(new AdminPasswordReset($token));
-        
-        $user->update(['status' => null]);
-
-        return back()->with('success', 'Reset link sent to ' . $user->email);
-    }
+    return back()->with('success', 'Reset link sent to ' . $user->email);
+}
 
     public function toggleStatus(User $user)
-    {
-        try {
-            // Prevent the admin from accidentally disabling themselves!
-            if (Auth::id() === $user->id) {
-                return back()->with('error', 'You cannot disable your own admin account!');
-            }
-
-            if ($user->status === 'Disabled') {
-                // If they are disabled, clear the status to re-enable them
-                $user->update(['status' => null]);
-                $message = "Account for {$user->name} has been re-enabled.";
-            } else {
-                // If they are active, disable them
-                $user->update(['status' => 'Disabled']);
-                $message = "Account for {$user->name} has been disabled.";
-            }
-
-            return back()->with('success', $message);
-            
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to update account status: ' . $e->getMessage());
+{
+    try {
+        if (Auth::id() === $user->id) {
+            return back()->with('error', 'You cannot disable your own admin account!');
         }
+
+        if ($user->status === 'Disabled') {
+            // If they are disabled, assume they are now active. 
+            // (If they didn't have a password yet, they shouldn't have been disabled, 
+            // but you could add logic to check has_password here if needed).
+            $newStatus = $user->has_password ? 'Active' : 'Pending Setup';
+            $user->update(['status' => $newStatus]);
+            $message = "Account for {$user->name} has been re-enabled.";
+        } else {
+            // If they are anything else, disable them
+            $user->update(['status' => 'Disabled']);
+            $message = "Account for {$user->name} has been disabled.";
+        }
+
+        return back()->with('success', $message);
+        
+    } catch (\Exception $e) {
+        return back()->with('error', 'Failed to update account status: ' . $e->getMessage());
     }
+}
 }
