@@ -3,7 +3,7 @@ import Dropdown from '@/Components/Dropdown';
 import FlashMessage from '@/Components/FlashMessage';
 import { Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function SidebarLayout({
     header,
@@ -12,17 +12,33 @@ export default function SidebarLayout({
     activeModule = 'Dashboard',
     headerClassName = '',
 }) {
+    const { auth } = usePage().props;
+    
+    // 🟢 NEW: Store notifications and count in local state for instant UI updates
+    const [localNotifications, setLocalNotifications] = useState(auth.notifications || []);
+    const [localUnreadCount, setLocalUnreadCount] = useState(auth.unreadNotificationsCount || 0);
 
-   const { auth } = usePage().props;
-    const notifications = auth.notifications || [];
-    const unreadCount = auth.unreadNotificationsCount || 0;
+    // Keep local state synced if Inertia pushes fresh props from the server
+    useEffect(() => {
+        setLocalNotifications(auth.notifications || []);
+        setLocalUnreadCount(auth.unreadNotificationsCount || 0);
+    }, [auth.notifications, auth.unreadNotificationsCount]);
 
-    // 2. 🟢 Update this function
+    // 🟢 UPDATED: Mark as read without deleting from the list
     const markAsRead = (notificationId, url) => {
-        // Silently mark as read in the background
-        axios.post(route('notifications.read', notificationId));
+        // 1. Instantly update UI: Mark as read and decrement count
+        const notification = localNotifications.find(n => n.id === notificationId);
+        if (notification && !notification.read_at) {
+            setLocalNotifications(prev => prev.map(n => 
+                n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
+            ));
+            setLocalUnreadCount(prev => Math.max(0, prev - 1));
+            
+            // 2. Silently tell the backend
+            axios.post(route('notifications.read', notificationId));
+        }
 
-        // Instantly redirect the user to the approval board
+        // 3. Navigate if there's a URL attached
         if (url) {
             router.visit(url);
         }
@@ -221,7 +237,7 @@ export default function SidebarLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
         ),
-        'PR/PO Request': (
+        'PR Request': (
             <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -387,10 +403,10 @@ export default function SidebarLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.563 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
             </svg>
             
-            {/* 🟢 The Red Dot Badge now only shows if there are unread notifications */}
-            {unreadCount > 0 && (
+            {/* 🟢 The Red Dot Badge uses local state so it clears instantly */}
+            {localUnreadCount > 0 && (
                 <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white">
-                    {unreadCount}
+                    {localUnreadCount}
                 </span>
             )}
         </button>
@@ -401,24 +417,29 @@ export default function SidebarLayout({
             Notifications
         </div>
         
-        {/* 🟢 Check if there are notifications. If not, show the empty message. If yes, map them! */}
-        {notifications.length === 0 ? (
+        {localNotifications.length === 0 ? (
             <div className="px-4 py-3">
                 <p className="mt-1 text-xs text-gray-500">No new notifications yet.</p>
             </div>
         ) : (
-            <div className="max-h-60 overflow-y-auto">
-                {notifications.map((notification) => (
+            // 🟢 Dropdown container max height with scrolling
+            <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                {localNotifications.map((notification) => (
                     <button 
                         key={notification.id}
                         onClick={() => markAsRead(notification.id, notification.data.action_url)}
-                        className="block w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-gray-50 transition"
+                        // 🟢 Dynamic background based on read state
+                        className={`block w-full text-left px-4 py-3 transition ${
+                            notification.read_at 
+                                ? 'bg-white hover:bg-slate-50' 
+                                : 'bg-indigo-50/60 hover:bg-indigo-50'
+                        }`}
                     >
-                        <p className="text-sm font-medium text-slate-800">
+                        <p className={`text-sm ${notification.read_at ? 'font-medium text-slate-600' : 'font-bold text-slate-900'}`}>
                             {notification.data.message}
                         </p>
                         <p className="text-xs text-slate-500 mt-1">
-                            {notification.data.user_email}
+                            {notification.data.user_email || notification.data.details}
                         </p>
                     </button>
                 ))}

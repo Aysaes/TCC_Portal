@@ -56,8 +56,10 @@ class HandleInertiaRequests extends Middleware
                     'has_global_access' => $user->has_global_access, 
                 ] : null,
                 
-                // 🟢 NEW: Here is the bridge for your notifications!
-                'notifications' => $user ? $user->unreadNotifications()->take(5)->get() : [],
+                // 🟢 FIX: Only attempt to fetch notifications if $user is NOT null!
+                'notifications' => $user ? $user->notifications()->latest()->take(20)->get() : [],
+                
+                // 🟢 FIX: Matched the key to your React code (unreadNotificationsCount)
                 'unreadNotificationsCount' => $user ? $user->unreadNotifications()->count() : 0,
             ],
 
