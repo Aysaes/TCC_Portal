@@ -57,7 +57,7 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
                 
                 // 🟢 FIX: Only attempt to fetch notifications if $user is NOT null!
-                'notifications' => $user ? $user->notifications()->latest()->take(20)->get() : [],
+                'notifications' => $user ? $user->notifications()->latest()->take(100)->get() : [],
                 
                 // 🟢 FIX: Matched the key to your React code (unreadNotificationsCount)
                 'unreadNotificationsCount' => $user ? $user->unreadNotifications()->count() : 0,

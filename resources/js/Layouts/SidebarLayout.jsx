@@ -409,71 +409,78 @@ export default function SidebarLayout({
 
                     <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
                         <Dropdown>
-    <Dropdown.Trigger>
-        <button
-            type="button"
-            className="relative inline-flex h-[42px] w-[42px] items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none"
-            aria-label="Notifications"
-        >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.563 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-            </svg>
-            
-            {/* 🟢 The Red Dot Badge uses local state so it clears instantly */}
-            {localUnreadCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white">
-                    {localUnreadCount}
-                </span>
-            )}
-        </button>
-    </Dropdown.Trigger>
-    
-    <Dropdown.Content align="right" width="80">
+                            <Dropdown.Trigger>
+                                <button
+                                    type="button"
+                                    className="relative inline-flex h-[42px] w-[42px] items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none"
+                                    aria-label="Notifications"
+                                >
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.563 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                                    </svg>
+                                    
+                                    {/* 🟢 The Red Dot Badge uses local state so it clears instantly */}
+                                    {localUnreadCount > 0 && (
+                                        <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white">
+                                            {localUnreadCount}
+                                        </span>
+                                    )}
+                                </button>
+                            </Dropdown.Trigger>
+                            
+                            <Dropdown.Content align="right" width="80">
 
-        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">
-            <span className="text-sm font-semibold text-gray-900">
-                Notifications
-            </span>
-            {localUnreadCount > 0 && (
-                <button
-                    onClick={markAllAsRead}
-                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors"
-                >
-                    Mark all as read
-                </button>
-            )}
-        </div>
-        
-        {localNotifications.length === 0 ? (
-            <div className="px-4 py-3">
-                <p className="mt-1 text-xs text-gray-500">No new notifications yet.</p>
-            </div>
-        ) : (
-            // 🟢 Dropdown container max height with scrolling
-            <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
-                {localNotifications.map((notification) => (
-                    <button 
-                        key={notification.id}
-                        onClick={() => markAsRead(notification.id, notification.data.action_url)}
-                        // 🟢 Dynamic background based on read state
-                        className={`block w-full text-left px-4 py-3 transition ${
-                            notification.read_at 
-                                ? 'bg-white hover:bg-slate-50' 
-                                : 'bg-indigo-50/60 hover:bg-indigo-50'
-                        }`}
-                    >
-                        <p className={`text-sm ${notification.read_at ? 'font-medium text-slate-600' : 'font-bold text-slate-900'}`}>
-                            {notification.data.message}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1">
-                            {notification.data.user_email || notification.data.details}
-                        </p>
-                    </button>
-                ))}
-            </div>
-        )}
-    </Dropdown.Content>
-</Dropdown>
+                                <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">
+                                    <span className="text-sm font-semibold text-gray-900">
+                                        Notifications
+                                    </span>
+                                    {localUnreadCount > 0 && (
+                                        <button
+                                            onClick={markAllAsRead}
+                                            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors"
+                                        >
+                                            Mark all as read
+                                        </button>
+                                    )}
+                                </div>
+                                
+                                {localNotifications.length === 0 ? (
+                                    <div className="px-4 py-3">
+                                        <p className="mt-1 text-xs text-gray-500">No new notifications yet.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* 🟢 Dropdown container max height with scrolling */}
+                                        <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                                            {localNotifications.map((notification) => (
+                                                <button 
+                                                    key={notification.id}
+                                                    onClick={() => markAsRead(notification.id, notification.data.action_url)}
+                                                    // 🟢 Dynamic background based on read state
+                                                    className={`block w-full text-left px-4 py-3 transition ${
+                                                        notification.read_at 
+                                                            ? 'bg-white hover:bg-slate-50' 
+                                                            : 'bg-indigo-50/60 hover:bg-indigo-50'
+                                                    }`}
+                                                >
+                                                    <p className={`text-sm ${notification.read_at ? 'font-medium text-slate-600' : 'font-bold text-slate-900'}`}>
+                                                        {notification.data.message}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 mt-1">
+                                                        {notification.data.user_email || notification.data.details}
+                                                    </p>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* 🟢 NEW: View All Footer Link securely added to the bottom */}
+                                        <div className="block px-4 py-2.5 bg-gray-50 text-center border-t border-gray-100 rounded-b-md text-xs text-gray-400 font-medium">
+    Showing recent notifications
+</div>
+                                    </>
+                                )}
+                            </Dropdown.Content>
+                        </Dropdown>
 
                         <Dropdown>
                             <Dropdown.Trigger>
@@ -487,27 +494,26 @@ export default function SidebarLayout({
 
                             <Dropdown.Content>
                                {['admin', 'director of corporate services and operations'].includes(auth.user.role.name.toLowerCase()) && (
-    <Dropdown.Link href={route('admin.dashboard')}>
-        Admin Module
-    </Dropdown.Link>
-)}
+                                    <Dropdown.Link href={route('admin.dashboard')}>
+                                        Admin Module
+                                    </Dropdown.Link>
+                                )}
 
                                 <Dropdown.Link href={route('hr.index')}>
                                     HR Module
+                                </Dropdown.Link>
+                                
+                                {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations', 'Operations Manager'].includes(user.role?.name) && (
+                                    <Dropdown.Link href={route('prpo.purchase-requests.create')}>
+                                        PR/PO Module
                                     </Dropdown.Link>
+                                )}
                                 
-                                
-                                    {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations', 'Operations Manager'].includes(user.role?.name) && (
-                                        <Dropdown.Link href={route('prpo.purchase-requests.create')}>
-                                            PR/PO Module
-                                        </Dropdown.Link>
-                                    )}
-                                
-                                    {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL'].includes(user.role?.name) && (
-    <Dropdown.Link href={route('admin.duty-meals.index')}>
-        Duty Meal Module
-    </Dropdown.Link>
-)}
+                                {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL'].includes(user.role?.name) && (
+                                    <Dropdown.Link href={route('admin.duty-meals.index')}>
+                                        Duty Meal Module
+                                    </Dropdown.Link>
+                                )}
                             </Dropdown.Content>
                         </Dropdown>
 

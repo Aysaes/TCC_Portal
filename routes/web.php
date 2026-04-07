@@ -112,9 +112,13 @@ Route::middleware('auth')->group(function () {
 
     return back();
 })->middleware('auth')->name('notifications.read');
-});
 
 Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+});
+Route::get('/notifications/load-more', [NotificationController::class, 'loadMore'])->name('notifications.load-more');
+
+
+
 
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
 
