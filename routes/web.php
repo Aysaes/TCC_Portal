@@ -171,6 +171,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::post('/announcements/priority', [AnnouncementController::class, 'storePriority'])->name('.announcements.priority.store');
 
     // --- Organizational Chart Management ---
+    Route::post('/org-chart/asset', [OrgChartController::class, 'storeAsset'])->name('.org-chart.asset.store');
     Route::get('/org-chart', [OrgChartController::class, 'index'])->name('.org-chart.index');
     Route::post('/org-chart', [OrgChartController::class, 'store'])->name('.org-chart.store');
     Route::put('/org-chart/{member}', [OrgChartController::class, 'update'])->name('.org-chart.update');

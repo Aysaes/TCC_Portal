@@ -218,13 +218,6 @@ const MANCOMM_POSITIONS = [
     'Junior Veterinarian TL',
 ];
 
-/*
-|--------------------------------------------------------------------------
-| ORG CHART ASSET
-|--------------------------------------------------------------------------
-*/
-
-const ORG_CHART_SVG_PATH = '/storage/org_chart/org-chart.svg';
 
 /*
 |--------------------------------------------------------------------------
@@ -344,8 +337,8 @@ function SideCarousel({ title, children }) {
 | ORG CHART VIEWER
 |--------------------------------------------------------------------------
 */
-
-function OrgChartMapViewer() {
+// 👇 UPDATE 1: Pass the dynamic SVG path down into the Viewer
+function OrgChartMapViewer({ svgPath }) {
     const containerRef = useRef(null);
     const imageRef = useRef(null);
 
@@ -549,22 +542,29 @@ function OrgChartMapViewer() {
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseLeave}
             >
-                <div
-                    className="absolute left-0 top-0 will-change-transform"
-                    style={{
-                        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                        transformOrigin: '0 0',
-                    }}
-                >
-                    <img
-                        ref={imageRef}
-                        src={ORG_CHART_SVG_PATH}
-                        alt="Organizational Chart"
-                        draggable={false}
-                        onLoad={handleImageLoad}
-                        className="block max-w-none select-none"
-                    />
-                </div>
+                {/* 👇 UPDATE 2: Show the image ONLY if we actually received an SVG Path */}
+                {svgPath ? (
+                    <div
+                        className="absolute left-0 top-0 will-change-transform"
+                        style={{
+                            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                            transformOrigin: '0 0',
+                        }}
+                    >
+                        <img
+                            ref={imageRef}
+                            src={svgPath}
+                            alt="Organizational Chart"
+                            draggable={false}
+                            onLoad={handleImageLoad}
+                            className="block max-w-none select-none"
+                        />
+                    </div>
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                        <p className="text-gray-500 font-medium">No organizational chart has been uploaded yet.</p>
+                    </div>
+                )}
 
                 <div className="pointer-events-none absolute bottom-4 right-4 rounded-xl bg-white/90 px-3 py-2 text-xs font-medium text-gray-600 shadow-sm border border-gray-200">
                     Zoom: {Math.round(scale * 100)}%
@@ -580,10 +580,19 @@ function OrgChartMapViewer() {
 |--------------------------------------------------------------------------
 */
 
-export default function OrgChart({ auth, members }) {
+// 👇 UPDATE 3: Ensure we are receiving orgChartSvg as a prop from the backend controller
+export default function OrgChart({ auth, members, orgChartSvg = null }) {
     const dashboardLinks = getDashboardLinks();
     const memberList = members || [];
     const [openSections, setOpenSections] = useState({});
+
+    // 👇 UPDATE 4: Clean up the path exactly like we did in the Admin panel to prevent broken links
+    const normalizedOrgChartSvg =
+        orgChartSvg && orgChartSvg.startsWith('/')
+            ? orgChartSvg
+            : orgChartSvg
+            ? `/${orgChartSvg}`
+            : null;
 
     const toggleSection = (name) => {
         setOpenSections((prev) => ({
@@ -663,8 +672,8 @@ export default function OrgChart({ auth, members }) {
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-4 lg:px-8">
-                    {/* ORG CHART SVG VIEWER */}
-                    <OrgChartMapViewer />
+                    {/* 👇 UPDATE 5: Pass the normalized string down into our viewer */}
+                    <OrgChartMapViewer svgPath={normalizedOrgChartSvg} />
 
                     {/* PEOPLE SECTIONS */}
                     <div className="mb-12">

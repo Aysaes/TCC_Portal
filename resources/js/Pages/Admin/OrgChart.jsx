@@ -120,10 +120,20 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
     const [editingMember, setEditingMember] = useState(null);
     const [localMembers, setLocalMembers] = useState([]);
     const [openSections, setOpenSections] = useState({});
+    
+    // 👇 NEW: State to hold the local preview URL of the selected SVG
+    const [previewUrl, setPreviewUrl] = useState(null);
 
     useEffect(() => {
         setLocalMembers(members || []);
     }, [members]);
+
+    // 👇 NEW: Clean up the preview URL from memory when the component unmounts or changes
+    useEffect(() => {
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
+    }, [previewUrl]);
 
     const {
         data,
@@ -228,6 +238,8 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
             onSuccess: () => {
                 resetOrgChart();
                 clearOrgChartErrors();
+                // 👇 Clear the local preview after successful upload so it defaults back to the server SVG
+                setPreviewUrl(null); 
             },
         });
     };
@@ -272,6 +284,9 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
             ? `/${orgChartSvg}`
             : null;
 
+    // 👇 Determine what to show in the box: The local preview first, or the saved database one second.
+    const displaySvg = previewUrl || normalizedOrgChartSvg;
+
     return (
         <SidebarLayout
             activeModule="Admin"
@@ -306,7 +321,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                                 >
-                                    View Current SVG
+                                    View Current Saved SVG
                                 </a>
                             )}
                         </div>
@@ -315,15 +330,16 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                             <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
                                 <div className="border-b border-gray-200 px-4 py-3">
                                     <h4 className="text-sm font-bold uppercase tracking-wide text-gray-700">
-                                        Current Org Chart Preview
+                                        {previewUrl ? 'Preview of Selected File' : 'Current Org Chart Preview'}
                                     </h4>
                                 </div>
 
                                 <div className="flex min-h-[280px] items-center justify-center p-4">
-                                    {normalizedOrgChartSvg ? (
+                                    {/* 👇 Use our new displaySvg variable here */}
+                                    {displaySvg ? (
                                         <img
-                                            src={normalizedOrgChartSvg}
-                                            alt="Current Organizational Chart"
+                                            src={displaySvg}
+                                            alt="Organizational Chart Preview"
                                             className="max-h-[420px] w-full object-contain"
                                         />
                                     ) : (
@@ -347,7 +363,17 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                                         <input
                                             type="file"
                                             accept=".svg,image/svg+xml"
-                                            onChange={(e) => setOrgChartData('org_chart_file', e.target.files[0] || null)}
+                                            onChange={(e) => {
+                                                // 👇 Update form data AND generate the preview URL
+                                                const file = e.target.files[0];
+                                                setOrgChartData('org_chart_file', file || null);
+                                                
+                                                if (file) {
+                                                    setPreviewUrl(URL.createObjectURL(file));
+                                                } else {
+                                                    setPreviewUrl(null);
+                                                }
+                                            }}
                                             className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 transition-colors hover:file:bg-indigo-100"
                                         />
 
