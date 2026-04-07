@@ -138,11 +138,21 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                             onChange={(e) => setModuleFilter(e.target.value)}
                         >
                             <option value="">All Modules</option>
-                            <option value="Auth">Authentication</option>
-                            <option value="User Management">User Management</option>
+                            <option value="Authentication">Authentication</option>
+                            <option value="User Profile">User Profile</option>
+                            <option value="Employee Management">Employee Management</option>
+                            <option value="System Logs">System Logs</option>
                             <option value="Org Chart">Org Chart</option>
                             <option value="Announcements">Announcements</option>
                             <option value="Company Content">Company Content</option>
+                            <option value="Document Repository">Document Repository</option>
+                            <option value="HR Requests">HR Requests</option>
+                            <option value="Manpower Requests">Manpower Requests</option>
+                            <option value="Feedback">Feedback</option>
+                            <option value="Purchase Requests">Purchase Requests (PR)</option>
+                            <option value="Purchase Orders">Purchase Orders (PO)</option>
+                            <option value="Products Masterlist">Products Masterlist</option>
+                            <option value="Duty Meals">Duty Meals</option>
                         </select>
 
                         {/* ACTIONS (FIXED EXACT MATCHES) */}
