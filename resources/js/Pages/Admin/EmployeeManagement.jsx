@@ -34,6 +34,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
     const [filterSearch, setFilterSearch] = useState('');
     const [filterDepartment, setFilterDepartment] = useState('');
     const [filterBranch, setFilterBranch] = useState('');
+    const [filterPosition, setFilterPosition] = useState('');
 
     // Sorting state
     const [sortField, setSortField] = useState('name');
@@ -56,14 +57,19 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                 return employee.department?.name || '';
             case 'position':
                 return employee.position?.name || '';
+            case 'status':
+                if (employee.status === 'Disabled') return 'Disabled';
+                if (employee.status === 'Password reset') return 'Password Reset';
+                return employee.has_password ? 'Active' : 'Pending Setup';
             default:
                 return '';
         }
     };
 
-    // 1. Automatically extract unique Departments and Branches from the users array for the dropdowns
+    // 1. Automatically extract unique Departments, Branches, and Positions
     const uniqueDepartments = [...new Set(users.map(u => u.department?.name).filter(Boolean))].sort();
     const uniqueBranches = [...new Set(users.flatMap(u => u.branches?.map(b => b.name) || []).filter(Boolean))].sort();
+    const uniquePositions = [...new Set(users.map(u => u.position?.name).filter(Boolean))].sort();
 
     // 2. The Live Filter Math
     const filteredUsers = [...users]
@@ -88,7 +94,11 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             const matchesBranch = filterBranch === '' ||
                 (employee.branches && employee.branches.some(b => b.name === filterBranch));
 
-            return matchesSearch && matchesDept && matchesBranch;
+            // Position matches exactly
+            const matchesPosition = filterPosition === '' || 
+                employee.position?.name === filterPosition;
+
+            return matchesSearch && matchesDept && matchesBranch && matchesPosition;
         })
         .sort((a, b) => {
             const aValue = getSortValue(a, sortField).toLowerCase();
@@ -208,11 +218,21 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         });
     };
 
-    // For Position
+    // ==========================================
+    // For Edit Positions
+    // ==========================================
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isPositionModalOpen, setPositionModalOpen] = useState(false);
 
-    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
+    const { 
+        data: positionData, 
+        setData: setPositionData, 
+        post: postPosition, 
+        processing: positionProcessing, 
+        errors: positionErrors, 
+        reset: resetPosition, 
+        clearErrors: clearPositionErrors 
+    } = useForm({
         department_id: '',
         position_name: '',
     });
@@ -225,22 +245,29 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
     const closePositionModal = () => {
         setPositionModalOpen(false);
-        clearErrors();
-        reset();
+        clearPositionErrors();
+        resetPosition();
     };
 
     const submitPosition = (e) => {
         e.preventDefault();
-        post(route('admin.positions.store'), {
+        postPosition(route('admin.positions.store'), {
             preserveScroll: true,
             onSuccess: () => {
-                closePositionModal();
-                reset();
+                // Optionally keep the selected department and only reset the name
+                resetPosition('position_name');
             },
         });
     };
 
-    // For Branch
+    // Live filtering for the Manage Positions list
+    const filteredManagePositions = positionData.department_id
+        ? positions.filter(pos => pos.department_id === parseInt(positionData.department_id))
+        : positions;
+
+    // ==========================================
+    // For Edit Branches
+    // ==========================================
     const [isBranchModalOpen, setBranchModalOpen] = useState(false);
 
     const {
@@ -252,7 +279,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         clearErrors: clearBranchErrors,
         reset: resetBranch
     } = useForm({
-        branch_name: '',
+        name: '',
     });
 
     const closeBranchModal = () => {
@@ -265,14 +292,13 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         e.preventDefault();
         postBranch(route('admin.branches.store'), {
             preserveScroll: true,
-            onSuccess: () => {
-                closeBranchModal();
-                resetBranch();
-            },
+            onSuccess: () => resetBranch(),
         });
     };
 
-    // For Users
+    // ==========================================
+    // For Add Users
+    // ==========================================
     const [isUserModalOpen, setUserModalOpen] = useState(false);
 
     const {
@@ -304,7 +330,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             preserveScroll: true,
             onSuccess: () => {
                 closeUserModal();
-                reset();
                 resetUser();
             },
         });
@@ -318,11 +343,13 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         }
     };
 
-    const filteredPositions = positions.filter(
+    const filteredPositionsForUser = positions.filter(
         pos => pos.department_id === parseInt(userData.department_id)
     );
 
+    // ==========================================
     // For Edit Users
+    // ==========================================
     const [isEditUserModalOpen, setEditUserModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
 
@@ -389,7 +416,9 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         (pos) => pos.department_id === parseInt(editUserData.department_id)
     );
 
-    // For Device Reset
+    // ==========================================
+    // ACTION HANDLERS (Reset, Disable, Delete)
+    // ==========================================
     const confirmDeviceReset = (employee) => {
         setActiveDropdown(null);
         setConfirmDialog({
@@ -407,7 +436,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         });
     };
 
-    // For Delete
     const confirmDeleteUser = (employee) => {
         setActiveDropdown(null);
         setConfirmDialog({
@@ -425,7 +453,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         });
     };
 
-    // For Disable/Enable Toggle
     const confirmToggleStatus = (employee) => {
         setActiveDropdown(null);
         const isDisabling = employee.status !== 'Disabled';
@@ -447,20 +474,15 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         });
     };
 
-    // ==========================================
-    // EMAIL SETUP / RESET ACTION
-    // ==========================================
     const handleAccountAction = (employee) => {
-        setActiveDropdown(null); // Close the cog menu
+        setActiveDropdown(null); 
         
         if (employee.has_password) {
-            // Phase 2: Send Password Reset
             router.post(route('employees.send-reset', employee.id), {}, {
                 preserveScroll: true,
                 onSuccess: () => triggerToast(`Reset link sent to ${employee.email}`, 'success'),
             });
         } else {
-            // Phase 1: Send Account Activation
             router.post(route('employees.send-activation', employee.id), {}, {
                 preserveScroll: true,
                 onSuccess: () => triggerToast(`Activation link sent to ${employee.email}`, 'success'),
@@ -493,6 +515,38 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             confirmColor: 'bg-red-600 hover:bg-red-500',
             onConfirm: () => {
                 router.delete(route('admin.departments.destroy', department.id), {
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
+            }
+        });
+    };
+
+    const confirmDeletePosition = (position) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Position',
+            message: `Are you sure you want to permanently delete the ${position.name} position?\n\nThis may affect employees currently assigned to it.`,
+            confirmText: 'Delete Position',
+            confirmColor: 'bg-red-600 hover:bg-red-500',
+            onConfirm: () => {
+                router.delete(route('admin.positions.destroy', position.id), {
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
+            }
+        });
+    };
+
+    const confirmDeleteBranch = (branch) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Branch',
+            message: `Are you sure you want to permanently delete the ${branch.name} branch?\n\nThis may affect employees currently assigned to it.`,
+            confirmText: 'Delete Branch',
+            confirmColor: 'bg-red-600 hover:bg-red-500',
+            onConfirm: () => {
+                router.delete(route('admin.branches.destroy', branch.id), {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -556,10 +610,10 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                 + Add Users
                             </button>
                             <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm hover:bg-gray-50 transition flex-shrink-0" onClick={() => setPositionModalOpen(true)}>
-                                + Add Position
+                                Edit Positions
                             </button>
-                            <button className="rounded-md border border-gray-300 bg-yellow-500 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white shadow-sm hover:bg-yellow-600 transition flex-shrink-0" onClick={() => setBranchModalOpen(true)}>
-                                + Add Branch
+                            <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm hover:bg-gray-50 transition flex-shrink-0" onClick={() => setBranchModalOpen(true)}>
+                                Edit Branch
                             </button>
                             <button className="rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm hover:bg-gray-50 transition flex-shrink-0" onClick={() => setDepartmentModalOpen(true)}>
                                 Edit Departments
@@ -640,6 +694,18 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                             ))}
                         </select>
 
+                        {/* NEW POSITION DROPDOWN */}
+                        <select
+                            className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            value={filterPosition}
+                            onChange={(e) => setFilterPosition(e.target.value)}
+                        >
+                            <option value="">All Positions</option>
+                            {uniquePositions.map(pos => (
+                                <option key={pos} value={pos}>{pos}</option>
+                            ))}
+                        </select>
+
                         <select
                             className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             value={filterBranch}
@@ -679,7 +745,15 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                     </th>
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Branch</th>
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Is Rotating</th>
-                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Status</th>
+                                    
+                                    {/* NEW SORTABLE STATUS HEADER */}
+                                    <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">
+                                        <div className="flex items-center">
+                                            <span>Status</span>
+                                            {renderHeaderSortButton('status')}
+                                        </div>
+                                    </th>
+
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider text-center w-20">Action</th>
                                 </tr>
                             </thead>
@@ -687,7 +761,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredUsers.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-12 text-center text-gray-500 font-medium">
+                                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500 font-medium">
                                             No employees found.
                                         </td>
                                     </tr>
@@ -724,20 +798,20 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                             </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap">
-    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
-        employee.status === 'Disabled'
-            ? 'bg-gray-100 text-gray-600 ring-gray-500/20'
-            : employee.status === 'Password reset' 
-                ? 'bg-red-50 text-red-700 ring-red-600/20' 
-                : employee.has_password 
-                    ? 'bg-green-50 text-green-700 ring-green-600/20' 
-                    : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
-    }`}>
-        {employee.status === 'Disabled' ? 'Disabled' : 
-         employee.status === 'Password reset' ? 'Password Reset' : 
-         (employee.has_password ? 'Active' : 'Pending Setup')}
-    </span>
-</td>
+                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+                                                    employee.status === 'Disabled'
+                                                        ? 'bg-gray-100 text-gray-600 ring-gray-500/20'
+                                                        : employee.status === 'Password reset' 
+                                                            ? 'bg-red-50 text-red-700 ring-red-600/20' 
+                                                            : employee.has_password 
+                                                                ? 'bg-green-50 text-green-700 ring-green-600/20' 
+                                                                : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+                                                }`}>
+                                                    {employee.status === 'Disabled' ? 'Disabled' : 
+                                                     employee.status === 'Password reset' ? 'Password Reset' : 
+                                                     (employee.has_password ? 'Active' : 'Pending Setup')}
+                                                </span>
+                                            </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap text-center relative">
                                                 <button
@@ -778,13 +852,13 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                             Device Reset
                                                         </Link>
                                                         <button 
-    className="block w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors" 
-    onClick={(e) => {
-        e.preventDefault(); e.stopPropagation(); confirmToggleStatus(employee);
-    }}
->
-    {employee.status === 'Disabled' ? 'Enable Account' : 'Disable Account'}
-</button>
+                                                            className="block w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors" 
+                                                            onClick={(e) => {
+                                                                e.preventDefault(); e.stopPropagation(); confirmToggleStatus(employee);
+                                                            }}
+                                                        >
+                                                            {employee.status === 'Disabled' ? 'Enable Account' : 'Disable Account'}
+                                                        </button>
                                                         <Link as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); confirmDeleteUser(employee);
                                                         }}>
@@ -910,19 +984,19 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                             </div>
                                         </div>
                                         <div>
-        <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Status</div>
-    <div className="mt-1">
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
-            employee.status === 'Password reset' 
-                ? 'bg-red-50 text-red-700 ring-red-600/20' 
-                : employee.has_password 
-                    ? 'bg-green-50 text-green-700 ring-green-600/20' 
-                    : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
-        }`}>
-            {employee.status === 'Password reset' ? 'Password Reset' : (employee.has_password ? 'Active' : 'Pending Setup')}
-        </span>
-    </div>
-</div>
+                                            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-3">Status</div>
+                                            <div className="mt-1">
+                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+                                                    employee.status === 'Password reset' 
+                                                        ? 'bg-red-50 text-red-700 ring-red-600/20' 
+                                                        : employee.has_password 
+                                                            ? 'bg-green-50 text-green-700 ring-green-600/20' 
+                                                            : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+                                                }`}>
+                                                    {employee.status === 'Password reset' ? 'Password Reset' : (employee.has_password ? 'Active' : 'Pending Setup')}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -931,85 +1005,118 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                 </div>
             </div>
 
-            <Modal show={isPositionModalOpen} onClose={closePositionModal}>
-                <form onSubmit={submitPosition} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Add New Position
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-600">
-                        Select the department and enter the new position name.
-                    </p>
+            <Modal show={isPositionModalOpen} onClose={closePositionModal} maxWidth="2xl">
+                <div className="p-6">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Manage Positions</h2>
 
-                    <div className="mt-6">
-                        <InputLabel htmlFor="department_id" value="Select Department" />
-                        <select
-                            id="department_id"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            value={data.department_id}
-                            onChange={(e) => setData('department_id', e.target.value)}
-                            required
-                        >
-                            <option value="" disabled>Select a department...</option>
-                            {departments.map((dept) => (
-                                <option key={dept.id} value={dept.id}>
-                                    {dept.name}
-                                </option>
-                            ))}
-                        </select>
-                        <InputError message={errors.department_id} className="mt-2" />
-                    </div>
+                    <form onSubmit={submitPosition} className="mb-6 flex flex-col md:flex-row items-start md:items-end gap-3 rounded-md bg-gray-50 p-4 border border-gray-100">
+                        <div className="flex-grow w-full md:w-auto">
+                            <InputLabel htmlFor="department_id" value="Department" />
+                            <select
+                                id="department_id"
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                value={positionData.department_id}
+                                onChange={(e) => setPositionData('department_id', e.target.value)}
+                                required
+                            >
+                                <option value="" disabled>Select Dept...</option>
+                                {departments.map((dept) => (
+                                    <option key={dept.id} value={dept.id}>
+                                        {dept.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <InputError message={positionErrors.department_id} className="mt-2" />
+                        </div>
 
-                    <div className="mt-6">
-                        <InputLabel htmlFor="position_name" value="Position Name" />
-                        <TextInput
-                            id="position_name"
-                            className="mt-1 block w-full"
-                            value={data.position_name}
-                            onChange={(e) => setData('position_name', e.target.value)}
-                            required
-                            placeholder="e.g. Veterinarian, Tech Support"
-                        />
-                        <InputError message={errors.position_name} className="mt-2" />
+                        <div className="flex-grow w-full md:w-auto">
+                            <InputLabel htmlFor="position_name" value="New Position Name" />
+                            <TextInput
+                                id="position_name"
+                                className="mt-1 block w-full"
+                                value={positionData.position_name}
+                                onChange={(e) => setPositionData('position_name', e.target.value)}
+                                required
+                                placeholder="e.g. Veterinarian"
+                            />
+                            <InputError message={positionErrors.position_name} className="mt-2" />
+                        </div>
+                        
+                        <PrimaryButton className="mt-4 md:mt-0" disabled={positionProcessing}>Add</PrimaryButton>
+                    </form>
+
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                        {positionData.department_id 
+                            ? `Existing Positions (${departments.find(d => d.id === parseInt(positionData.department_id))?.name || 'Selected Dept'})` 
+                            : 'All Existing Positions'}
+                    </h3>
+                    <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
+                        <ul className="divide-y divide-gray-200">
+                            {filteredManagePositions.map((pos) => {
+                                const deptName = departments.find(d => d.id === pos.department_id)?.name || 'Unknown Dept';
+                                return (
+                                    <li key={pos.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                                        <div>
+                                            <span className="text-sm font-medium text-gray-800 block">{pos.name}</span>
+                                            {/* Only show the department name below the position if they are viewing "All Existing Positions" */}
+                                            {!positionData.department_id && (
+                                                <span className="text-xs text-gray-500">{deptName}</span>
+                                            )}
+                                        </div>
+                                        <button onClick={() => confirmDeletePosition(pos)} className="text-xs font-medium text-red-600 hover:text-red-900">
+                                            Delete
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                            {filteredManagePositions.length === 0 && (
+                                <li className="p-4 text-sm text-gray-500 text-center">
+                                    {positionData.department_id ? 'No positions found for this department.' : 'No positions found.'}
+                                </li>
+                            )}
+                        </ul>
                     </div>
 
                     <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closePositionModal}>Cancel</SecondaryButton>
-                        <PrimaryButton className="ms-3" disabled={processing}>
-                            Save Position
-                        </PrimaryButton>
+                        <SecondaryButton onClick={closePositionModal}>Close</SecondaryButton>
                     </div>
-                </form>
+                </div>
             </Modal>
 
             <Modal show={isBranchModalOpen} onClose={closeBranchModal}>
-                <form onSubmit={submitBranch} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Add New Branch
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-600">
-                        Enter the name of the new clinic location.
-                    </p>
+                <div className="p-6">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Manage Branches</h2>
 
-                    <div className="mt-6">
-                        <InputLabel htmlFor="branch_name" value="Branch Name" />
-                        <TextInput
-                            id="branch_name"
-                            className="mt-1 block w-full"
-                            value={branchData.name}
-                            onChange={(e) => setBranchData('name', e.target.value)}
-                            required
-                            placeholder="e.g. Makati"
-                        />
-                        <InputError message={branchErrors.name} className="mt-2" />
+                    <form onSubmit={submitBranch} className="mb-6 flex items-end gap-3 rounded-md bg-gray-50 p-4 border border-gray-100">
+                        <div className="flex-grow">
+                            <InputLabel htmlFor="new_branch_name" value="New Branch Name" />
+                            <TextInput id="new_branch_name" className="mt-1 block w-full" value={branchData.name} onChange={(e) => setBranchData('name', e.target.value)} required placeholder="e.g. Makati, Greenhills" />
+                            <InputError message={branchErrors.name} className="mt-2" />
+                        </div>
+                        <PrimaryButton disabled={branchProcessing}>Add</PrimaryButton>
+                    </form>
+
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Existing Branches</h3>
+                    <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
+                        <ul className="divide-y divide-gray-200">
+                            {branches.map((branch) => (
+                                <li key={branch.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                                    <span className="text-sm text-gray-800">{branch.name}</span>
+                                    <button onClick={() => confirmDeleteBranch(branch)} className="text-xs font-medium text-red-600 hover:text-red-900">
+                                        Delete
+                                    </button>
+                                </li>
+                            ))}
+                            {branches.length === 0 && (
+                                <li className="p-4 text-sm text-gray-500 text-center">No branches found.</li>
+                            )}
+                        </ul>
                     </div>
 
                     <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeBranchModal}>Cancel</SecondaryButton>
-                        <PrimaryButton className="ms-3" disabled={branchProcessing}>
-                            Save Branch
-                        </PrimaryButton>
+                        <SecondaryButton onClick={closeBranchModal}>Close</SecondaryButton>
                     </div>
-                </form>
+                </div>
             </Modal>
 
             <Modal show={isUserModalOpen} onClose={closeUserModal} maxWidth="2xl">
@@ -1062,7 +1169,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                 <InputLabel htmlFor="user_position" value="Position" />
                                 <select id="user_position" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value={userData.position_id} onChange={(e) => setUserData('position_id', e.target.value)} required disabled={!userData.department_id}>
                                     <option value="" disabled>Select Position</option>
-                                    {filteredPositions.map((pos) => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
+                                    {filteredPositionsForUser.map((pos) => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
                                 </select>
                                 <InputError message={userErrors.position_id} className="mt-2" />
                             </div>
