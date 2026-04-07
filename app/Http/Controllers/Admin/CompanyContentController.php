@@ -54,7 +54,7 @@ class CompanyContentController extends Controller
             'type' => 'required|string|max:50',
             'title' => 'nullable|string|max:255',
             'content' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         try {
