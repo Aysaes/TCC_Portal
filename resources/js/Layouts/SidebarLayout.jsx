@@ -269,6 +269,22 @@ export default function SidebarLayout({
         return iconSvg[link.label] || <div className="h-4 w-4 rounded bg-gray-200" />;
     };
 
+    const markAllAsRead = (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Keep the dropdown open if desired, or remove to let it close
+
+        if (localUnreadCount === 0) return;
+
+        // 1. Instantly update UI: Mark all unread as read and reset count to 0
+        setLocalNotifications(prev => prev.map(n => 
+            !n.read_at ? { ...n, read_at: new Date().toISOString() } : n
+        ));
+        setLocalUnreadCount(0);
+
+        // 2. Silently tell the backend
+        axios.post(route('notifications.mark-all-read'));
+    };
+
     return (
         <div className="flex h-screen overflow-hidden bg-gray-100">
             <FlashMessage />
@@ -413,8 +429,19 @@ export default function SidebarLayout({
     </Dropdown.Trigger>
     
     <Dropdown.Content align="right" width="80">
-        <div className="block px-4 py-2 text-sm font-semibold text-gray-900 border-b border-gray-100">
-            Notifications
+
+        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">
+            <span className="text-sm font-semibold text-gray-900">
+                Notifications
+            </span>
+            {localUnreadCount > 0 && (
+                <button
+                    onClick={markAllAsRead}
+                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors"
+                >
+                    Mark all as read
+                </button>
+            )}
         </div>
         
         {localNotifications.length === 0 ? (
