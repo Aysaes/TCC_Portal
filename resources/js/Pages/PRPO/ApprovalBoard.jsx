@@ -183,7 +183,6 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                                 <th className="px-6 py-3 font-semibold text-gray-900">Date Needed</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Items Count</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Status</th>
-                                <th className="px-6 py-3 font-semibold text-gray-900 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">

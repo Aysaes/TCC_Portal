@@ -78,8 +78,8 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                 </form>
 
                 {/* Data Table */}
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
+                <div className="overflow-auto max-h-[calc(100vh-450px)] border border-gray-200 rounded-lg relative no-scrollbar">
+                <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
                         <thead className="bg-gray-50 text-gray-600 font-medium">
                             <tr>
                                 <th className="px-6 py-3">Timestamp</th>
