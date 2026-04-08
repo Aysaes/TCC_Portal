@@ -92,8 +92,17 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
                             {/* Branch */}
                             <div>
                                 <InputLabel htmlFor="branch_id" value="Target Branch" />
-                                <select id="branch_id" className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500" value={data.branch_id} onChange={e => setData('branch_id', e.target.value)}>
+                                <select 
+                                    id="branch_id" 
+                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500" 
+                                    value={data.branch_id} 
+                                    onChange={e => setData('branch_id', e.target.value)}
+                                >
                                     <option value="">Select Branch...</option>
+                                    
+                                    {/* 🟢 ADDED "ALL BRANCH" OPTION HERE */}
+                                    <option value="all">All Branch</option> 
+                                    
                                     {/* Added a fallback so you know if data is reaching React */}
                                     {branches && branches.length > 0 ? (
                                         branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)
