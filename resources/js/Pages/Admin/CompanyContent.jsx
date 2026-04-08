@@ -8,10 +8,15 @@ import TextInput from '@/Components/TextInput';
 import { getAdminLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, router, useForm } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function CompanyContent({ auth, contents = [], contentTypes = [] }) {
     const adminLinks = getAdminLinks();
+
+    const FRAME_RATIO_CLASS = 'aspect-[16/9] w-full';
+    const DEFAULT_ZOOM = 1;
+    const MIN_ZOOM = 0.3;
+    const MAX_ZOOM = 4;
 
     const normalizedTypeOptions = useMemo(() => {
         return (contentTypes || [])
@@ -47,10 +52,33 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const [isTypeOverlayOpen, setIsTypeOverlayOpen] = useState(false);
-    const [typeOverlayMode, setTypeOverlayMode] = useState('create'); // create | edit | manage
-    const [typeModalTarget, setTypeModalTarget] = useState('add'); // add | edit | manage
+    const [typeOverlayMode, setTypeOverlayMode] = useState('create');
+    const [typeModalTarget, setTypeModalTarget] = useState('add');
     const [editingId, setEditingId] = useState(null);
     const [editingTypeId, setEditingTypeId] = useState(null);
+    const [editingItem, setEditingItem] = useState(null);
+
+    const addEditorRef = useRef(null);
+    const editEditorRef = useRef(null);
+
+    const [addImagePreview, setAddImagePreview] = useState(null);
+    const [editImagePreview, setEditImagePreview] = useState(null);
+
+    const [addCropState, setAddCropState] = useState({
+        dragging: false,
+        startX: 0,
+        startY: 0,
+        originX: 0,
+        originY: 0,
+    });
+
+    const [editCropState, setEditCropState] = useState({
+        dragging: false,
+        startX: 0,
+        startY: 0,
+        originX: 0,
+        originY: 0,
+    });
 
     const {
         data: addData,
@@ -64,7 +92,11 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
         type: '',
         title: '',
         content: '',
+        content_html: '',
         image: null,
+        image_zoom: DEFAULT_ZOOM,
+        image_offset_x: 0,
+        image_offset_y: 0,
     });
 
     const {
@@ -80,7 +112,11 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
         type: '',
         title: '',
         content: '',
+        content_html: '',
         image: null,
+        image_zoom: DEFAULT_ZOOM,
+        image_offset_x: 0,
+        image_offset_y: 0,
     });
 
     const {
@@ -115,6 +151,137 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
             setAddData('type', normalizedTypeOptions[0].name);
         }
     }, [normalizedTypeOptions, isAddModalOpen]);
+
+    useEffect(() => {
+        if (!addData.image) {
+            setAddImagePreview(null);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(addData.image);
+        setAddImagePreview(objectUrl);
+
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [addData.image]);
+
+    useEffect(() => {
+        if (!editData.image) {
+            setEditImagePreview(null);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(editData.image);
+        setEditImagePreview(objectUrl);
+
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [editData.image]);
+
+    const getImageSource = (item, previewImage) => {
+        if (previewImage) return previewImage;
+        if (item?.image_path) return `/storage/${item.image_path}`;
+        return null;
+    };
+
+    const forceEditorLTR = (editorRef) => {
+        if (!editorRef.current) return;
+
+        editorRef.current.setAttribute('dir', 'ltr');
+        editorRef.current.style.direction = 'ltr';
+        editorRef.current.style.textAlign = 'left';
+        editorRef.current.style.unicodeBidi = 'plaintext';
+        editorRef.current.style.whiteSpace = 'pre-wrap';
+        editorRef.current.style.wordBreak = 'break-word';
+    };
+
+    const syncEditorToForm = (editorRef, setDataFn) => {
+        if (!editorRef.current) return;
+
+        const html = editorRef.current.innerHTML;
+        const plain = editorRef.current.innerText;
+
+        setDataFn('content_html', html);
+        setDataFn('content', plain);
+    };
+
+    const setEditorHtml = (editorRef, html) => {
+        if (!editorRef.current) return;
+
+        editorRef.current.innerHTML = html || '';
+        forceEditorLTR(editorRef);
+    };
+
+    const runEditorCommand = (editorRef, setDataFn, command, value = null) => {
+        if (!editorRef.current) return;
+
+        editorRef.current.focus();
+        forceEditorLTR(editorRef);
+        document.execCommand(command, false, value);
+        syncEditorToForm(editorRef, setDataFn);
+    };
+
+    const handleEditorKeyDown = (e, editorRef, setDataFn) => {
+        const isMod = e.ctrlKey || e.metaKey;
+        if (!isMod) return;
+
+        const key = e.key.toLowerCase();
+
+        if (key === 'b') {
+            e.preventDefault();
+            runEditorCommand(editorRef, setDataFn, 'bold');
+            return;
+        }
+
+        if (key === 'i') {
+            e.preventDefault();
+            runEditorCommand(editorRef, setDataFn, 'italic');
+            return;
+        }
+
+        if (key === 'u') {
+            e.preventDefault();
+            runEditorCommand(editorRef, setDataFn, 'underline');
+            return;
+        }
+    };
+
+    const startCropDrag = (e, data, setStateFn) => {
+        e.preventDefault();
+
+        setStateFn({
+            dragging: true,
+            startX: e.clientX,
+            startY: e.clientY,
+            originX: data.image_offset_x || 0,
+            originY: data.image_offset_y || 0,
+        });
+    };
+
+    const handleCropMove = (e, state, setDataFn) => {
+        if (!state.dragging) return;
+
+        const dx = e.clientX - state.startX;
+        const dy = e.clientY - state.startY;
+
+        setDataFn('image_offset_x', state.originX + dx);
+        setDataFn('image_offset_y', state.originY + dy);
+    };
+
+    const stopCropDrag = (setStateFn) => {
+        setStateFn((prev) => ({ ...prev, dragging: false }));
+    };
+
+    const handleCropWheel = (e, data, setDataFn) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (data.image_zoom || DEFAULT_ZOOM) + delta));
+        setDataFn('image_zoom', Number(nextZoom.toFixed(2)));
+    };
+
+    const resetCrop = (setDataFn) => {
+        setDataFn('image_zoom', DEFAULT_ZOOM);
+        setDataFn('image_offset_x', 0);
+        setDataFn('image_offset_y', 0);
+    };
 
     const closeConfirmModal = () => {
         setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
@@ -165,6 +332,10 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
     const openAddModal = () => {
         clearAddErrors();
         setIsAddModalOpen(true);
+
+        setTimeout(() => {
+            setEditorHtml(addEditorRef, addData.content_html || '');
+        }, 0);
     };
 
     const closeAddModal = () => {
@@ -179,10 +350,23 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
         resetTypeCreate();
         resetTypeEdit();
         setEditingTypeId(null);
+        setAddImagePreview(null);
+        setAddCropState({
+            dragging: false,
+            startX: 0,
+            startY: 0,
+            originX: 0,
+            originY: 0,
+        });
+
+        if (addEditorRef.current) {
+            addEditorRef.current.innerHTML = '';
+        }
     };
 
     const submitAdd = (e) => {
         e.preventDefault();
+        syncEditorToForm(addEditorRef, setAddData);
 
         postContent(route('admin.company-content.store'), {
             preserveScroll: true,
@@ -192,15 +376,26 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
 
     const openEditModal = (contentItem) => {
         setEditingId(contentItem.id);
+        setEditingItem(contentItem);
+
         setEditData({
             _method: 'put',
             type: contentItem.type || '',
             title: contentItem.title || '',
             content: contentItem.content || '',
+            content_html: contentItem.content_html || contentItem.content || '',
             image: null,
+            image_zoom: contentItem.image_zoom ?? DEFAULT_ZOOM,
+            image_offset_x: contentItem.image_offset_x ?? 0,
+            image_offset_y: contentItem.image_offset_y ?? 0,
         });
+
         clearEditErrors();
         setIsEditModalOpen(true);
+
+        setTimeout(() => {
+            setEditorHtml(editEditorRef, contentItem.content_html || contentItem.content || '');
+        }, 0);
     };
 
     const closeEditModal = () => {
@@ -216,10 +411,24 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
         resetTypeEdit();
         setEditingId(null);
         setEditingTypeId(null);
+        setEditingItem(null);
+        setEditImagePreview(null);
+        setEditCropState({
+            dragging: false,
+            startX: 0,
+            startY: 0,
+            originX: 0,
+            originY: 0,
+        });
+
+        if (editEditorRef.current) {
+            editEditorRef.current.innerHTML = '';
+        }
     };
 
     const submitEdit = (e) => {
         e.preventDefault();
+        syncEditorToForm(editEditorRef, setEditData);
 
         updateContent(route('admin.company-content.update', editingId), {
             preserveScroll: true,
@@ -379,10 +588,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
 
                             <form onSubmit={submitEditType}>
                                 <div>
-                                    <InputLabel
-                                        htmlFor="edit_type_name"
-                                        value="Type Name"
-                                    />
+                                    <InputLabel htmlFor="edit_type_name" value="Type Name" />
                                     <TextInput
                                         id="edit_type_name"
                                         className="mt-1 block w-full"
@@ -510,6 +716,162 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
         </div>
     );
 
+    const ToolbarButton = ({ label, onCommand, title }) => (
+        <button
+            type="button"
+            title={title}
+            onMouseDown={(e) => {
+                e.preventDefault();
+                onCommand();
+            }}
+            className="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+            {label}
+        </button>
+    );
+
+    const renderRichTextEditor = (id, editorRef, setDataFn, errorMessage) => (
+        <div>
+            <InputLabel htmlFor={id} value="Content Styling" />
+
+            <div className="mt-1 rounded-lg border border-gray-300 bg-white">
+                <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 p-3">
+                    <ToolbarButton
+                        label={<strong>B</strong>}
+                        title="Bold"
+                        onCommand={() => runEditorCommand(editorRef, setDataFn, 'bold')}
+                    />
+                    <ToolbarButton
+                        label={<em>I</em>}
+                        title="Italic"
+                        onCommand={() => runEditorCommand(editorRef, setDataFn, 'italic')}
+                    />
+                    <ToolbarButton
+                        label={<span className="underline">U</span>}
+                        title="Underline"
+                        onCommand={() => runEditorCommand(editorRef, setDataFn, 'underline')}
+                    />
+                    <ToolbarButton
+                        label={<span className="line-through">ab</span>}
+                        title="Strikethrough"
+                        onCommand={() => runEditorCommand(editorRef, setDataFn, 'strikeThrough')}
+                    />
+                    <ToolbarButton
+                        label={<span>x<sub>2</sub></span>}
+                        title="Subscript"
+                        onCommand={() => runEditorCommand(editorRef, setDataFn, 'subscript')}
+                    />
+                    <ToolbarButton
+                        label={<span>x<sup>2</sup></span>}
+                        title="Superscript"
+                        onCommand={() => runEditorCommand(editorRef, setDataFn, 'superscript')}
+                    />
+                </div>
+
+                <div
+                    id={id}
+                    ref={editorRef}
+                    contentEditable
+                    dir="ltr"
+                    suppressContentEditableWarning
+                    onInput={() => syncEditorToForm(editorRef, setDataFn)}
+                    onKeyDown={(e) => handleEditorKeyDown(e, editorRef, setDataFn)}
+                    className="min-h-[220px] w-full px-4 py-3 text-left text-sm text-gray-700 focus:outline-none"
+                    style={{
+                        direction: 'ltr',
+                        unicodeBidi: 'plaintext',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                    }}
+                />
+            </div>
+
+            <InputError message={errorMessage} className="mt-2" />
+        </div>
+    );
+
+    const renderImageCropper = (
+        mode,
+        data,
+        setDataFn,
+        previewSrc,
+        cropState,
+        setCropState,
+        currentItem = null,
+        errorMessage = null
+    ) => {
+        const imageSrc = getImageSource(currentItem, previewSrc);
+
+        return (
+            <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div>
+                    <InputLabel
+                        htmlFor={`${mode}_image`}
+                        value={mode === 'edit' ? 'Replace Image (Leave empty to keep current image)' : 'Upload Image (Optional)'}
+                    />
+                    <input
+                        id={`${mode}_image`}
+                        type="file"
+                        accept="image/*"
+                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+                        onChange={(e) => {
+                            setDataFn('image', e.target.files[0] || null);
+                            setTimeout(() => resetCrop(setDataFn), 0);
+                        }}
+                    />
+                    <InputError message={errorMessage} className="mt-2" />
+                </div>
+
+                {imageSrc ? (
+                    <>
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-700">Image Crop Preview</p>
+                            <button
+                                type="button"
+                                onClick={() => resetCrop(setDataFn)}
+                                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Reset Crop
+                            </button>
+                        </div>
+
+                        <div
+                            className={`${FRAME_RATIO_CLASS} relative overflow-hidden rounded-lg border border-gray-200 bg-white`}
+                            onMouseMove={(e) => handleCropMove(e, cropState, setDataFn)}
+                            onMouseUp={() => stopCropDrag(setCropState)}
+                            onMouseLeave={() => stopCropDrag(setCropState)}
+                            onWheel={(e) => handleCropWheel(e, data, setDataFn)}
+                        >
+                            <img
+                                src={imageSrc}
+                                alt="Crop Preview"
+                                draggable={false}
+                                onMouseDown={(e) => startCropDrag(e, data, setCropState)}
+                                className={`${cropState.dragging ? 'cursor-grabbing' : 'cursor-grab'} absolute left-1/2 top-1/2 select-none`}
+                                style={{
+                                    transform: `translate(calc(-50% + ${data.image_offset_x || 0}px), calc(-50% + ${data.image_offset_y || 0}px)) scale(${data.image_zoom || DEFAULT_ZOOM})`,
+                                    transformOrigin: 'center center',
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'contain',
+                                    pointerEvents: 'auto',
+                                }}
+                            />
+                        </div>
+
+                        <p className="text-xs text-gray-500">
+                            Drag the image to position it inside the fixed frame. Use your mouse wheel to zoom.
+                        </p>
+                    </>
+                ) : (
+                    <div className="rounded-md border border-dashed border-gray-300 bg-white p-6 text-center text-sm italic text-gray-400">
+                        No image selected yet.
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <SidebarLayout
             activeModule="Admin"
@@ -526,7 +888,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="mb-6 flex items-center justify-between">
                         <p className="text-gray-600">
-                            Manage the Mission, Vision, and core identity text for the clinic.
+                            Manage the Mission, Vision, story posts, and company identity content.
                         </p>
                         <button
                             type="button"
@@ -548,12 +910,19 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                                     key={item.id}
                                     className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm"
                                 >
-                                    <div className="relative h-48 w-full bg-gray-100">
+                                    <div className={`${FRAME_RATIO_CLASS} relative overflow-hidden bg-gray-100`}>
                                         {item.image_path ? (
                                             <img
                                                 src={`/storage/${item.image_path}`}
                                                 alt={item.title}
-                                                className="h-full w-full object-cover"
+                                                className="absolute left-1/2 top-1/2"
+                                                style={{
+                                                    transform: `translate(calc(-50% + ${item.image_offset_x ?? 0}px), calc(-50% + ${item.image_offset_y ?? 0}px)) scale(${item.image_zoom ?? DEFAULT_ZOOM})`,
+                                                    transformOrigin: 'center center',
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'contain',
+                                                }}
                                             />
                                         ) : (
                                             <div className="flex h-full items-center justify-center text-gray-400 italic">
@@ -571,9 +940,12 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                                             {item.title || 'Untitled'}
                                         </h3>
 
-                                        <p className="mb-4 flex-1 whitespace-pre-line break-words text-sm text-gray-600 line-clamp-3">
-                                            {item.content}
-                                        </p>
+                                        <div
+                                            className="mb-4 flex-1 prose prose-sm max-w-none break-words text-gray-600 line-clamp-4"
+                                            dangerouslySetInnerHTML={{
+                                                __html: item.content_html || item.content || '',
+                                            }}
+                                        />
 
                                         <div className="mt-auto flex justify-end gap-3 border-t pt-3">
                                             <button
@@ -599,12 +971,12 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                 </div>
             </div>
 
-            <Modal show={isAddModalOpen} onClose={closeAddModal} maxWidth="xl">
+            <Modal show={isAddModalOpen} onClose={closeAddModal} maxWidth="2xl">
                 <div className="relative">
                     <form onSubmit={submitAdd} className="p-6">
                         <h2 className="mb-6 text-lg font-medium text-gray-900">Add New Content</h2>
 
-                        <div className="space-y-4">
+                        <div className="space-y-5">
                             {renderTypeControls(
                                 addData.type,
                                 (value) => setAddData('type', value),
@@ -620,35 +992,28 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                                     className="mt-1 block w-full"
                                     value={addData.title}
                                     onChange={(e) => setAddData('title', e.target.value)}
-                                    placeholder="e.g. Our Core Values"
+                                    placeholder="e.g. The Cat Clinic and Kiki’s Story"
                                 />
                                 <InputError message={addErrors.title} className="mt-2" />
                             </div>
 
-                            <div>
-                                <InputLabel htmlFor="add_content" value="Paragraph Text" />
-                                <textarea
-                                    id="add_content"
-                                    rows="4"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                    value={addData.content}
-                                    onChange={(e) => setAddData('content', e.target.value)}
-                                    required
-                                />
-                                <InputError message={addErrors.content} className="mt-2" />
-                            </div>
+                            {renderRichTextEditor(
+                                'add_content_editor',
+                                addEditorRef,
+                                setAddData,
+                                addErrors.content || addErrors.content_html
+                            )}
 
-                            <div>
-                                <InputLabel htmlFor="add_image" value="Upload Image (Optional)" />
-                                <input
-                                    id="add_image"
-                                    type="file"
-                                    accept="image/*"
-                                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
-                                    onChange={(e) => setAddData('image', e.target.files[0] || null)}
-                                />
-                                <InputError message={addErrors.image} className="mt-2" />
-                            </div>
+                            {renderImageCropper(
+                                'add',
+                                addData,
+                                setAddData,
+                                addImagePreview,
+                                addCropState,
+                                setAddCropState,
+                                null,
+                                addErrors.image
+                            )}
                         </div>
 
                         <div className="mt-6 flex justify-end">
@@ -665,12 +1030,12 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                 </div>
             </Modal>
 
-            <Modal show={isEditModalOpen} onClose={closeEditModal} maxWidth="xl">
+            <Modal show={isEditModalOpen} onClose={closeEditModal} maxWidth="2xl">
                 <div className="relative">
                     <form onSubmit={submitEdit} className="p-6">
                         <h2 className="mb-6 text-lg font-medium text-gray-900">Edit Content</h2>
 
-                        <div className="space-y-4">
+                        <div className="space-y-5">
                             {renderTypeControls(
                                 editData.type,
                                 (value) => setEditData('type', value),
@@ -690,33 +1055,23 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                                 <InputError message={editErrors.title} className="mt-2" />
                             </div>
 
-                            <div>
-                                <InputLabel htmlFor="edit_content" value="Paragraph Text" />
-                                <textarea
-                                    id="edit_content"
-                                    rows="4"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                    value={editData.content}
-                                    onChange={(e) => setEditData('content', e.target.value)}
-                                    required
-                                />
-                                <InputError message={editErrors.content} className="mt-2" />
-                            </div>
+                            {renderRichTextEditor(
+                                'edit_content_editor',
+                                editEditorRef,
+                                setEditData,
+                                editErrors.content || editErrors.content_html
+                            )}
 
-                            <div>
-                                <InputLabel
-                                    htmlFor="edit_image"
-                                    value="Replace Image (Leave empty to keep current image)"
-                                />
-                                <input
-                                    id="edit_image"
-                                    type="file"
-                                    accept="image/*"
-                                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
-                                    onChange={(e) => setEditData('image', e.target.files[0] || null)}
-                                />
-                                <InputError message={editErrors.image} className="mt-2" />
-                            </div>
+                            {renderImageCropper(
+                                'edit',
+                                editData,
+                                setEditData,
+                                editImagePreview,
+                                editCropState,
+                                setEditCropState,
+                                editingItem,
+                                editErrors.image
+                            )}
                         </div>
 
                         <div className="mt-6 flex justify-end">
