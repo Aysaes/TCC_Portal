@@ -145,9 +145,30 @@ const MealCard = ({ meal }) => {
     );
 };
 
+// 👇 1. Added the Filter Function
+/**
+ * Filters an array of meal objects, removing any that occurred before today.
+ */
+const filterUpcomingMeals = (meals) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to midnight for accurate "day" comparison
+
+    return meals.filter((meal) => {
+        // Use your database's duty_date property
+        const shiftDate = new Date(meal.duty_date); 
+        shiftDate.setHours(0, 0, 0, 0);
+
+        // Keep the item if its timestamp is greater than or equal to today's
+        return shiftDate.getTime() >= today.getTime();
+    });
+};
+
 // 👇 2. Your Main Page Layout
 export default function Index({ auth, myDutyMeals = [] }) {
     const DutyMealLinks = getStaffDutyMealLinks();
+
+    // Apply the filter to ensure past meals are ignored
+    const upcomingMeals = filterUpcomingMeals(myDutyMeals);
 
     return (
         <SidebarLayout 
@@ -164,13 +185,15 @@ export default function Index({ auth, myDutyMeals = [] }) {
                     <p className="text-gray-500 mt-1">Select your meal preferences for your upcoming shifts.</p>
                 </div>
 
-                {myDutyMeals.length === 0 ? (
+                {/* 👇 Swapped myDutyMeals with our new upcomingMeals array */}
+                {upcomingMeals.length === 0 ? (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-500">
-                        You have no assigned duty meals right now.
+                        You have no upcoming duty meals assigned right now.
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {myDutyMeals.map((meal) => (
+                        {/* 👇 Mapping over the filtered list */}
+                        {upcomingMeals.map((meal) => (
                             <MealCard key={meal.participant_id} meal={meal} />
                         ))}
                     </div>

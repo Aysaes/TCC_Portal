@@ -13,17 +13,49 @@ class OrgChartController extends Controller
     // For the Admin to manage members
     public function index()
     {
-        // Notice we added orderBy('sort_order') here!
         $members = OrgChartMember::orderBy('sort_order')->latest()->get();
-        return Inertia::render('Admin/OrgChart', ['members' => $members]);
+        
+        // 👇 NEW: Check if the SVG exists and define the path
+        $orgChartSvg = Storage::disk('public')->exists('org_chart/org-chart.svg') 
+            ? 'storage/org_chart/org-chart.svg' 
+            : null;
+
+        return Inertia::render('Admin/OrgChart', [
+            'members' => $members,
+            'orgChartSvg' => $orgChartSvg // <-- Passed to React!
+        ]);
     }
 
     // For the regular User to view the chart
     public function userIndex()
     {
-        // Notice we added orderBy('sort_order') here!
         $members = OrgChartMember::orderBy('sort_order')->latest()->get();
-        return Inertia::render('OrgChart', ['members' => $members]);
+        
+        // 👇 NEW: Check if the SVG exists and define the path
+        $orgChartSvg = Storage::disk('public')->exists('org_chart/org-chart.svg') 
+            ? 'storage/org_chart/org-chart.svg' 
+            : null;
+
+        return Inertia::render('OrgChart', [
+            'members' => $members,
+            'orgChartSvg' => $orgChartSvg // <-- Passed to React!
+        ]);
+    }
+
+    // 👇 NEW FUNCTION: Catch the SVG upload from the Admin Panel
+    public function storeAsset(Request $request)
+    {
+        // Validate that it is actually a file and specifically an SVG
+        $request->validate([
+            'org_chart_file' => 'required|file|mimes:svg|max:5120', // Max 5MB
+        ]);
+
+        if ($request->hasFile('org_chart_file')) {
+            // Save it with a fixed filename ('org-chart.svg') so it overwrites the old one automatically
+            $request->file('org_chart_file')->storeAs('org_chart', 'org-chart.svg', 'public');
+        }
+
+        return back()->with('success', 'Organizational Chart updated successfully!');
     }
 
     // NEW FUNCTION: Save the Drag-and-Drop Order
@@ -46,11 +78,10 @@ class OrgChartController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'position' => 'required|string|max:255',
-            'branch' => 'required|string|max:255', // <-- Added validation
+            'branch' => 'required|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        // <-- Added 'branch' to the data collection
         $data = $request->only(['name', 'position', 'branch']); 
 
         if ($request->hasFile('image')) {
@@ -61,6 +92,7 @@ class OrgChartController extends Controller
 
         return back()->with('success', 'Member added to Organizational Chart successfully!');
     }
+
     // Save changes to an existing member (including photo replacement)
     public function update(Request $request, OrgChartMember $member)
     {

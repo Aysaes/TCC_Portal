@@ -114,22 +114,53 @@ const SECTION_TITLES = {
     'Greenhills Branch Services Operations Team': 'Greenhills Branch Services Operations Team',
 };
 
-export default function OrgChartAdmin({ auth, members }) {
+export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
     const adminLinks = getAdminLinks();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState(null);
     const [localMembers, setLocalMembers] = useState([]);
     const [openSections, setOpenSections] = useState({});
+    
+    // 👇 NEW: State to hold the local preview URL of the selected SVG
+    const [previewUrl, setPreviewUrl] = useState(null);
 
     useEffect(() => {
         setLocalMembers(members || []);
     }, [members]);
 
-    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
+    // 👇 NEW: Clean up the preview URL from memory when the component unmounts or changes
+    useEffect(() => {
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
+    }, [previewUrl]);
+
+    const {
+        data,
+        setData,
+        post,
+        put,
+        processing,
+        errors,
+        reset,
+        clearErrors,
+    } = useForm({
         name: '',
         position: '',
         branch: 'ExeCom and ManComm',
         image: null,
+    });
+
+    const {
+        data: orgChartData,
+        setData: setOrgChartData,
+        post: postOrgChart,
+        processing: orgChartProcessing,
+        errors: orgChartErrors,
+        reset: resetOrgChart,
+        clearErrors: clearOrgChartErrors,
+    } = useForm({
+        org_chart_file: null,
     });
 
     const selectedBranchPositions = BRANCH_SPECIFIC_POSITIONS[data.branch] || [];
@@ -185,13 +216,32 @@ export default function OrgChartAdmin({ auth, members }) {
 
         if (editingMember) {
             put(route('admin.org-chart.update', editingMember.id), {
+                forceFormData: true,
                 onSuccess: () => closeModal(),
             });
         } else {
             post(route('admin.org-chart.store'), {
+                forceFormData: true,
                 onSuccess: () => closeModal(),
             });
         }
+    };
+
+    const submitOrgChartSvg = (e) => {
+        e.preventDefault();
+
+        if (!orgChartData.org_chart_file) return;
+
+        postOrgChart(route('admin.org-chart.asset.store'), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                resetOrgChart();
+                clearOrgChartErrors();
+                // 👇 Clear the local preview after successful upload so it defaults back to the server SVG
+                setPreviewUrl(null); 
+            },
+        });
     };
 
     const deleteMemberAction = (id) => {
@@ -227,6 +277,16 @@ export default function OrgChartAdmin({ auth, members }) {
         groupedMembers['Other Staff'] = otherMembers;
     }
 
+    const normalizedOrgChartSvg =
+        orgChartSvg && orgChartSvg.startsWith('/')
+            ? orgChartSvg
+            : orgChartSvg
+            ? `/${orgChartSvg}`
+            : null;
+
+    // 👇 Determine what to show in the box: The local preview first, or the saved database one second.
+    const displaySvg = previewUrl || normalizedOrgChartSvg;
+
     return (
         <SidebarLayout
             activeModule="Admin"
@@ -241,6 +301,116 @@ export default function OrgChartAdmin({ auth, members }) {
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    {/* ORG CHART SVG MANAGEMENT */}
+                    <div className="mb-8 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                        <div className="flex flex-col gap-4 border-b border-gray-100 p-6 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Organization Chart SVG</h3>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Upload one SVG file only. Uploading a new file will replace the current org chart.
+                                </p>
+                                <p className="mt-1 text-xs text-gray-400">
+                                    Allowed file type: .svg only
+                                </p>
+                            </div>
+
+                            {normalizedOrgChartSvg && (
+                                <a
+                                    href={normalizedOrgChartSvg}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                                >
+                                    View Current Saved SVG
+                                </a>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr]">
+                            <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                                <div className="border-b border-gray-200 px-4 py-3">
+                                    <h4 className="text-sm font-bold uppercase tracking-wide text-gray-700">
+                                        {previewUrl ? 'Preview of Selected File' : 'Current Org Chart Preview'}
+                                    </h4>
+                                </div>
+
+                                <div className="flex min-h-[280px] items-center justify-center p-4">
+                                    {/* 👇 Use our new displaySvg variable here */}
+                                    {displaySvg ? (
+                                        <img
+                                            src={displaySvg}
+                                            alt="Organizational Chart Preview"
+                                            className="max-h-[420px] w-full object-contain"
+                                        />
+                                    ) : (
+                                        <div className="text-center">
+                                            <p className="text-base font-medium text-gray-700">No org chart uploaded yet.</p>
+                                            <p className="mt-1 text-sm text-gray-500">
+                                                Upload your first SVG file to show it here.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-gray-200 bg-white p-5">
+                                <form onSubmit={submitOrgChartSvg} className="space-y-4">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-bold text-gray-700">
+                                            {normalizedOrgChartSvg ? 'Replace SVG File' : 'Upload SVG File'}
+                                        </label>
+
+                                        <input
+                                            type="file"
+                                            accept=".svg,image/svg+xml"
+                                            onChange={(e) => {
+                                                // 👇 Update form data AND generate the preview URL
+                                                const file = e.target.files[0];
+                                                setOrgChartData('org_chart_file', file || null);
+                                                
+                                                if (file) {
+                                                    setPreviewUrl(URL.createObjectURL(file));
+                                                } else {
+                                                    setPreviewUrl(null);
+                                                }
+                                            }}
+                                            className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 transition-colors hover:file:bg-indigo-100"
+                                        />
+
+                                        {orgChartErrors.org_chart_file && (
+                                            <p className="mt-1 text-xs text-red-500">{orgChartErrors.org_chart_file}</p>
+                                        )}
+
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            The file will be stored in <span className="font-semibold">public/storage/org_chart</span>.
+                                        </p>
+                                    </div>
+
+                                    {orgChartData.org_chart_file && (
+                                        <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-gray-700">
+                                            <span className="font-semibold">Selected file:</span>{' '}
+                                            {orgChartData.org_chart_file.name}
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="submit"
+                                            disabled={orgChartProcessing || !orgChartData.org_chart_file}
+                                            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {orgChartProcessing
+                                                ? 'Uploading...'
+                                                : normalizedOrgChartSvg
+                                                ? 'Replace Org Chart'
+                                                : 'Upload Org Chart'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="mb-10 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:flex-row">
                         <div>
                             <h3 className="mb-1 text-xl font-bold text-gray-900">
@@ -397,6 +567,7 @@ export default function OrgChartAdmin({ auth, members }) {
                                 </span>
                                 <img
                                     src={`/storage/${editingMember.image_path}`}
+                                    alt="Current member"
                                     className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md"
                                 />
                             </div>
@@ -469,7 +640,7 @@ export default function OrgChartAdmin({ auth, members }) {
                             </label>
                             <input
                                 type="file"
-                                onChange={(e) => setData('image', e.target.files[0])}
+                                onChange={(e) => setData('image', e.target.files[0] || null)}
                                 className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 transition-colors hover:file:bg-indigo-100"
                                 accept="image/*"
                             />

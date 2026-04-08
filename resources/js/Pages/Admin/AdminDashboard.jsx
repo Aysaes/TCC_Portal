@@ -2,8 +2,8 @@ import { getAdminLinks } from "@/Config/navigation";
 import SidebarLayout from "@/Layouts/SidebarLayout";
 import { Head } from "@inertiajs/react";
 
-// Accept the new props passed from our Laravel route, setting a default of 0 just in case
-export default function AdminDashboard({ totalActiveEmployees = 0, totalBranches = 0 }) {
+// Accept the new props passed from our Laravel route, setting defaults to 0 just in case
+export default function AdminDashboard({ totalActiveEmployees = 0, totalBranches = 0, activeSessions = 0 }) {
 
     const adminLinks = getAdminLinks();
 
@@ -34,7 +34,7 @@ export default function AdminDashboard({ totalActiveEmployees = 0, totalBranches
                     {/* Admin stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                            <div className="text-gray-500 text-sm font-medium">Total Active Employees</div>
+                            <div className="text-gray-500 text-sm font-medium">Total Employees</div>
                             {/* Dynamically render the total active employees */}
                             <div className="mt-2 text-3xl font-bold text-gray-900">{totalActiveEmployees}</div>
                         </div>
@@ -44,8 +44,16 @@ export default function AdminDashboard({ totalActiveEmployees = 0, totalBranches
                             <div className="mt-2 text-3xl font-bold text-gray-900">{totalBranches}</div>
                         </div>
                         <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                            <div className="text-gray-500 text-sm font-medium">System Status</div>
-                            <div className="mt-2 text-3xl font-bold text-green-600">Online</div>
+                            <div className="text-gray-500 text-sm font-medium">
+                                Active Users <br />
+                            </div>
+                            
+                            {/* Dynamic text color based on activeSessions count */}
+                            <div className={`mt-2 text-3xl font-bold flex items-center gap-2 ${activeSessions > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                {/* Dynamic dot indicator */}
+                                <span className={`h-3 w-3 rounded-full inline-block ${activeSessions > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></span>
+                                {activeSessions}
+                            </div>
                         </div>
                     </div>
                 </div>

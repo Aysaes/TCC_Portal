@@ -44,6 +44,22 @@ class LoginRequest extends FormRequest
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
+            // --- START OF NEW LOGGING CODE ---
+            // 1. Try to find the user by the email they entered
+            $user = \App\Models\User::where('email', $this->input('email'))->first();
+            
+            // 2. Create the log entry directly in the database
+            \App\Models\SystemLog::create([
+                'user_id' => $user ? $user->id : null, // Links to user if they exist, otherwise null
+                'module' => 'Auth',
+                'action' => 'Failed Login',
+                'description' => 'Failed login attempt for email: ' . $this->input('email'),
+                'ip_address' => $this->ip(),
+                'user_agent' => $this->userAgent(), // Captures browser info
+                'status' => 'danger', // Shows up as red in your React table
+            ]);
+            // --- END OF NEW LOGGING CODE ---
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);

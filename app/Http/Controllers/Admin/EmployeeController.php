@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\DB; // <-- REQUIRED FOR SAFE DELETE
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Position;
@@ -20,7 +21,6 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Notifications\AccountActivation;
 use App\Notifications\AdminPasswordReset;
 use Inertia\Inertia;
-
 
 class EmployeeController extends Controller
 {
@@ -41,7 +41,7 @@ class EmployeeController extends Controller
         ]);
     }
 
-        // ----------------Store User, Position, Branch functions ----------------
+    // ----------------Store User, Position, Branch functions ----------------
 
     public function storeUser(Request $request)
     {
@@ -49,29 +49,28 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'string|min:8|',
-            'status' => 'Pending Setup',
             'role_id' => 'required|exists:roles,id',
             'department_id' => 'required|exists:departments,id',
             'position_id' => 'required|exists:positions,id',
             'branch_ids' => 'required|array',
             'branch_ids.*' => 'exists:branches,id',
         ]);
-        try{
+        try {
             $user = User::create([
-            'name' => trim($request->name),
-            'email' => trim($request->email),
-            'password' => null,
-            'role_id' => $request->role_id,
-            'department_id' => $request->department_id,
-            'position_id' => $request->position_id,
-            'device_limit'=> $request->device_limit,
-            'branch_id' => $request->branch_ids[0] ?? null,
-            'is_rotating'=> count($request->branch_ids) > 1,
-        ]);
+                'name' => trim($request->name),
+                'email' => trim($request->email),
+                'password' => null,
+                'role_id' => $request->role_id,
+                'department_id' => $request->department_id,
+                'position_id' => $request->position_id,
+                'device_limit'=> $request->device_limit,
+                'branch_id' => $request->branch_ids[0] ?? null,
+                'is_rotating'=> count($request->branch_ids) > 1,
+            ]);
 
-        $user->branches()->attach($request->branch_ids);
+            $user->branches()->attach($request->branch_ids);
 
-        return redirect()->back()->with('success', 'Employee added successfully.');
+            return redirect()->back()->with('success', 'Employee added successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'An error occurred while adding the employee: ' . $e->getMessage());
         }
@@ -79,110 +78,147 @@ class EmployeeController extends Controller
 
     public function storePosition(Request $request)
     {
-        try{
+        try {
             $request->validate([
-            'department_id' => 'required|exists:departments,id',
-            'position_name' => 'required|string|max:255',
-        ]);
+                'department_id' => 'required|exists:departments,id',
+                'position_name' => 'required|string|max:255',
+            ]);
 
-        Position::create([
-            'department_id' => $request->department_id,
-            'name' => $request->position_name,
-        ]);
+            Position::create([
+                'department_id' => $request->department_id,
+                'name' => $request->position_name,
+            ]);
 
-        return redirect()->back()->with('success', 'Position added successfully.');
+            return redirect()->back()->with('success', 'Position added successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'An error occurred while adding the position: ' . $e->getMessage());
         }
-        
     }
 
-     public function storeBranch (Request $request)
+    public function storeBranch(Request $request)
     {
-        try{
+        try {
             $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
+                'name' => 'required|string|max:255',
+            ]);
 
-        Branch::create([
-            'name' => $request->name,
-        ]);
+            Branch::create([
+                'name' => $request->name,
+            ]);
 
-        return redirect()->back()->with('success', 'Branch added successfully.');
+            return redirect()->back()->with('success', 'Branch added successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'An error occurred while adding the branch: ' . $e->getMessage());
         }
     }
 
-    public function storeDepartment (Request $request){
-        try{
+    public function storeDepartment(Request $request)
+    {
+        try {
             $request->validate([
-            'name' => 'required|string|max:255|unique:departments,name',]);
+                'name' => 'required|string|max:255|unique:departments,name',
+            ]);
+            
             Department::create([
-            'name' => $request->name,]);
+                'name' => $request->name,
+            ]);
+            
             return back()->with('success', 'Department added successfully.');
-        }catch(\Exception $e){
+        } catch(\Exception $e) {
             return back()->with('error', 'An error occured while adding the department: ' . $e->getMessage());
         }
     }
 
-    public function destroyDepartment(Department $department)
+    public function storeRole(Request $request)
     {
         try {
-            // 1. Check if the department has active employees
-            if ($department->users()->exists()) {
-                return back()->with('error', 'Cannot delete a department that has active employees.');
-            }
-
-            // 2. Check if the department still has positions assigned to it
-            if ($department->positions()->exists()) {
-                return back()->with('error', 'Cannot delete a department that has existing positions. Please reassign or delete the positions first.');
-            }
-
-            // 3. Safe to delete
-            $department->delete();
-            return back()->with('success', 'Department deleted successfully.');
-
-        } catch (\Exception $e) {
-            return back()->with('error', 'An error occurred while deleting the department: ' . $e->getMessage());
-        }
-    }
-
-    public function storeRole (Request $request){
-        try{
             $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name',
-        ]);
+                'name' => 'required|string|max:255|unique:roles,name',
+            ]);
 
-        Role::create([
-            'name' => $request->name,
-        ]);
+            Role::create([
+                'name' => $request->name,
+            ]);
 
-        return back()->with('success', 'System role added successfully.');
-        }catch(\Exception $e){
+            return back()->with('success', 'System role added successfully.');
+        } catch(\Exception $e) {
             return back()->with('error', 'An error occured while adding the role: ' . $e->getMessage());
         }
     }
 
-    public function destroyRole (Role $role){
-        try{
+    // =====================================
+    // SAFE DELETE METHODS
+    // =====================================
+
+    public function destroyRole(\App\Models\Role $role)
+    {
+        try {
+            // Check if it's a core role
             if (strtolower($role->name) === 'admin' || strtolower($role->name) === 'super admin') {
-            return back()->withErrors(['name' => 'Cannot delete core system roles.']);
-        }
+                return back()->with('error', 'Cannot delete core system roles.');
+            }
 
-        if ($role->users()->exists()) {
-             return back()->withErrors(['name' => 'Cannot delete a role that is currently assigned to employees.']);
-        }
-
-        $role->delete();
-
-        return back()->with('success', 'Role deleted successfully.');
-        }catch(\Exception $e){
-            return back()->with('error', 'An error occured while deleting the department: ' . $e->getMessage());
+            // Using DB::table() bypasses SoftDeletes to check ALL users, active or archived
+            if (\Illuminate\Support\Facades\DB::table('users')->where('role_id', $role->id)->exists()) {
+                return back()->with('error', 'Cannot delete this Role because it is assigned to existing or archived employees. Reassign them first.');
+            }
+            
+            $role->delete();
+            return back()->with('success', 'Role deleted successfully.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Database restriction: Cannot delete this role. It is still tied to other records.');
         }
     }
 
-    // ----------------Edit, Device Reset, and Delete functions ----------------
+    public function destroyDepartment(\App\Models\Department $department)
+    {
+        try {
+            if (\Illuminate\Support\Facades\DB::table('users')->where('department_id', $department->id)->exists()) {
+                return back()->with('error', 'Cannot delete this Department because it has employees assigned to it.');
+            }
+            
+            if (\Illuminate\Support\Facades\DB::table('positions')->where('department_id', $department->id)->exists()) {
+                return back()->with('error', 'Cannot delete this Department because it has positions attached to it. Delete the positions first.');
+            }
+            
+            $department->delete();
+            return back()->with('success', 'Department deleted successfully.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Database restriction: Cannot delete this department.');
+        }
+    }
+
+    public function destroyPosition(\App\Models\Position $position)
+    {
+        try {
+            if (\Illuminate\Support\Facades\DB::table('users')->where('position_id', $position->id)->exists()) {
+                return back()->with('error', 'Cannot delete this Position because it is assigned to existing or archived employees.');
+            }
+            
+            $position->delete();
+            return back()->with('success', 'Position deleted successfully.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Database restriction: Cannot delete this position.');
+        }
+    }
+
+    public function destroyBranch(\App\Models\Branch $branch)
+    {
+        try {
+            if (\Illuminate\Support\Facades\DB::table('branch_user')->where('branch_id', $branch->id)->exists()) {
+                return back()->with('error', 'Cannot delete this Branch because it is assigned to existing employees.');
+            }
+            
+            \Illuminate\Support\Facades\DB::table('announcement_branch')->where('branch_id', $branch->id)->delete();
+            
+            $branch->delete();
+            return back()->with('success', 'Branch deleted successfully.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Database restriction: Cannot delete this branch.');
+        }
+    }
+
+    // ----------------Edit, Device Reset, and User Delete functions ----------------
 
     public function updateUser(Request $request, User $user)
     {
@@ -197,7 +233,7 @@ class EmployeeController extends Controller
             'branch_ids.*' => 'exists:branches,id',
         ]);
 
-        try{
+        try {
             $user->update([
                 'name' => trim($request->name),
                 'email' => trim($request->email),
@@ -218,7 +254,7 @@ class EmployeeController extends Controller
 
     public function resetDevice(User $user)
     {
-        try{
+        try {
             $user->authorized_device_ids = null;
             $user->save();
             return redirect()->back()->with('success', "Device successfully reset for {$user->name}.");
@@ -229,7 +265,6 @@ class EmployeeController extends Controller
 
     public function destroy(User $user)
     {
-        // 1. Log that the React frontend successfully reached this route
         Log::info("Delete route hit for user ID: {$user->id}");
 
         try {
@@ -248,45 +283,43 @@ class EmployeeController extends Controller
             return back()->with('success', "Employee {$user->name} has been permanently deleted.");
             
         } catch (\Exception $e) {
-            // 2. Log the exact error message, file, and line number if it crashes
             Log::error("Failed to delete user ID {$user->id}. Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
             
             return back()->with('error', 'Failed to delete user: ' . $e->getMessage());
         }
     }
 
+    // ---------------- Export & Import Functions ----------------
+
     public function export(Request $request)
-{
-    return Excel::download(
-        new UsersExport($request->search, $request->department, $request->branch), 
-        'employees_export_' . now()->format('Ymd_His') . '.xlsx'
-    );
-}
+    {
+        return Excel::download(
+            new UsersExport($request->search, $request->department, $request->branch), 
+            'employees_export_' . now()->format('Ymd_His') . '.xlsx'
+        );
+    }
 
-public function downloadTemplate()
-{
-    return Excel::download(new UsersTemplateExport, 'employee_import_template.xlsx');
-}
+    public function downloadTemplate()
+    {
+        return Excel::download(new UsersTemplateExport, 'employee_import_template.xlsx');
+    }
 
-public function import(Request $request)
+    public function import(Request $request)
     {
         $request->validate(['import_file' => 'required|mimes:xlsx,xls,csv|max:10240']);
         
         try {
             Excel::import(new UsersImport, $request->file('import_file'));
             
-            // 🟢 Triggers your GREEN toast automatically!
             return back()->with('success', 'Employees imported successfully.');
             
         } catch (\Exception $e) {
-            // 🔴 Triggers your RED toast automatically! (Changed from withErrors)
             return back()->with('error', 'Failed to import. Please check your Excel format.');
         }
     }
 
-  public function sendActivationLink(User $user)
+    public function sendActivationLink(User $user)
     {
-
         if ($user->has_password) {
             return back()->with('error', 'This account is already active.');
         }
@@ -301,43 +334,34 @@ public function import(Request $request)
     }
 
     public function sendResetLink(User $user)
-{
-    /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
-    $broker = Password::broker();
-    $token = $broker->createToken($user);
-    
-    $user->notify(new AdminPasswordReset($token));
-    
-    // CHANGE THIS LINE:
-    $user->update(['status' => 'Password Reset']);
+    {
+        /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
+        $broker = Password::broker();
+        $token = $broker->createToken($user);
+        
+        $user->notify(new AdminPasswordReset($token));
 
-    return back()->with('success', 'Reset link sent to ' . $user->email);
-}
+        return back()->with('success', 'Password reset link sent to ' . $user->email);
+    }
 
     public function toggleStatus(User $user)
-{
-    try {
-        if (Auth::id() === $user->id) {
-            return back()->with('error', 'You cannot disable your own admin account!');
+    {
+        try {
+            if ($user->status === 'Disabled') {
+                // If they are disabled, make them Active
+                $user->status = 'Active';
+                $message = "Access re-enabled for {$user->name}.";
+            } else {
+                // If they are Active or Password Reset, lock them out
+                $user->status = 'Disabled';
+                $message = "Account disabled for {$user->name}.";
+            }
+            
+            $user->save();
+            
+            return back()->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to change user status: ' . $e->getMessage());
         }
-
-        if ($user->status === 'Disabled') {
-            // If they are disabled, assume they are now active. 
-            // (If they didn't have a password yet, they shouldn't have been disabled, 
-            // but you could add logic to check has_password here if needed).
-            $newStatus = $user->has_password ? 'Active' : 'Pending Setup';
-            $user->update(['status' => $newStatus]);
-            $message = "Account for {$user->name} has been re-enabled.";
-        } else {
-            // If they are anything else, disable them
-            $user->update(['status' => 'Disabled']);
-            $message = "Account for {$user->name} has been disabled.";
-        }
-
-        return back()->with('success', $message);
-        
-    } catch (\Exception $e) {
-        return back()->with('error', 'Failed to update account status: ' . $e->getMessage());
     }
-}
 }

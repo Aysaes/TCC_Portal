@@ -10,10 +10,10 @@ export default function Overview({ auth, announcements, contents }) {
     const { system } = usePage().props;
 
     const allAnnouncements = Array.isArray(announcements?.data)
-    ? announcements.data
-    : Array.isArray(announcements)
-        ? announcements
-        : [];
+        ? announcements.data
+        : Array.isArray(announcements)
+            ? announcements
+            : [];
 
     const announcementList = [...allAnnouncements]
         .sort((a, b) => {
@@ -22,7 +22,6 @@ export default function Overview({ auth, announcements, contents }) {
             return dateB - dateA;
         })
         .slice(0, 6);
-
 
     const contentList = contents || [];
 
@@ -201,6 +200,21 @@ export default function Overview({ auth, announcements, contents }) {
         (c) => !isMissionContent(c) && !isVisionContent(c)
     );
 
+    const storyContents = otherContents.filter((item) => {
+        const type = (item?.type || '').toLowerCase();
+        const slug = (item?.slug || '').toLowerCase();
+        const title = (item?.title || '').toLowerCase();
+
+        return (
+            type.includes('story') ||
+            slug.includes('story') ||
+            title.includes('story') ||
+            title.includes('founder')
+        );
+    });
+
+    const remainingContents = otherContents.filter((item) => !storyContents.includes(item));
+
     return (
         <SidebarLayout
             activeModule="General"
@@ -333,13 +347,15 @@ export default function Overview({ auth, announcements, contents }) {
                                                             </div>
 
                                                             {item.attachment_path && (
-                                                            <div className="absolute left-3 top-3 z-20">
-                                                                <span className="flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-gray-700 shadow-sm backdrop-blur-md">
-                                                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-                                                                    Has File
-                                                                </span>
-                                                            </div>
-                                                        )}
+                                                                <div className="absolute left-3 top-3 z-20">
+                                                                    <span className="flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-gray-700 shadow-sm backdrop-blur-md">
+                                                                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                                                                        </svg>
+                                                                        Has File
+                                                                    </span>
+                                                                </div>
+                                                            )}
 
                                                             <div className="relative h-44 w-full shrink-0 bg-gray-200">
                                                                 {item.image_path ? (
@@ -436,15 +452,48 @@ export default function Overview({ auth, announcements, contents }) {
 
                     <section>
                         <h3 className="mb-6 text-lg font-bold uppercase tracking-wide text-gray-700">
-                            Company Direction
+                            About Us
                         </h3>
 
-                        {(mission || vision) && (
+                        {storyContents.length > 0 && (
                             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                                {storyContents.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm"
+                                    >
+                                        {item.image_path && (
+                                            <div className="h-72 w-full bg-gray-200">
+                                                <img
+                                                    src={`/storage/${item.image_path}`}
+                                                    alt={item.title}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="flex flex-1 flex-col p-8">
+                                            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
+                                                {item.type || item.slug || 'Story'}
+                                            </p>
+                                            <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
+                                                {item.title}
+                                            </h4>
+                                            <div className="prose max-w-none whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-600">
+                                                {item.content}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {(mission || vision) && (
+                            <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2">
                                 {mission && (
-                                    <div className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                                    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
                                         {mission.image_path && (
-                                            <div className="h-64 w-full bg-gray-200">
+                                            <div className="h-52 w-full bg-gray-200">
                                                 <img
                                                     src={`/storage/${mission.image_path}`}
                                                     alt="Mission"
@@ -452,14 +501,14 @@ export default function Overview({ auth, announcements, contents }) {
                                                 />
                                             </div>
                                         )}
-                                        <div className="p-8">
+                                        <div className="flex flex-1 flex-col p-8">
                                             <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
                                                 Mission
                                             </p>
                                             <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
                                                 {mission.title}
                                             </h4>
-                                            <div className="prose whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                                            <div className="prose max-w-none whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
                                                 {mission.content}
                                             </div>
                                         </div>
@@ -467,9 +516,9 @@ export default function Overview({ auth, announcements, contents }) {
                                 )}
 
                                 {vision && (
-                                    <div className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                                    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
                                         {vision.image_path && (
-                                            <div className="h-64 w-full bg-gray-200">
+                                            <div className="h-52 w-full bg-gray-200">
                                                 <img
                                                     src={`/storage/${vision.image_path}`}
                                                     alt="Vision"
@@ -477,14 +526,14 @@ export default function Overview({ auth, announcements, contents }) {
                                                 />
                                             </div>
                                         )}
-                                        <div className="p-8">
+                                        <div className="flex flex-1 flex-col p-8">
                                             <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
                                                 Vision
                                             </p>
                                             <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
                                                 {vision.title}
                                             </h4>
-                                            <div className="prose whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                                            <div className="prose max-w-none whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
                                                 {vision.content}
                                             </div>
                                         </div>
@@ -493,9 +542,9 @@ export default function Overview({ auth, announcements, contents }) {
                             </div>
                         )}
 
-                        {otherContents.length > 0 && (
+                        {remainingContents.length > 0 && (
                             <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
-                                {otherContents.map((item) => (
+                                {remainingContents.map((item) => (
                                     <div
                                         key={item.id}
                                         className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm"
@@ -575,9 +624,9 @@ export default function Overview({ auth, announcements, contents }) {
                             {selectedAnnouncement.attachment_path && (
                                 <div className="mt-2 mb-10 border-t border-gray-100 pt-6">
                                     <h4 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Attached File</h4>
-                                    <a 
-                                        href={`/storage/${selectedAnnouncement.attachment_path}`} 
-                                        target="_blank" 
+                                    <a
+                                        href={`/storage/${selectedAnnouncement.attachment_path}`}
+                                        target="_blank"
                                         rel="noreferrer"
                                         className="inline-flex items-center gap-2 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-4 py-3 rounded-lg hover:bg-indigo-100 hover:text-indigo-800 transition-colors shadow-sm w-full sm:w-auto"
                                     >

@@ -1,9 +1,13 @@
-import {
-    Dialog,
-    DialogPanel,
-    Transition,
-    TransitionChild,
-} from '@headlessui/react';
+import { Fragment, useEffect, useRef } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
+
+const maxWidthClasses = {
+    sm: 'sm:max-w-sm',
+    md: 'sm:max-w-md',
+    lg: 'sm:max-w-lg',
+    xl: 'sm:max-w-xl',
+    '2xl': 'sm:max-w-2xl',
+};
 
 export default function Modal({
     children,
@@ -12,29 +16,98 @@ export default function Modal({
     closeable = true,
     onClose = () => {},
 }) {
-    const close = () => {
+    const panelRef = useRef(null);
+    const touchStartY = useRef(0);
+
+    useEffect(() => {
+        if (show) {
+            document.documentElement.classList.add('overflow-hidden');
+            document.body.classList.add('overflow-hidden');
+            document.documentElement.style.overscrollBehavior = 'none';
+            document.body.style.overscrollBehavior = 'none';
+        } else {
+            document.documentElement.classList.remove('overflow-hidden');
+            document.body.classList.remove('overflow-hidden');
+            document.documentElement.style.overscrollBehavior = '';
+            document.body.style.overscrollBehavior = '';
+        }
+
+        return () => {
+            document.documentElement.classList.remove('overflow-hidden');
+            document.body.classList.remove('overflow-hidden');
+            document.documentElement.style.overscrollBehavior = '';
+            document.body.style.overscrollBehavior = '';
+        };
+    }, [show]);
+
+    useEffect(() => {
+        const el = panelRef.current;
+        if (!el || !show) return;
+
+        const handleWheel = (e) => {
+            const { scrollTop, scrollHeight, clientHeight } = el;
+            const deltaY = e.deltaY;
+            const atTop = scrollTop <= 0;
+            const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+            const canScroll = scrollHeight > clientHeight;
+
+            if (!canScroll) {
+                e.preventDefault();
+                return;
+            }
+
+            if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
+                e.preventDefault();
+            }
+        };
+
+        const handleTouchStart = (e) => {
+            touchStartY.current = e.touches[0].clientY;
+        };
+
+        const handleTouchMove = (e) => {
+            const currentY = e.touches[0].clientY;
+            const deltaY = touchStartY.current - currentY;
+
+            const { scrollTop, scrollHeight, clientHeight } = el;
+            const atTop = scrollTop <= 0;
+            const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+            const canScroll = scrollHeight > clientHeight;
+
+            if (!canScroll) {
+                e.preventDefault();
+                return;
+            }
+
+            if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
+                e.preventDefault();
+            }
+        };
+
+        el.addEventListener('wheel', handleWheel, { passive: false });
+        el.addEventListener('touchstart', handleTouchStart, { passive: true });
+        el.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+        return () => {
+            el.removeEventListener('wheel', handleWheel);
+            el.removeEventListener('touchstart', handleTouchStart);
+            el.removeEventListener('touchmove', handleTouchMove);
+        };
+    }, [show]);
+
+    const handleClose = () => {
         if (closeable) {
             onClose();
         }
     };
 
-    const maxWidthClass = {
-        sm: 'sm:max-w-sm',
-        md: 'sm:max-w-md',
-        lg: 'sm:max-w-lg',
-        xl: 'sm:max-w-xl',
-        '2xl': 'sm:max-w-2xl',
-    }[maxWidth];
-
     return (
-        <Transition show={show} leave="duration-200">
-            <Dialog
-                as="div"
-                id="modal"
-                className="fixed inset-0 z-50 flex transform items-center overflow-y-auto px-4 py-6 transition-all sm:px-0"
-                onClose={close}
-            >
-                <TransitionChild
+        <Transition appear show={show} as={Fragment}>
+            <Dialog as="div" className="fixed inset-0 z-50" onClose={handleClose}>
+                <Transition.Child
+                    as={Fragment}
                     enter="ease-out duration-300"
                     enterFrom="opacity-0"
                     enterTo="opacity-100"
@@ -42,23 +115,35 @@ export default function Modal({
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="absolute inset-0 bg-gray-500/75" />
-                </TransitionChild>
+                    <div className="fixed inset-0 bg-gray-500/75" />
+                </Transition.Child>
 
-                <TransitionChild
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                    enterTo="opacity-100 translate-y-0 sm:scale-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-                    leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                >
-                    <DialogPanel
-                        className={`mb-6 transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:mx-auto sm:w-full ${maxWidthClass}`}
-                    >
-                        {children}
-                    </DialogPanel>
-                </TransitionChild>
+                <div className="fixed inset-0 overflow-hidden">
+                    <div className="flex h-full items-start justify-center p-4 sm:p-6">
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                            enterTo="opacity-100 translate-y-0 sm:scale-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                            leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        >
+                            <Dialog.Panel
+                                ref={panelRef}
+                                className={`relative mt-4 w-full ${
+                                    maxWidthClasses[maxWidth] || maxWidthClasses['2xl']
+                                } max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-none rounded-2xl bg-white text-left shadow-xl transition-all sm:mt-8 sm:max-h-[calc(100vh-4rem)]`}
+                                style={{
+                                    overscrollBehavior: 'none',
+                                    WebkitOverflowScrolling: 'touch',
+                                }}
+                            >
+                                {children}
+                            </Dialog.Panel>
+                        </Transition.Child>
+                    </div>
+                </div>
             </Dialog>
         </Transition>
     );
