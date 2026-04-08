@@ -86,9 +86,9 @@ export default function SidebarLayout({
             : ['HR', 'HR MENU', 'HR ADMIN'].includes(activeModule)
               ? 'HR Module'
               : activeModule === 'Duty Meals'
-                ? 'Select Module'
+                ? 'Duty Meal Module'
                 : activeModule === 'Document Repository'
-                  ? 'Select Module'
+                  ? 'Admin Module'
                   : activeModule === 'PR/PO Module'
                     ? 'PR/PO Module'
                     : 'Select Module';
@@ -560,7 +560,7 @@ export default function SidebarLayout({
                                     <Dropdown.Link href={route('admin.duty-meals.index')}>
                                         Duty Meal Module
                                     </Dropdown.Link>
-                               )}
+                                )}
                             </Dropdown.Content>
                         </Dropdown>
 

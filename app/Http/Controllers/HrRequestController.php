@@ -29,7 +29,7 @@ class HrRequestController extends Controller
             'specific_details' => 'nullable|string|max:255',
         ]);
 
-        // 🟢 1. Save the request to a variable so we can pass it to the notification
+        // 1. Save the request to a variable so we can pass it to the notification
         $hrRequest = HrRequest::create([
             'user_id' => Auth::id(),
             'type' => $request->type,
@@ -39,14 +39,14 @@ class HrRequestController extends Controller
             'specific_details' => $request->specific_details,
         ]);
 
-        // 🟢 2. Find all HR Personnel (Matching your checkHrAccess logic)
+        // 2. Find all HR Personnel
         $hrUsers = User::whereHas('role', function ($q) {
             $q->whereIn('name', ['Admin', 'HR', 'HRBP', 'Human Resources']);
         })->orWhereHas('position', function ($q) {
             $q->where('name', 'Human Resources');
         })->get();
 
-        // 🟢 3. Send the in-app notification!
+        // 3. Send the in-app notification!
         if ($hrUsers->isNotEmpty()) {
             Notification::send($hrUsers, new DocumentRequestAlert($hrRequest, Auth::user()->name));
         }
@@ -57,23 +57,48 @@ class HrRequestController extends Controller
 
     // --- HR ADMIN FUNCTIONS ---
 
+    // 🟢 GATEKEEPER 1: For VIEWING the page (HR Assistants, HRBP, Admin)
     private function checkHrAccess()
     {
-        // Safely grab the names, default to empty strings, and convert to lowercase
         $roleName = strtolower(Auth::user()?->role?->name ?? '');
         $positionName = strtolower(Auth::user()?->position?->name ?? '');
 
-        // ALLOWED ROLES (Including HRBP!)
-        $allowedRoles = ['admin', 'hr', 'hrbp'];
+        // Expanded allowed roles to catch variations of HR Assistant
+        $allowedRoles = [
+            'admin', 
+            'hr', 
+            'hrbp', 
+            'HR Assistant',
+            'HR Assist', 
+            'human resources assistant', 
+            'human resources'
+        ];
 
-        // If they are NOT in the allowed roles, and NOT a Human Resources position -> Kick them out
-        if (!in_array($roleName, $allowedRoles) && $positionName !== 'human resources') {
+        // Check if the role is in the list, OR if the position contains 'human resources'
+        $hasRole = in_array($roleName, $allowedRoles);
+        $hasPosition = str_contains($positionName, 'human resources') || str_contains($positionName, 'hr assistant');
+
+        if (!$hasRole && !$hasPosition) {
             abort(403, 'UNAUTHORIZED ACCESS. ONLY HR PERSONNEL CAN VIEW THIS PAGE.');
+        }
+    }
+
+    // 🟢 GATEKEEPER 2: For ACTIONS (Only HRBP & Admin)
+    private function checkHrbpAccess()
+    {
+        $roleName = strtolower(Auth::user()?->role?->name ?? '');
+
+        // Only Admin and HRBP can approve/reject
+        $allowedRoles = ['admin', 'hrbp'];
+
+        if (!in_array($roleName, $allowedRoles)) {
+            abort(403, 'UNAUTHORIZED ACCESS. ONLY HRBP CAN ACCEPT OR ENDORSE REQUESTS.');
         }
     }
 
     public function adminIndex()
     {
+        // HR Assistants can pass this gate and see the data
         $this->checkHrAccess();
 
         $requests = HrRequest::with('user')->latest()->get();
@@ -85,14 +110,14 @@ class HrRequestController extends Controller
 
    public function updateStatus(Request $request, HrRequest $hrRequest)
     {
-        $this->checkHrAccess();
+        // 🟢 NEW: HR Assistants will hit a brick wall here and get a 403 error!
+        $this->checkHrbpAccess();
 
         $request->validate([
             'action' => 'required|in:accept,reject',
             'remarks' => 'nullable|string' 
         ]);
 
-        // 🟢 Grab the employee who requested it
         $originalRequester = $hrRequest->user;
 
         if ($request->action === 'reject') {
@@ -101,7 +126,6 @@ class HrRequestController extends Controller
                 'remarks' => $request->filled('remarks') ? 'HR|' . $request->remarks : null
             ]);
             
-            // 🟢 Notify User: Rejected by HR
             if ($originalRequester) {
                 $originalRequester->notify(new \App\Notifications\DocumentStatusUpdate($hrRequest, "Rejected by HR."));
             }
@@ -112,7 +136,6 @@ class HrRequestController extends Controller
         if ($hrRequest->type === '2316') {
             $hrRequest->update(['status' => 'General Accounting']);
             
-            // 🟢 Notify User: Endorsed to Accounting
             if ($originalRequester) {
                 $originalRequester->notify(new \App\Notifications\DocumentStatusUpdate($hrRequest, "Forwarded to General Accounting."));
             }
@@ -122,7 +145,6 @@ class HrRequestController extends Controller
         } else {
             $hrRequest->update(['status' => 'Released']);
             
-            // 🟢 Notify User: COE is Ready
             if ($originalRequester) {
                 $originalRequester->notify(new \App\Notifications\DocumentStatusUpdate($hrRequest, "Your COE is ready for release!"));
             }
@@ -150,10 +172,9 @@ class HrRequestController extends Controller
 
     public function accountingApprovals()
     {
-        // 🟢 1. Lock the door!
         $this->checkAccountingAccess();
 
-        $requests = HrRequest::with('user') // Added with('user') so the frontend gets the name!
+        $requests = HrRequest::with('user') 
                         ->where('type', '2316')
                         ->whereIn('status', ['General Accounting', 'Released', 'Rejected'])
                         ->latest()
@@ -166,7 +187,6 @@ class HrRequestController extends Controller
 
     public function updateAccountingStatus(Request $request, $id)
     {
-        // 🟢 2. Lock the update action so they can't force a POST request!
         $this->checkAccountingAccess();
 
         $request->validate([
@@ -183,7 +203,6 @@ class HrRequestController extends Controller
 
         $docRequest->save();
 
-        // Grab the employee and notify them of Accounting's final decision
         $originalRequester = $docRequest->user;
 
         if ($originalRequester) {

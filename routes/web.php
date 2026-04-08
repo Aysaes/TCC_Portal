@@ -99,7 +99,8 @@ Route::middleware('auth')->group(function () {
     // Staff Duty Meal Routes
     Route::get('/my-duty-meals', [\App\Http\Controllers\Staff\DutyMealController::class, 'index'])->name('staff.duty-meals.index');
     Route::patch('/my-duty-meals/{participantId}/choice', [\App\Http\Controllers\Staff\DutyMealController::class, 'updateChoice'])->name('staff.duty-meals.choice');
-    Route::patch('/staff/duty-meals/{id}/lock-in', [\App\Http\Controllers\Staff\DutyMealController::class, 'lockIn'])->name('staff.duty-meals.lock-in');
+    Route::post('/duty-meals/bulk-lock-in', [App\Http\Controllers\Staff\DutyMealController::class, 'bulkLockIn'])
+    ->name('staff.duty-meals.bulk-lock-in');
 
     Route::post('/notifications/{id}/mark-as-read', function (Request $request, $id) {
     /** @var \App\Models\User $user */

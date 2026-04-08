@@ -8,16 +8,43 @@ use App\Models\DutyMealParticipant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Carbon\Carbon;
 use App\Notifications\MealChoiceUpdated;
 
 class DutyMealController extends Controller
 {
-
-   public function index(Request $request)
+    public function index(Request $request)
     {
+        $user = $request->user();
+        $now = now();
+
+        // 🟢 1. The "Force Main" Rule (3 Days before Roster Week)
+        $pendingParticipants = DutyMealParticipant::with('dutyMeal')
+            ->where('user_id', $user->id)
+            ->where('choice', 'none')
+            ->get();
+
+        foreach ($pendingParticipants as $participant) {
+            if ($participant->dutyMeal) {
+                // Find the Monday of the week this meal belongs to
+                $mealDate = Carbon::parse($participant->dutyMeal->duty_date);
+                $startOfWeek = $mealDate->copy()->startOfWeek(); 
+                
+                // The deadline is 3 days before Monday (Friday 23:59:59)
+                $deadline = $startOfWeek->copy()->subDays(3)->endOfDay(); 
+
+                // If we are past the deadline, force the choice to 'main'
+                if ($now->greaterThanOrEqualTo($deadline)) {
+                    $participant->update(['choice' => 'main']);
+                }
+            }
+        }
+
+        // 🟢 2. Fetch the updated meals for the React view
         $myDutyMeals = DutyMealParticipant::with('dutyMeal.branch')
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->whereHas('dutyMeal', function ($query) {
                 $query->whereDate('duty_date', '>=', now()->startOfWeek());
             })
@@ -34,7 +61,6 @@ class DutyMealController extends Controller
                     'branch_name' => $participant->dutyMeal->branch->name ?? 'Unknown',
                 ];
             })
-            // 3. Sort the final collection
             ->sortByDesc('duty_date')
             ->values();
 
@@ -43,74 +69,62 @@ class DutyMealController extends Controller
         ]);
     }
 
-
-    public function updateChoice(Request $request, $participantId)
-    {
-        try{
-            $request->validate([
-            'choice' => 'required|in:main,alt',
-            'custom_request' => 'nullable|string|max:255'
-        ]);
-
-        $participant = DutyMealParticipant::where('id', $participantId)
-            ->where('user_id', $request->user()->id)
-            ->firstOrFail();
-
-
-        if ($participant->dutyMeal->is_locked) {
-            return back()->with('error', 'This roster is locked by the admin.');
-        }
-
-        if ($participant->choice !== 'none') {
-            return back()->with('error', 'You have already selected your meal.');
-        }
-
-        $participant->update(['choice' => $request->choice, 'custom_request' => $request->custom_request]);
-
-       return back()->with('success', 'Your meal choice has been successfully locked in!');
-
-        }catch(\Exception $e){
-             return back()->with('error', 'Failed to update choice: ' . $e->getMessage());
-        }
-    }
-
-    public function lockIn(Request $request, $id)
+    // 🟢 3. The New Weekly Bulk Lock-In Method
+    public function bulkLockIn(Request $request)
     {
         $request->validate([
-            'choice' => 'required|in:main,alt',
-            'custom_request' => 'nullable|string|max:255',
+            'selections' => 'required|array',
+            'selections.*.participant_id' => 'required|exists:duty_meal_participants,id',
+            'selections.*.choice' => 'required|in:main,alt',
+            'selections.*.custom_request' => 'nullable|string|max:255',
         ]);
 
-        $participant = DutyMealParticipant::with('dutyMeal')->findOrFail($id);
+        $userId = Auth::id();
+        $participantIds = collect($request->selections)->pluck('participant_id');
+        
+        $participants = DutyMealParticipant::with('dutyMeal')
+            ->whereIn('id', $participantIds)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('id');
 
-        // 1. Security: Make sure they own this record
-        if ($participant->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized action.');
+        $updatedCount = 0;
+        $firstUpdated = null;
+
+        // Use a transaction so if one fails, they all fail (keeps data clean)
+        DB::transaction(function () use ($request, $participants, &$updatedCount, &$firstUpdated) {
+            foreach ($request->selections as $selection) {
+                $participant = $participants->get($selection['participant_id']);
+
+                // Security check: ensure it isn't locked by admin and hasn't been chosen yet
+                if ($participant && !$participant->dutyMeal->is_locked && $participant->choice === 'none') {
+                    $participant->update([
+                        'choice' => $selection['choice'],
+                        'custom_request' => $selection['custom_request'],
+                    ]);
+                    $updatedCount++;
+
+                    // Grab the first one to use for the notification reference
+                    if (!$firstUpdated) {
+                        $firstUpdated = $participant;
+                    }
+                }
+            }
+        });
+
+        // 🟢 4. Notify Admins exactly ONCE for the whole week
+        if ($updatedCount > 0 && $firstUpdated) {
+            $firstUpdated->load('user'); 
+            
+            $adminUsers = User::whereHas('role', function ($q) {
+                $q->whereIn('name', ['Admin', 'Duty Meal Custodian', 'Director of Corporate Services and Operations']);
+            })->get();
+
+            if ($adminUsers->isNotEmpty()) {
+                Notification::send($adminUsers, new MealChoiceUpdated($firstUpdated));
+            }
         }
 
-        // 2. Security: Respect the 6:00 AM lockdown!
-        if ($participant->dutyMeal->is_locked) {
-            return back()->with('error', 'This roster is locked and choices cannot be changed.');
-        }
-
-        // 3. Save the choice
-        $participant->update([
-            'choice' => $request->choice,
-            'custom_request' => $request->custom_request,
-        ]);
-
-        // 🟢 4. NEW: Notify the Admins / Duty Meal Custodians
-        // Load the user relationship so the notification can extract their name!
-        $participant->load('user'); 
-
-        $adminUsers = User::whereHas('role', function ($q) {
-            $q->whereIn('name', ['Admin', 'Duty Meal Custodian', 'Director of Corporate Services and Operations']);
-        })->get();
-
-        if ($adminUsers->isNotEmpty()) {
-            Notification::send($adminUsers, new MealChoiceUpdated($participant));
-        }
-
-        return back()->with('success', 'Your meal choice has been locked in!');
+        return back()->with('success', "Successfully locked in {$updatedCount} meal choices for the week!");
     }
 }

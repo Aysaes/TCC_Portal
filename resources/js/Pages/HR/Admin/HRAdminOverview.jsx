@@ -9,6 +9,11 @@ export default function HRAdminOverview({ auth, requests }) {
     const hrLinks = getHRAdminLinks(auth);
     const { system } = usePage().props;
 
+    // 🟢 NEW: Define who is allowed to click the action buttons!
+    const currentRole = auth.user?.role?.name || 'Guest';
+    const roleName = currentRole.toLowerCase();
+    const canAct = ['admin', 'hrbp'].includes(roleName);
+
     const requestList = requests || [];
     const ITEMS_PER_PAGE = 10;
 
@@ -110,7 +115,6 @@ export default function HRAdminOverview({ auth, requests }) {
             return;
         }
 
-        // 🟢 NEW: Open the custom modal instead of window.confirm
         if (actionType === 'accept') {
             setAcceptingId(id);
             setIsAcceptModalOpen(true);
@@ -134,7 +138,7 @@ export default function HRAdminOverview({ auth, requests }) {
         });
     };
 
-    // 🟢 NEW: SUBMIT ACCEPTANCE ---
+    // --- SUBMIT ACCEPTANCE ---
     const submitAccept = () => {
         router.patch(route('hr.admin.update-status', acceptingId), {
             action: 'accept'
@@ -280,7 +284,6 @@ export default function HRAdminOverview({ auth, requests }) {
                                     <table className="min-w-full divide-y divide-gray-200 text-left text-sm text-gray-600">
                                         <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-200 shadow-sm text-gray-500 uppercase tracking-wider text-[11px] font-bold">
                                             <tr>
-                                                {/* --- SWAPPED HEADER BEGIN --- */}
                                                 <th className="px-6 py-4">
                                                     <div className="flex items-center">
                                                         <span>Date</span>
@@ -294,7 +297,6 @@ export default function HRAdminOverview({ auth, requests }) {
                                                         {renderHeaderSortButton('requestor')}
                                                     </div>
                                                 </th>
-                                                {/* --- SWAPPED HEADER END --- */}
 
                                                 <th className="px-6 py-4">
                                                     <div className="flex items-center">
@@ -316,7 +318,6 @@ export default function HRAdminOverview({ auth, requests }) {
                                                     onClick={() => openViewModal(req)}
                                                     className="hover:bg-gray-50 cursor-pointer transition-colors group"
                                                 >
-                                                    {/* --- SWAPPED TABLE DATA BEGIN --- */}
                                                     <td className="px-6 py-4 font-medium text-gray-500 whitespace-nowrap">
                                                         {formatAppDate(req.created_at, system?.timezone)}
                                                     </td>
@@ -325,7 +326,6 @@ export default function HRAdminOverview({ auth, requests }) {
                                                         <div className="font-bold text-gray-900">{req.user?.name || 'Unknown User'}</div>
                                                         <div className="text-xs text-gray-500">{req.user?.email || ''}</div>
                                                     </td>
-                                                    {/* --- SWAPPED TABLE DATA END --- */}
 
                                                     <td className="px-6 py-4 font-bold text-indigo-900 whitespace-nowrap">
                                                         {req.type === 'COE' ? 'COE' : 'Form 2316'}
@@ -357,20 +357,25 @@ export default function HRAdminOverview({ auth, requests }) {
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
                                                         {activeTab === 'action-required' && req.status === 'Pending HR' ? (
-                                                            <div className="flex items-center justify-end gap-2">
-                                                                <button
-                                                                    onClick={() => handleAction(req.id, 'reject')}
-                                                                    className="rounded border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors"
-                                                                >
-                                                                    Reject
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleAction(req.id, 'accept')}
-                                                                    className="rounded bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition-colors shadow-sm"
-                                                                >
-                                                                    Accept
-                                                                </button>
-                                                            </div>
+                                                            // 🟢 NEW: Check if the user is allowed to act!
+                                                            canAct ? (
+                                                                <div className="flex items-center justify-end gap-2">
+                                                                    <button
+                                                                        onClick={() => handleAction(req.id, 'reject')}
+                                                                        className="rounded border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors"
+                                                                    >
+                                                                        Reject
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleAction(req.id, 'accept')}
+                                                                        className="rounded bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition-colors shadow-sm"
+                                                                    >
+                                                                        Accept
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-gray-400 italic font-medium">View Only</span>
+                                                            )
                                                         ) : (
                                                             <span className="text-xs text-gray-400 italic">Processed</span>
                                                         )}
@@ -426,12 +431,10 @@ export default function HRAdminOverview({ auth, requests }) {
                         <div className="flex items-center justify-between border-b pb-4 mb-5">
                             <h2 className="text-xl font-bold text-gray-900">Request Details</h2>
                             <button onClick={closeViewModal} className="text-gray-400 hover:text-gray-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
-
+                        
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Requestor</label>
@@ -447,7 +450,7 @@ export default function HRAdminOverview({ auth, requests }) {
                                     {selectedRequest.type === 'COE' ? 'Certificate of Employment' : 'Form 2316'}
                                 </p>
                             </div>
-
+                            
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Date Requested</label>
                                 <p className="mt-1 text-sm text-gray-900">

@@ -139,60 +139,91 @@ class DutyMealController extends Controller
         ]);
     }
 
-    // 3. THE SAVER: Saves the submitted form to the database
+   // 3. THE SAVER: Saves the submitted weekly form to the databas
     public function store(Request $request)
     {
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
-            'duty_date' => 'required|date',
-            'main_meal' => 'required|string|max:255',
-            'alt_meal' => 'nullable|string|max:255',
-            'participants' => 'required|array|min:1',
-            'participants.*.id' => 'required|exists:users,id',
-            // UPDATED HERE: Validation rule changed to accept shift_type
-            'participants.*.shift_type'=> 'required|string|in:day,graveyard,straight',
+            'week_start' => 'required|date',
+            'schedule' => 'required|array|min:1',
+            'schedule.*.date' => 'required|date',
+            'schedule.*.main_meal' => 'nullable|string|max:255',
+            'schedule.*.alt_meal' => 'nullable|string|max:255',
+            'schedule.*.participants' => 'nullable|array',
+            'schedule.*.participants.*.id' => 'required_with:schedule.*.participants|exists:users,id',
+            'schedule.*.participants.*.shift_type'=> 'required_with:schedule.*.participants|string|in:day,graveyard,straight',
         ]);
 
         try {
-            DB::transaction(function () use ($validated) {
-                $dutyMeal = DutyMeal::create([
-                    'branch_id' => $validated['branch_id'],
-                    'duty_date' => $validated['duty_date'],
-                    'main_meal' => $validated['main_meal'],
-                    'alt_meal' => $validated['alt_meal'],
-                    'is_locked' => false,
-                ]);
+            $createdDutyMeals = collect();
+            $allParticipantData = [];
+            $userIdsToNotify = [];
 
-                $participantsData = collect($validated['participants'])->map(function ($staff) use ($dutyMeal) {
-                    return [
-                        'duty_meal_id' => $dutyMeal->id,
-                        'user_id' => $staff['id'],
-                        'choice' => 'none',
-                        // UPDATED HERE: Saving shift_type instead of is_graveyard
-                        'shift_type' => $staff['shift_type'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
-                })->toArray();
+            DB::transaction(function () use ($validated, &$createdDutyMeals, &$allParticipantData, &$userIdsToNotify) {
+                // Loop through all 7 days submitted from React
+                foreach ($validated['schedule'] as $day) {
+                    
+                    // 1. SMART SKIP: If this day has no meals typed AND no staff added, just skip it!
+                    if (empty($day['main_meal']) && empty($day['participants'])) {
+                        continue; 
+                    }
 
-                DutyMealParticipant::insert($participantsData);
+                    // 2. Create the Duty Meal for this specific date
+                    $dutyMeal = DutyMeal::create([
+                        'branch_id' => $validated['branch_id'],
+                        'duty_date' => $day['date'],
+                        // If they added staff but forgot the meal, default to TBD so it doesn't crash
+                        'main_meal' => $day['main_meal'] ?? 'TBD', 
+                        'alt_meal' => $day['alt_meal'] ?? null,
+                        'is_locked' => false,
+                    ]);
+
+                    $createdDutyMeals->push($dutyMeal);
+
+                    // 3. Prepare the participants for this specific date
+                    if (!empty($day['participants'])) {
+                        foreach ($day['participants'] as $staff) {
+                            $allParticipantData[] = [
+                                'duty_meal_id' => $dutyMeal->id,
+                                'user_id' => $staff['id'],
+                                'choice' => 'none',
+                                'shift_type' => $staff['shift_type'],
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                            
+                            // Collect user ID for notifications
+                            $userIdsToNotify[] = $staff['id'];
+                        }
+                    }
+                }
+
+                // 4. Perform a massive bulk insert for all staff across all days (Super fast!)
+                if (!empty($allParticipantData)) {
+                    DutyMealParticipant::insert($allParticipantData);
+                }
             });
-            // 🟢 NEW: Notify all participants that they have been added to a roster
-            $userIds = array_column($validated['participants'], 'id');
-            $employeesToNotify = User::whereIn('id', $userIds)->get();
-            
-            // We need to grab the newly created DutyMeal so we can pass the date to the notification
-            $newDutyMeal = DutyMeal::latest()->first();
 
-            if ($employeesToNotify->isNotEmpty() && $newDutyMeal) {
-                Notification::send($employeesToNotify, new DutyMealRosterCreated($newDutyMeal));
+            // 🟢 NEW: Notify participants, but prevent spam!
+            if (!empty($userIdsToNotify) && $createdDutyMeals->isNotEmpty()) {
+                // array_unique ensures if John works Mon/Tue/Wed, he only gets 1 email, not 3.
+                $uniqueUserIds = array_unique($userIdsToNotify);
+                $employeesToNotify = User::whereIn('id', $uniqueUserIds)->get();
+                
+                // We use the very first created meal of the week as the reference for the notification
+                $referenceMeal = $createdDutyMeals->first();
+
+                if ($employeesToNotify->isNotEmpty()) {
+                    Notification::send($employeesToNotify, new DutyMealRosterCreated($referenceMeal));
+                }
             }
 
-            return redirect()->route('admin.duty-meals.index')->with('success', 'Duty roster created successfully!');
+            return redirect()->route('admin.duty-meals.index')->with('success', 'Weekly duty roster published successfully!');
 
         } catch (\Illuminate\Database\QueryException $e) {
+            // Error 1062 is a Duplicate Entry (meaning a roster already exists for that branch on that date)
             if ($e->errorInfo[1] == 1062) {
-                return back()->with('error', 'A duty meal schedule already exists for this branch on this date.');
+                return back()->with('error', 'A roster already exists for one of these dates! Please edit the existing roster instead.');
             }
             return back()->withErrors(['error' => 'Database error: ' . $e->getMessage()]);
         }

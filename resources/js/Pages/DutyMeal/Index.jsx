@@ -5,9 +5,9 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import { getDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, router, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
 import { formatAppDate } from '@/Utils/date';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Fragment, useMemo, useState } from 'react'; // 🟢 Added Fragment here
 
 export default function Index({ auth, dutymeals = [], employees = [], departments = [], positions = [], branches = [] }) {
     
@@ -188,6 +188,34 @@ export default function Index({ auth, dutymeals = [], employees = [], department
         return filtered;
     }, [dutymeals, overviewBranch, dateFilterType, customStartDate, customEndDate, system?.serverDate]);
 
+
+    // 🟢 NEW: Group the filtered meals by Week!
+    const groupedDutyMeals = useMemo(() => {
+        const groups = {};
+
+        filteredDutyMeals.forEach(meal => {
+            const mealDate = new Date(meal.duty_date);
+            const day = mealDate.getDay();
+            
+            // Calculate the Monday of this meal's week
+            const diff = mealDate.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(mealDate);
+            monday.setDate(diff);
+
+            // Create a readable label, e.g., "Week of Apr 13, 2026"
+            const weekLabel = `Week of ${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+            if (!groups[weekLabel]) {
+                groups[weekLabel] = [];
+            }
+            groups[weekLabel].push(meal);
+        });
+
+        // Returns an array of [ "Week of...", [meals...] ]
+        return Object.entries(groups); 
+    }, [filteredDutyMeals]);
+
+
     // STATS CRUNCHER
     const stats = useMemo(() => {
         let totalMeals = 0; let totalMain = 0; let totalAlt = 0; let totalSpecial = 0;
@@ -324,21 +352,34 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredDutyMeals.length === 0 ? (
+                            {groupedDutyMeals.length === 0 ? (
                                 <tr>
                                     <td colSpan="3" className="px-6 py-8 text-center text-sm text-gray-500">
                                         No duty meals found for this branch.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredDutyMeals.map((meal) => (
-                                    <tr key={meal.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setSelectedRosterId(meal.id)}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {formatAppDate(meal.duty_date, system?.timezone)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.branch?.name}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.participants_count} Staff</td>
-                                    </tr>
+                                // 🟢 NEW: Loop over the Week Groups!
+                                groupedDutyMeals.map(([weekLabel, meals]) => (
+                                    <Fragment key={weekLabel}>
+                                        {/* The Week Header Row */}
+                                        <tr className="bg-gray-50/80 border-y border-gray-200">
+                                            <td colSpan="3" className="px-6 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                                {weekLabel}
+                                            </td>
+                                        </tr>
+                                        {/* The actual Daily Meals inside that week */}
+                                        {meals.map((meal) => (
+                                            <tr key={meal.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setSelectedRosterId(meal.id)}>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {/* Show the day of the week, e.g., "Monday, Apr 13" */}
+                                                    {new Date(meal.duty_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.branch?.name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.participants_count} Staff</td>
+                                            </tr>
+                                        ))}
+                                    </Fragment>
                                 ))
                             )}
                         </tbody>
