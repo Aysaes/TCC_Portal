@@ -295,7 +295,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
             confirmText: 'Delete',
             confirmColor: 'bg-red-600 hover:bg-red-500',
             onConfirm: () => {
-                router.delete(route('admin.company-content.destroy', content.id), {
+                router.delete(route('admin.company-content.destroy', [content.id]), {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -311,7 +311,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
             confirmText: 'Delete',
             confirmColor: 'bg-red-600 hover:bg-red-500',
             onConfirm: () => {
-                router.delete(route('admin.company-content.type.destroy', typeItem.id), {
+                router.delete(route('admin.company-content.type.destroy', [typeItem.id]), {
                     preserveScroll: true,
                     onSuccess: () => {
                         closeConfirmModal();
@@ -430,7 +430,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
         e.preventDefault();
         syncEditorToForm(editEditorRef, setEditData);
 
-        updateContent(route('admin.company-content.update', editingId), {
+        updateContent(route('admin.company-content.update', [editingId]), {
             preserveScroll: true,
             onSuccess: () => closeEditModal(),
         });
@@ -511,7 +511,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
         const trimmedName = typeEditData.name.trim();
         setTypeEditData('name', trimmedName);
 
-        updateType(route('admin.company-content.type.update', editingTypeId), {
+        updateType(route('admin.company-content.type.update', [editingTypeId]), {
             preserveScroll: true,
             onSuccess: () => {
                 closeTypeOverlay();
