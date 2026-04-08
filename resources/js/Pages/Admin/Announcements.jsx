@@ -8,11 +8,16 @@ import TextInput from '@/Components/TextInput';
 import { getAdminLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function Announcements({ auth, announcements = [], branches = [], priorities = [] }) {
     const adminLinks = getAdminLinks();
     const { system } = usePage().props;
+
+    const FRAME_RATIO_CLASS = 'aspect-[16/9] w-full';
+    const DEFAULT_ZOOM = 1;
+    const MIN_ZOOM = 0.3;
+    const MAX_ZOOM = 4;
 
     // --- FILTER STATES ---
     const [titleSearch, setTitleSearch] = useState('');
@@ -22,6 +27,30 @@ export default function Announcements({ auth, announcements = [], branches = [],
 
     const startDatePickerRef = useRef(null);
     const endDatePickerRef = useRef(null);
+
+    const addImagePreviewRef = useRef(null);
+    const editImagePreviewRef = useRef(null);
+
+    const [addImagePreview, setAddImagePreview] = useState(null);
+    const [editImagePreview, setEditImagePreview] = useState(null);
+
+    const [editingItem, setEditingItem] = useState(null);
+
+    const [addCropState, setAddCropState] = useState({
+        dragging: false,
+        startX: 0,
+        startY: 0,
+        originX: 0,
+        originY: 0,
+    });
+
+    const [editCropState, setEditCropState] = useState({
+        dragging: false,
+        startX: 0,
+        startY: 0,
+        originX: 0,
+        originY: 0,
+    });
 
     // --- DATE HELPERS (MM/DD/YYYY display, YYYY-MM-DD picker value) ---
     const formatDateInput = (value) => {
@@ -146,21 +175,6 @@ export default function Announcements({ auth, announcements = [], branches = [],
         return `#${hex}`;
     };
 
-    const getPastelStyle = (hexColor) => {
-        const normalized = normalizeHexColor(hexColor);
-        const hex = normalized.replace('#', '');
-        
-        const r = parseInt(hex.substring(0, 2), 16) || 79;
-        const g = parseInt(hex.substring(2, 4), 16) || 70;
-        const b = parseInt(hex.substring(4, 6), 16) || 229;
-
-        return {
-            backgroundColor: `rgba(${r}, ${g}, ${b}, 0.15)`,
-            color: normalized,
-            borderColor: `rgba(${r}, ${g}, ${b}, 0.3)`
-        };
-    };
-
     const getGlassStyle = (hexColor) => {
         const normalized = normalizeHexColor(hexColor);
         const hex = normalized.replace('#', '');
@@ -186,6 +200,51 @@ export default function Announcements({ auth, announcements = [], branches = [],
             color: '#ffffff',
             borderColor: normalized,
         };
+    };
+
+    const getImageSource = (item, previewImage) => {
+        if (previewImage) return previewImage;
+        if (item?.image_path) return `/storage/${item.image_path}`;
+        return null;
+    };
+
+    const resetCrop = (setDataFn) => {
+        setDataFn('image_zoom', DEFAULT_ZOOM);
+        setDataFn('image_offset_x', 0);
+        setDataFn('image_offset_y', 0);
+    };
+
+    const startCropDrag = (e, data, setStateFn) => {
+        e.preventDefault();
+
+        setStateFn({
+            dragging: true,
+            startX: e.clientX,
+            startY: e.clientY,
+            originX: data.image_offset_x || 0,
+            originY: data.image_offset_y || 0,
+        });
+    };
+
+    const handleCropMove = (e, state, setDataFn) => {
+        if (!state.dragging) return;
+
+        const dx = e.clientX - state.startX;
+        const dy = e.clientY - state.startY;
+
+        setDataFn('image_offset_x', state.originX + dx);
+        setDataFn('image_offset_y', state.originY + dy);
+    };
+
+    const stopCropDrag = (setStateFn) => {
+        setStateFn((prev) => ({ ...prev, dragging: false }));
+    };
+
+    const handleCropWheel = (e, data, setDataFn) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (data.image_zoom || DEFAULT_ZOOM) + delta));
+        setDataFn('image_zoom', Number(nextZoom.toFixed(2)));
     };
 
     // --- FILTERED ANNOUNCEMENTS ---
@@ -294,7 +353,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
 
     // --- GLOBAL CONFIRMATION MODAL ---
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} });
-    const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false });
+    const closeConfirmModal = () => setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
 
     const confirmDelete = (announcement) => {
         setConfirmDialog({
@@ -370,12 +429,35 @@ export default function Announcements({ auth, announcements = [], branches = [],
         branch_ids: [],
         image: null,
         attachment: null,
+        image_zoom: DEFAULT_ZOOM,
+        image_offset_x: 0,
+        image_offset_y: 0,
     });
+
+    useEffect(() => {
+        if (!addData.image) {
+            setAddImagePreview(null);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(addData.image);
+        setAddImagePreview(objectUrl);
+
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [addData.image]);
 
     const closeAddModal = () => {
         setIsAddModalOpen(false);
         clearAddErrors();
         resetAdd();
+        setAddImagePreview(null);
+        setAddCropState({
+            dragging: false,
+            startX: 0,
+            startY: 0,
+            originX: 0,
+            originY: 0,
+        });
     };
 
     const submitAdd = (e) => {
@@ -406,10 +488,26 @@ export default function Announcements({ auth, announcements = [], branches = [],
         branch_ids: [],
         image: null,
         attachment: null,
+        image_zoom: DEFAULT_ZOOM,
+        image_offset_x: 0,
+        image_offset_y: 0,
     });
+
+    useEffect(() => {
+        if (!editData.image) {
+            setEditImagePreview(null);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(editData.image);
+        setEditImagePreview(objectUrl);
+
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [editData.image]);
 
     const openEditModal = (item) => {
         setEditingId(item.id);
+        setEditingItem(item);
         setEditData({
             _method: 'put',
             title: item.title,
@@ -419,6 +517,9 @@ export default function Announcements({ auth, announcements = [], branches = [],
             branch_ids: item.branches.map(b => b.id),
             image: null,
             attachment: null,
+            image_zoom: item.image_zoom ?? DEFAULT_ZOOM,
+            image_offset_x: item.image_offset_x ?? 0,
+            image_offset_y: item.image_offset_y ?? 0,
         });
         setIsEditModalOpen(true);
     };
@@ -428,6 +529,15 @@ export default function Announcements({ auth, announcements = [], branches = [],
         clearEditErrors();
         resetEdit();
         setEditingId(null);
+        setEditingItem(null);
+        setEditImagePreview(null);
+        setEditCropState({
+            dragging: false,
+            startX: 0,
+            startY: 0,
+            originX: 0,
+            originY: 0,
+        });
     };
 
     const submitEdit = (e) => {
@@ -436,6 +546,88 @@ export default function Announcements({ auth, announcements = [], branches = [],
             preserveScroll: true,
             onSuccess: () => closeEditModal()
         });
+    };
+
+    const renderImageCropper = (
+        mode,
+        data,
+        setDataFn,
+        previewSrc,
+        cropState,
+        setCropState,
+        currentItem = null,
+        errorMessage = null
+    ) => {
+        const imageSrc = getImageSource(currentItem, previewSrc);
+
+        return (
+            <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div>
+                    <InputLabel
+                        htmlFor={`${mode}_image`}
+                        value={mode === 'edit' ? 'Replace Cover Photo (Leave empty to keep current image)' : 'Cover Photo (Image)'}
+                    />
+                    <input
+                        id={`${mode}_image`}
+                        type="file"
+                        accept="image/*"
+                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-indigo-700 hover:file:bg-indigo-100"
+                        onChange={(e) => {
+                            setDataFn('image', e.target.files[0] || null);
+                            setTimeout(() => resetCrop(setDataFn), 0);
+                        }}
+                    />
+                    <InputError message={errorMessage} className="mt-2" />
+                </div>
+
+                {imageSrc ? (
+                    <>
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-700">Cover Photo Preview</p>
+                            <button
+                                type="button"
+                                onClick={() => resetCrop(setDataFn)}
+                                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Reset Crop
+                            </button>
+                        </div>
+
+                        <div
+                            className={`${FRAME_RATIO_CLASS} relative overflow-hidden rounded-lg border border-gray-200 bg-white`}
+                            onMouseMove={(e) => handleCropMove(e, cropState, setDataFn)}
+                            onMouseUp={() => stopCropDrag(setCropState)}
+                            onMouseLeave={() => stopCropDrag(setCropState)}
+                            onWheel={(e) => handleCropWheel(e, data, setDataFn)}
+                        >
+                            <img
+                                src={imageSrc}
+                                alt="Cover Preview"
+                                draggable={false}
+                                onMouseDown={(e) => startCropDrag(e, data, setCropState)}
+                                className={`${cropState.dragging ? 'cursor-grabbing' : 'cursor-grab'} absolute left-1/2 top-1/2 select-none`}
+                                style={{
+                                    transform: `translate(calc(-50% + ${data.image_offset_x || 0}px), calc(-50% + ${data.image_offset_y || 0}px)) scale(${data.image_zoom || DEFAULT_ZOOM})`,
+                                    transformOrigin: 'center center',
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'contain',
+                                    pointerEvents: 'auto',
+                                }}
+                            />
+                        </div>
+
+                        <p className="text-xs text-gray-500">
+                            Drag the image to position it inside the fixed frame. Use your mouse wheel to zoom.
+                        </p>
+                    </>
+                ) : (
+                    <div className="rounded-md border border-dashed border-gray-300 bg-white p-6 text-center text-sm italic text-gray-400">
+                        No image selected yet.
+                    </div>
+                )}
+            </div>
+        );
     };
 
     return (
@@ -481,8 +673,6 @@ export default function Announcements({ auth, announcements = [], branches = [],
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    
-                    {/* Header */}
                     <div className="mb-6 flex items-center justify-between">
                         <p className="text-gray-600">Broadcast notices and updates to specific clinic branches.</p>
                         <button
@@ -493,7 +683,6 @@ export default function Announcements({ auth, announcements = [], branches = [],
                         </button>
                     </div>
 
-                    {/* Filters */}
                     <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                             <div>
@@ -608,14 +797,12 @@ export default function Announcements({ auth, announcements = [], branches = [],
                         </div>
                     </div>
 
-                    {/* Results Count */}
                     <div className="mb-4 flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-600">
                             Showing {filteredAnnouncements.length} announcement{filteredAnnouncements.length !== 1 ? 's' : ''}
                         </p>
                     </div>
 
-                    {/* Manual Carousel */}
                     <div className="flex items-center gap-2 md:gap-4">
                         {chunkedAnnouncements.length > 1 && (
                             <button
@@ -634,7 +821,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                             className="hide-scroll smooth-snap flex w-full flex-1 gap-6 overflow-x-auto overflow-y-visible scroll-smooth bg-transparent px-0 py-1"
                         >
                             {chunkedAnnouncements.length === 0 ? (
-                                <div className="w-full rounded-lg bg-white p-6 text-center text-gray-500 shadow-sm border border-gray-100">
+                                <div className="w-full rounded-lg border border-gray-100 bg-white p-6 text-center text-gray-500 shadow-sm">
                                     No announcements found.
                                 </div>
                             ) : (
@@ -664,22 +851,27 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                                             '--badge-glass-border': glassBadgeStyle.borderColor,
                                                         }}
                                                     >
-                                                        {/* Priority Badge */}
-                                                        <div className="absolute top-3 right-3 z-10">
+                                                        <div className="absolute right-3 top-3 z-10">
                                                             <span
-                                                                className="announcement-badge rounded px-2 py-1 text-xs font-bold uppercase shadow-sm border transition-all duration-200"
+                                                                className="announcement-badge rounded border px-2 py-1 text-xs font-bold uppercase shadow-sm transition-all duration-200"
                                                             >
                                                                 {priorityName}
                                                             </span>
                                                         </div>
 
-                                                        {/* Image Placeholder */}
-                                                        <div className="h-40 w-full border-b border-gray-100 bg-gray-100">
+                                                        <div className={`${FRAME_RATIO_CLASS} relative overflow-hidden border-b border-gray-100 bg-gray-100`}>
                                                             {item.image_path ? (
                                                                 <img
                                                                     src={`/storage/${item.image_path}`}
                                                                     alt={item.title}
-                                                                    className="h-full w-full object-cover"
+                                                                    className="absolute left-1/2 top-1/2"
+                                                                    style={{
+                                                                        transform: `translate(calc(-50% + ${item.image_offset_x ?? 0}px), calc(-50% + ${item.image_offset_y ?? 0}px)) scale(${item.image_zoom ?? DEFAULT_ZOOM})`,
+                                                                        transformOrigin: 'center center',
+                                                                        width: '100%',
+                                                                        height: '100%',
+                                                                        objectFit: 'contain',
+                                                                    }}
                                                                 />
                                                             ) : (
                                                                 <div className="flex h-full items-center justify-center text-sm text-gray-400">
@@ -698,8 +890,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                                                     year: 'numeric',
                                                                 })}
                                                             </p>
-                                                            
-                                                            {/* Branch Tags */}
+
                                                             <div className="mb-4 flex flex-wrap gap-1">
                                                                 {item.branches.map(branch => (
                                                                     <span
@@ -714,17 +905,16 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                                             <p className="mb-4 flex-1 whitespace-pre-line text-sm text-gray-600 line-clamp-3">
                                                                 {item.content}
                                                             </p>
-                                                            
-                                                            {/* Attachment Download Button */}
+
                                                             {item.attachment_path && (
                                                                 <div className="mb-4">
-                                                                    <a 
-                                                                        href={`/storage/${item.attachment_path}`} 
-                                                                        target="_blank" 
+                                                                    <a
+                                                                        href={`/storage/${item.attachment_path}`}
+                                                                        target="_blank"
                                                                         rel="noreferrer"
                                                                         className="inline-flex items-center gap-2 rounded-md border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-100"
                                                                     >
-                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
                                                                         </svg>
                                                                         Download Attachment
@@ -732,7 +922,6 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                                                 </div>
                                                             )}
 
-                                                            {/* Footer Actions */}
                                                             <div className="mt-auto flex justify-end gap-3 border-t border-gray-100 pt-3">
                                                                 <button
                                                                     onClick={() => openEditModal(item)}
@@ -749,7 +938,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                                             </div>
                                                         </div>
                                                     </div>
-                                                ); 
+                                                );
                                             })}
 
                                             {pageItems.length < cardsPerPage &&
@@ -771,14 +960,13 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                 onClick={scrollRight}
                                 className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-black shadow-sm transition-all focus:outline-none hover:scale-105 hover:shadow-md lg:flex"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-5 w-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                                 </svg>
                             </button>
                         )}
                     </div>
 
-                    {/* Pagination Dots */}
                     {chunkedAnnouncements.length > 1 && (
                         <div className="mt-4 flex items-center justify-center gap-2">
                             {chunkedAnnouncements.map((_, idx) => (
@@ -798,12 +986,15 @@ export default function Announcements({ auth, announcements = [], branches = [],
                 </div>
             </div>
 
-            {/* --- ADD MODAL --- */}
             <Modal show={isAddModalOpen} onClose={closeAddModal} maxWidth="2xl">
                 <form onSubmit={submitAdd} className="p-6">
                     <h2 className="mb-6 text-lg font-medium text-gray-900">Post New Announcement</h2>
-                    
+
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <input type="hidden" name="image_zoom" value={addData.image_zoom} />
+                        <input type="hidden" name="image_offset_x" value={addData.image_offset_x} />
+                        <input type="hidden" name="image_offset_y" value={addData.image_offset_y} />
+
                         <div className="md:col-span-2">
                             <InputLabel htmlFor="add_title" value="Title" />
                             <TextInput
@@ -853,7 +1044,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                     + Add Priority
                                 </button>
                             </div>
-                            <InputError message={addErrors.priority} className="mt-2" />
+                            <InputError message={addErrors.priority || addErrors.priority_level_id} className="mt-2" />
                         </div>
 
                         <div className="md:col-span-2">
@@ -887,18 +1078,20 @@ export default function Announcements({ auth, announcements = [], branches = [],
                             <InputError message={addErrors.content} className="mt-2" />
                         </div>
 
-                        <div className="md:col-span-1">
-                            <InputLabel value="Cover Photo (Image)" />
-                            <input
-                                type="file"
-                                accept="image/*"
-                                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-indigo-700 hover:file:bg-indigo-100"
-                                onChange={(e) => setAddData('image', e.target.files[0])}
-                            />
-                            <InputError message={addErrors.image} className="mt-2" />
+                        <div className="md:col-span-2">
+                            {renderImageCropper(
+                                'add',
+                                addData,
+                                setAddData,
+                                addImagePreview,
+                                addCropState,
+                                setAddCropState,
+                                null,
+                                addErrors.image
+                            )}
                         </div>
 
-                        <div className="md:col-span-1">
+                        <div className="md:col-span-2">
                             <InputLabel value="File Attachment (PDF, Excel, Word)" />
                             <input
                                 type="file"
@@ -919,12 +1112,15 @@ export default function Announcements({ auth, announcements = [], branches = [],
                 </form>
             </Modal>
 
-            {/* --- EDIT MODAL --- */}
             <Modal show={isEditModalOpen} onClose={closeEditModal} maxWidth="2xl">
                 <form onSubmit={submitEdit} className="p-6">
                     <h2 className="mb-6 text-lg font-medium text-gray-900">Edit Announcement</h2>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <input type="hidden" name="image_zoom" value={editData.image_zoom} />
+                        <input type="hidden" name="image_offset_x" value={editData.image_offset_x} />
+                        <input type="hidden" name="image_offset_y" value={editData.image_offset_y} />
+
                         <div className="md:col-span-2">
                             <InputLabel htmlFor="edit_title" value="Title" />
                             <TextInput
@@ -934,6 +1130,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                 onChange={(e) => setEditData('title', e.target.value)}
                                 required
                             />
+                            <InputError message={editErrors.title} className="mt-2" />
                         </div>
 
                         <div>
@@ -945,6 +1142,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                 onChange={(e) => setEditData('author', e.target.value)}
                                 required
                             />
+                            <InputError message={editErrors.author} className="mt-2" />
                         </div>
 
                         <div className="md:col-span-2">
@@ -962,7 +1160,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                         <option key={p.id} value={p.id}>{p.name}</option>
                                     ))}
                                 </select>
-                                
+
                                 <button
                                     type="button"
                                     onClick={() => setIsPriorityModalOpen(true)}
@@ -971,7 +1169,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                     + Add Priority
                                 </button>
                             </div>
-                            <InputError message={addErrors.priority} className="mt-2" />
+                            <InputError message={editErrors.priority || editErrors.priority_level_id} className="mt-2" />
                         </div>
 
                         <div className="md:col-span-2">
@@ -989,6 +1187,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                     </label>
                                 ))}
                             </div>
+                            <InputError message={editErrors.branch_ids} className="mt-2" />
                         </div>
 
                         <div className="md:col-span-2">
@@ -1001,20 +1200,23 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                 onChange={(e) => setEditData('content', e.target.value)}
                                 required
                             />
+                            <InputError message={editErrors.content} className="mt-2" />
                         </div>
 
-                        <div className="md:col-span-1">
-                            <InputLabel value="Cover Photo (Image)" />
-                            <input
-                                type="file"
-                                accept="image/*"
-                                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-indigo-700 hover:file:bg-indigo-100"
-                                onChange={(e) => setEditData('image', e.target.files[0])}
-                            />
-                            <InputError message={addErrors.image} className="mt-2" />
+                        <div className="md:col-span-2">
+                            {renderImageCropper(
+                                'edit',
+                                editData,
+                                setEditData,
+                                editImagePreview,
+                                editCropState,
+                                setEditCropState,
+                                editingItem,
+                                editErrors.image
+                            )}
                         </div>
 
-                        <div className="md:col-span-1">
+                        <div className="md:col-span-2">
                             <InputLabel value="File Attachment (PDF, Excel, Word)" />
                             <input
                                 type="file"
@@ -1022,7 +1224,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                 className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-green-50 file:px-4 file:py-2 file:text-green-700 hover:file:bg-green-100"
                                 onChange={(e) => setEditData('attachment', e.target.files[0])}
                             />
-                            <InputError message={addErrors.attachment} className="mt-2" />
+                            <InputError message={editErrors.attachment} className="mt-2" />
                         </div>
                     </div>
 
@@ -1035,7 +1237,6 @@ export default function Announcements({ auth, announcements = [], branches = [],
                 </form>
             </Modal>
 
-            {/* --- ADD NEW PRIORITY MODAL --- */}
             <Modal show={isPriorityModalOpen} onClose={closePriorityModal} maxWidth="sm">
                 <form onSubmit={submitPriority} className="p-6">
                     <h2 className="mb-4 text-lg font-medium text-gray-900">Add Custom Priority</h2>
