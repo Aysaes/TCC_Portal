@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\DB; // <-- REQUIRED FOR SAFE DELETE
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Position;
@@ -55,7 +55,18 @@ class EmployeeController extends Controller
             'branch_ids' => 'required|array',
             'branch_ids.*' => 'exists:branches,id',
         ]);
+        
         try {
+            // Check if the assigned role is an Admin
+            $role = Role::find($request->role_id);
+            $isAdmin = $role && (strtolower($role->name) === 'admin' || strtolower($role->name) === 'super admin');
+            
+            // Force device limit to max 2 if not an Admin
+            $device_limit = $request->device_limit;
+            if (!$isAdmin && $device_limit > 2) {
+                $device_limit = 2;
+            }
+
             $user = User::create([
                 'name' => trim($request->name),
                 'email' => trim($request->email),
@@ -63,7 +74,7 @@ class EmployeeController extends Controller
                 'role_id' => $request->role_id,
                 'department_id' => $request->department_id,
                 'position_id' => $request->position_id,
-                'device_limit'=> $request->device_limit,
+                'device_limit'=> $device_limit,
                 'branch_id' => $request->branch_ids[0] ?? null,
                 'is_rotating'=> count($request->branch_ids) > 1,
             ]);
@@ -147,18 +158,16 @@ class EmployeeController extends Controller
     }
 
     // =====================================
-    // SAFE DELETE METHODS
+    // SAFE DELETE METHODS (BULLETPROOF)
     // =====================================
 
     public function destroyRole(\App\Models\Role $role)
     {
         try {
-            // Check if it's a core role
             if (strtolower($role->name) === 'admin' || strtolower($role->name) === 'super admin') {
                 return back()->with('error', 'Cannot delete core system roles.');
             }
 
-            // Using DB::table() bypasses SoftDeletes to check ALL users, active or archived
             if (\Illuminate\Support\Facades\DB::table('users')->where('role_id', $role->id)->exists()) {
                 return back()->with('error', 'Cannot delete this Role because it is assigned to existing or archived employees. Reassign them first.');
             }
@@ -234,13 +243,23 @@ class EmployeeController extends Controller
         ]);
 
         try {
+            // Check if the assigned role is an Admin
+            $role = Role::find($request->role_id);
+            $isAdmin = $role && (strtolower($role->name) === 'admin' || strtolower($role->name) === 'super admin');
+            
+            // Force device limit to max 2 if not an Admin
+            $device_limit = $request->device_limit;
+            if (!$isAdmin && $device_limit > 2) {
+                $device_limit = 2;
+            }
+
             $user->update([
                 'name' => trim($request->name),
                 'email' => trim($request->email),
                 'role_id' => $request->role_id,
                 'department_id' => $request->department_id,
                 'position_id' => $request->position_id,
-                'device_limit'=> $request->device_limit,
+                'device_limit'=> $device_limit, 
                 'is_rotating'=> count($request->branch_ids) > 1,
             ]);
 
@@ -348,11 +367,9 @@ class EmployeeController extends Controller
     {
         try {
             if ($user->status === 'Disabled') {
-                // If they are disabled, make them Active
                 $user->status = 'Active';
                 $message = "Access re-enabled for {$user->name}.";
             } else {
-                // If they are Active or Password Reset, lock them out
                 $user->status = 'Disabled';
                 $message = "Account disabled for {$user->name}.";
             }
