@@ -71,9 +71,9 @@ if (strtolower($roleName) !== 'admin') {
         $safeRole = strtolower(trim($roleName));
 
         if ($safeRole === 'director of corporate services and operations') {
-            // DCSO: Accounting/Operational Depts OR exact specific roles
+            // DCSO: Accounting/Operations Depts OR exact specific roles
             $query->whereHas('department', function ($q) {
-                $q->whereIn('name', ['Accounting', 'Operational']); 
+                $q->whereIn('name', ['Accounting', 'Operations']); 
             })
             ->orWhereIn('name', ['Chief Veterinarian', 'Human Resources Business Partner', 'Marketing Manager']) 
             ->orWhere(function ($subQuery) {
