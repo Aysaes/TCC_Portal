@@ -222,6 +222,7 @@ class ManpowerRequestController extends Controller
             $validated['user_id'] = Auth::id();
             $validated['workflow_path'] = $workflowPath;
             $validated['current_step'] = 0; 
+            $validated['requesting_manager_id'] = Auth::id();
 
             // 🟢 AUTO-APPROVE DCSO REQUESTS 🟢
             if (isset($workflowPath[0]) && $workflowPath[0] === 'HR') {

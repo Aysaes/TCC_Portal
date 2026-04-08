@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use PhpParser\Node\Expr\Cast;
 
 class ManpowerRequest extends Model
 {
     use HasFactory;
+
+    // 🟢 ADD THIS LINE TO OVERRIDE LARAVEL'S DEFAULT PLURALIZATION
+    protected $table = 'manpower_request';
 
     protected $fillable = [
         'user_id', 'branch_id', 'department_id', 'position_id', 
