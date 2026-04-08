@@ -13,6 +13,7 @@ class SupplierController extends Controller
             'name' => 'required|string|max:255|unique:suppliers,name',
             'contact_person' => 'nullable|string|max:255', 
             'contact_number' => 'nullable|string|max:255', 
+            'address' => 'nullable|string|max:255',
         ]);
 
         Supplier::create($validated);
@@ -26,6 +27,7 @@ class SupplierController extends Controller
             'name' => 'required|string|max:255|unique:suppliers,name,' . $supplier->id,
             'contact_person' => 'nullable|string|max:255', 
             'contact_number' => 'nullable|string|max:255', 
+            'address' => 'nullable|string|max:255',
         ]);
 
         $supplier->update($validated);

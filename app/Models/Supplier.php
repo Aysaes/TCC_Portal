@@ -13,6 +13,7 @@ class Supplier extends Model
         'name',
         'contact_person',
         'contact_number',
+        'address',
         'status',
     ];
 
