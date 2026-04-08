@@ -132,6 +132,8 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
         // -> THE FIX: Count ONLY unique, logged-in users <-
         $activeSessions = \Illuminate\Support\Facades\DB::table('sessions')
             ->whereNotNull('user_id')
+            // Filter by last_activity timestamp (newer than 15 mins ago)
+            ->where('last_activity', '>=', now()->subMinutes(15)->getTimestamp())
             ->distinct('user_id')
             ->count('user_id');
 

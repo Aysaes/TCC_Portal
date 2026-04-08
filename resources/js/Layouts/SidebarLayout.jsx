@@ -53,9 +53,9 @@ export default function SidebarLayout({
             : ['HR', 'HR MENU', 'HR ADMIN'].includes(activeModule)
               ? 'HR Module'
               : activeModule === 'Duty Meals'
-                ? 'Duty Meal Module'
+                ? 'Select Module'
                 : activeModule === 'Document Repository'
-                  ? 'Admin Module'
+                  ? 'Select Module'
                   : activeModule === 'PR/PO Module'
                     ? 'PR/PO Module'
                     : 'Select Module';
