@@ -618,7 +618,18 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
 
                             <div>
                                 <InputLabel htmlFor="contact_number" value="Contact Number" />
-                                <TextInput id="contact_number" className="mt-1 block w-full" value={supData.contact_number} onChange={(e) => setSupData('contact_number', e.target.value)} placeholder="e.g. 0917-123-4567" />
+                                <TextInput 
+                                    id="contact_number" 
+                                    className="mt-1 block w-full" 
+                                    value={supData.contact_number} 
+                                    onChange={(e) => {
+                                        // This regex removes anything that is NOT a digit (0-9)
+                                        const numericValue = e.target.value.replace(/\D/g, '');
+                                        setSupData('contact_number', numericValue);
+                                    }} 
+                                    placeholder="e.g. 09171234567" 
+                                    maxLength="15" // Optional: Prevents them from typing an infinitely long number
+                                />
                                 <InputError message={supErrors.contact_number} className="mt-2" />
                             </div>
 
@@ -631,7 +642,26 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
 
                             <div>
                                 <InputLabel htmlFor="tin" value="TIN" />
-                                <TextInput id="tin" className="mt-1 block w-full" value={supData.tin} onChange={(e) => setSupData('tin', e.target.value)} placeholder="e.g. 123-456-789-000" />
+                                <TextInput 
+                                    id="tin" 
+                                    className="mt-1 block w-full" 
+                                    value={supData.tin} 
+                                    onChange={(e) => {
+                                        // 1. Remove anything that isn't a number
+                                        let val = e.target.value.replace(/\D/g, '');
+                                        
+                                        // 2. Limit to exactly 12 digits max
+                                        val = val.substring(0, 12);
+                                        
+                                        // 3. Group by 3s and join with dashes
+                                        const formattedTIN = val.match(/.{1,3}/g)?.join('-') || '';
+                                        
+                                        // 4. Save the formatted string to the form state
+                                        setSupData('tin', formattedTIN);
+                                    }} 
+                                    placeholder="e.g. 123-456-789-000" 
+                                    maxLength="15" // 12 numbers + 3 dashes = 15 characters total
+                                />
                                 <InputError message={supErrors.tin} className="mt-2" />
                             </div>
                         </div>

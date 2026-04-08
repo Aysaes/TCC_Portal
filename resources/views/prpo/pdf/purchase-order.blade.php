@@ -75,13 +75,15 @@
                 <span class="info-label">To Supplier:</span>
                 <span class="info-value">{{ $po->supplier->name ?? 'N/A' }}</span><br>
                 Contact: {{ $po->supplier->contact_person ?? 'N/A' }}<br>
-                Phone: {{ $po->supplier->contact_number ?? 'N/A' }}
+                Phone: {{ $po->supplier->contact_number ?? 'N/A' }}<br>
+                Address: {{ $po->supplier->address ?? 'N/A' }}<br>
+                Supplier TIN: {{ $po->supplier->tin ?? 'N/A' }}
             </td>
             <td>
                 <span class="info-label">Shipping Details:</span>
                 <span class="info-value">Ship To: {{ $po->ship_to }}</span><br>
                 Target Delivery: {{ \Carbon\Carbon::parse($po->delivery_date)->format('F d, Y') }}<br>
-                Payment Terms: {{ $po->payment_terms }}
+                Payment Terms: {{ $po->payment_terms }}<br>
             </td>
         </tr>
     </table>
