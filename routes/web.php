@@ -129,10 +129,17 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
         // Count all existing branches
         $totalBranches = \App\Models\Branch::count();
 
+        // -> THE FIX: Count ONLY unique, logged-in users <-
+        $activeSessions = \Illuminate\Support\Facades\DB::table('sessions')
+            ->whereNotNull('user_id')
+            ->distinct('user_id')
+            ->count('user_id');
+
         // Pass the variables to the Inertia frontend
         return Inertia::render('Admin/AdminDashboard', [
             'totalActiveEmployees' => $totalActiveEmployees,
             'totalBranches' => $totalBranches,
+            'activeSessions' => $activeSessions, // Pass the new variable
         ]);
     })->name('.dashboard');
 
