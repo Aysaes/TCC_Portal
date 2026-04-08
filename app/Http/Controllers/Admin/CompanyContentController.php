@@ -54,7 +54,7 @@ class CompanyContentController extends Controller
             'type' => 'required|string|max:50',
             'title' => 'nullable|string|max:255',
             'content' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         try {
@@ -106,5 +106,35 @@ class CompanyContentController extends Controller
 
         return back()->with('success', 'New content type added!');
     }
-}
 
+    // ---> NEW METHOD FOR UPDATING A TYPE <---
+    public function updateType(Request $request, ContentType $type)
+    {
+        $request->validate([
+            // This ensures we can keep the same name if we don't change it, 
+            // but blocks us from duplicating another existing type's name
+            'name' => 'required|string|max:50|unique:content_types,name,' . $type->id,
+        ]);
+
+        try {
+            $type->update([
+                'name' => $request->name
+            ]);
+
+            return back()->with('success', 'Content type updated successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update content type: ' . $e->getMessage());
+        }
+    }
+
+    // ---> NEW METHOD FOR DELETING A TYPE <---
+    public function destroyType(ContentType $type)
+    {
+        try {
+            $type->delete();
+            return back()->with('success', 'Content type deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete content type: ' . $e->getMessage());
+        }
+    }
+}

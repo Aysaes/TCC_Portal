@@ -118,11 +118,8 @@ Route::post('/notifications/mark-all-read', [NotificationController::class, 'mar
 Route::get('/notifications/load-more', [NotificationController::class, 'loadMore'])->name('notifications.load-more');
 
 
-
-
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
 
-    // ---> THIS IS THE FIXED LINE <---
     Route::get('/logs', [SystemLogController::class, 'index'])->name('.logs.index');
     
     Route::get('/dashboard', function(){
@@ -139,29 +136,44 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
         ]);
     })->name('.dashboard');
 
-    // Employee Management
+    // ==========================================
+    // EMPLOYEE MANAGEMENT ROUTES
+    // ==========================================
     Route::get('/employees', [EmployeeController::class, 'index'])->name('.employees');
+    
+    // Create Routes
     Route::post('/positions', [EmployeeController::class, 'storePosition'])->name('.positions.store');
     Route::post('/branches', [EmployeeController::class, 'storeBranch'])->name('.branches.store');
     Route::post('/departments', [EmployeeController::class, 'storeDepartment'])->name('.departments.store');
     Route::post('/roles', [EmployeeController::class, 'storeRole'])->name('.roles.store');
     Route::post('/users', [EmployeeController::class, 'storeUser'])->name('.users.store');
+    
+    // Update & Action Routes
     Route::put('/users/{user}', [EmployeeController::class, 'updateUser'])->name('.users.update');
     Route::patch('/users/{user}/reset-device', [EmployeeController::class, 'resetDevice'])->name('.users.reset-device');
+    Route::patch('/users/{user}/toggle-status', [EmployeeController::class, 'toggleStatus'])->name('.users.toggle-status');
+    
+    // ALL Delete Routes (Safely parameterized)
     Route::delete('/users/{user}', [EmployeeController::class, 'destroy'])->name('.users.destroy');
     Route::delete('/departments/{department}', [EmployeeController::class, 'destroyDepartment'])->name('.departments.destroy');
     Route::delete('/roles/{role}', [EmployeeController::class, 'destroyRole'])->name('.roles.destroy');
+    Route::delete('/positions/{position}', [EmployeeController::class, 'destroyPosition'])->name('.positions.destroy');
+    Route::delete('/branches/{branch}', [EmployeeController::class, 'destroyBranch'])->name('.branches.destroy');
+
+    // Import/Export Routes
     Route::get('/employees/export', [EmployeeController::class, 'export'])->name('.employees.export');
     Route::get('/employees/import-template', [EmployeeController::class, 'downloadTemplate'])->name('.employees.template');
     Route::post('/employees/import', [EmployeeController::class, 'import'])->name('.employees.import');
-     Route::patch('/admin/users/{user}/toggle-status', [EmployeeController::class, 'toggleStatus'])->name('.users.toggle-status');
 
     // --- Company Content Management ---
     Route::get('/company-content', [CompanyContentController::class, 'index'])->name('.company-content.index');
     Route::post('/company-content', [CompanyContentController::class, 'store'])->name('.company-content.store');
     Route::put('/company-content/{companyContent}', [CompanyContentController::class, 'update'])->name('.company-content.update');
     Route::delete('/company-content/{companyContent}', [CompanyContentController::class, 'destroy'])->name('.company-content.destroy');
+    
     Route::post('/company-content/type', [CompanyContentController::class, 'storeType'])->name('.company-content.type.store');
+    Route::put('/company-content/type/{type}', [CompanyContentController::class, 'updateType'])->name('.company-content.type.update');
+    Route::delete('/company-content/type/{type}', [CompanyContentController::class, 'destroyType'])->name('.company-content.type.destroy');
 
     // --- Announcements & Notices ---
     Route::get('/announcements', [AnnouncementController::class, 'index'])->name('.announcements.index');
@@ -183,8 +195,6 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
-
-   
 });
 
 // Admin Routes (Protect these with auth/admin middleware)

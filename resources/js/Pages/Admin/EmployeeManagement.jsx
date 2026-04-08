@@ -252,13 +252,11 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         postPosition(route('admin.positions.store'), {
             preserveScroll: true,
             onSuccess: () => {
-                // Optionally keep the selected department and only reset the name
                 resetPosition('position_name');
             },
         });
     };
 
-    // Live filtering for the Manage Positions list
     const filteredManagePositions = positionData.department_id
         ? positions.filter(pos => pos.department_id === parseInt(positionData.department_id))
         : positions;
@@ -393,7 +391,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
     const submitEditUser = (e) => {
         e.preventDefault();
-        putUser(route('admin.users.update', editingUser.id), {
+        putUser(route('admin.users.update', [editingUser.id]), {
             preserveScroll: true,
             onSuccess: () => {
                 closeEditUserModal();
@@ -426,7 +424,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             confirmText: 'Reset Device',
             confirmColor: 'bg-yellow-600 hover:bg-yellow-500',
             onConfirm: () => {
-                router.patch(route('admin.users.reset-device', employee.id), {}, {
+                router.patch(route('admin.users.reset-device', [employee.id]), {}, {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -443,7 +441,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             confirmText: 'Delete Employee',
             confirmColor: 'bg-red-600 hover:bg-red-500',
             onConfirm: () => {
-                router.delete(route('admin.users.destroy', employee.id), {
+                router.delete(route('admin.users.destroy', [employee.id]), {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -464,7 +462,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             confirmText: isDisabling ? 'Disable Account' : 'Enable Account',
             confirmColor: isDisabling ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500',
             onConfirm: () => {
-                router.patch(route('admin.users.toggle-status', employee.id), {}, {
+                router.patch(route('admin.users.toggle-status', [employee.id]), {}, {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -476,12 +474,12 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         setActiveDropdown(null); 
         
         if (employee.has_password) {
-            router.post(route('employees.send-reset', employee.id), {}, {
+            router.post(route('employees.send-reset', [employee.id]), {}, {
                 preserveScroll: true,
                 onSuccess: () => triggerToast(`Reset link sent to ${employee.email}`, 'success'),
             });
         } else {
-            router.post(route('employees.send-activation', employee.id), {}, {
+            router.post(route('employees.send-activation', [employee.id]), {}, {
                 preserveScroll: true,
                 onSuccess: () => triggerToast(`Activation link sent to ${employee.email}`, 'success'),
             });
@@ -496,7 +494,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             confirmText: 'Delete Role',
             confirmColor: 'bg-red-600 hover:bg-red-500',
             onConfirm: () => {
-                router.delete(route('admin.roles.destroy', role.id), {
+                router.delete(route('admin.roles.destroy', [role.id]), {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -512,7 +510,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             confirmText: 'Delete Department',
             confirmColor: 'bg-red-600 hover:bg-red-500',
             onConfirm: () => {
-                router.delete(route('admin.departments.destroy', department.id), {
+                router.delete(route('admin.departments.destroy', [department.id]), {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -528,7 +526,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             confirmText: 'Delete Position',
             confirmColor: 'bg-red-600 hover:bg-red-500',
             onConfirm: () => {
-                router.delete(route('admin.positions.destroy', position.id), {
+                router.delete(route('admin.positions.destroy', [position.id]), {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -544,7 +542,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             confirmText: 'Delete Branch',
             confirmColor: 'bg-red-600 hover:bg-red-500',
             onConfirm: () => {
-                router.delete(route('admin.branches.destroy', branch.id), {
+                router.delete(route('admin.branches.destroy', [branch.id]), {
                     preserveScroll: true,
                     onSuccess: () => closeConfirmModal(),
                 });
@@ -692,7 +690,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                             ))}
                         </select>
 
-                        {/* NEW POSITION DROPDOWN */}
                         <select
                             className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             value={filterPosition}
@@ -743,7 +740,6 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                     </th>
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">Branch</th>
                                     
-                                    {/* NEW SORTABLE STATUS HEADER */}
                                     <th scope="col" className="px-6 py-3 bg-gray-50 font-bold tracking-wider">
                                         <div className="flex items-center">
                                             <span>Status</span>
@@ -919,6 +915,14 @@ export default function EmployeeManagement({ users = [], departments = [], posit
                                                         }}>
                                                             Device Reset
                                                         </Link>
+                                                        <button 
+                                                            className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" 
+                                                            onClick={(e) => {
+                                                                e.preventDefault(); e.stopPropagation(); confirmToggleStatus(employee);
+                                                            }}
+                                                        >
+                                                            {employee.status === 'Disabled' ? 'Enable Account' : 'Disable Account'}
+                                                        </button>
                                                         <Link as="button" method="delete" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
                                                             e.preventDefault(); e.stopPropagation(); confirmDeleteUser(employee);
                                                         }}>
