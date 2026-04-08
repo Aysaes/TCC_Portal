@@ -88,7 +88,7 @@ if (strtolower($roleName) !== 'admin') {
 
         } elseif ($safeRole === 'operations manager') {
             // 🟢 OM: Only Receptionist and TCC Driver
-            $query->whereIn('name', ['Receptionist', 'TCC Driver']);
+            $query->whereIn('name', ['Receptionist']);
 
         // (Added fallback check for 'chief veterinarian' just in case it isn't abbreviated in the DB)
         } elseif ($safeRole === 'chief vet' || $safeRole === 'chief veterinarian') {
