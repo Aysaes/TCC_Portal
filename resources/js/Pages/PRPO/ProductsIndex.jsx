@@ -191,7 +191,8 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
         name: '',
         contact_person: '',
         contact_number: '',
-        address: ''
+        address: '',
+        tin: ''
     });
 
     const closeSupplierModal = () => {
@@ -222,7 +223,8 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
             name: sup.name,
             contact_person: sup.contact_person || '',
             contact_number: sup.contact_number || '',
-            address: sup.address || ''
+            address: sup.address || '',
+            tin: sup.tin || ''
         });
     };
 
@@ -600,7 +602,7 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
 
                     <form onSubmit={submitSupplier} className="mb-6 rounded-md bg-gray-50 p-4 border border-gray-100">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                            {/* Row 1: Name (Full width on mobile, spans 2 columns if needed or just 1) */}
+                            {/* Row 1: Name */}
                             <div className="sm:col-span-2">
                                 <InputLabel htmlFor="sup_name" value={editingSupplier ? "Update Supplier Name" : "New Supplier Name"} />
                                 <TextInput id="sup_name" className="mt-1 block w-full" value={supData.name} onChange={(e) => setSupData('name', e.target.value)} required placeholder="e.g. MedCorp Inc." />
@@ -620,11 +622,17 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
                                 <InputError message={supErrors.contact_number} className="mt-2" />
                             </div>
 
-                            {/* Row 3: Address */}
-                            <div className="sm:col-span-2">
+                            {/* Row 3: Address & TIN */}
+                            <div>
                                 <InputLabel htmlFor="address" value="Address" />
                                 <TextInput id="address" className="mt-1 block w-full" value={supData.address} onChange={(e) => setSupData('address', e.target.value)} placeholder="e.g. 123 Main St, City" />
                                 <InputError message={supErrors.address} className="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="tin" value="TIN" />
+                                <TextInput id="tin" className="mt-1 block w-full" value={supData.tin} onChange={(e) => setSupData('tin', e.target.value)} placeholder="e.g. 123-456-789-000" />
+                                <InputError message={supErrors.tin} className="mt-2" />
                             </div>
                         </div>
 
