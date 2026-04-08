@@ -14,13 +14,46 @@ export default function SidebarLayout({
 }) {
     const { auth } = usePage().props;
     
-    // 🟢 NEW: Store notifications and count in local state for instant UI updates
+    // 🟢 NEW: Store notifications and count in local state
     const [localNotifications, setLocalNotifications] = useState(auth.notifications || []);
     const [localUnreadCount, setLocalUnreadCount] = useState(auth.unreadNotificationsCount || 0);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+    // 🟢 FIX 1: Calculate hasMore dynamically so it NEVER gets out of sync!
+    const totalNotificationsCount = auth.totalNotificationsCount || 0;
+    const hasMore = totalNotificationsCount > localNotifications.length;
+
+    const loadMoreNotifications = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isLoadingMore || !hasMore) return;
+
+        setIsLoadingMore(true);
+
+        try {
+            const response = await axios.get(route('notifications.load-more'), {
+                params: { offset: localNotifications.length }
+            });
+
+            const newNotifications = response.data.notifications;
+            
+            // Append the older notifications to our existing list
+            setLocalNotifications(prev => [...prev, ...newNotifications]);
+        } catch (error) {
+            console.error("Failed to load older notifications", error);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    };
 
     // Keep local state synced if Inertia pushes fresh props from the server
     useEffect(() => {
-        setLocalNotifications(auth.notifications || []);
+        // 🟢 FIX 2: Only overwrite local notifications if the backend sends a completely fresh/smaller list.
+        // This prevents Inertia from wiping out the user's history if they click "Load More" and then trigger a page reload!
+        if (localNotifications.length <= (auth.notifications?.length || 0)) {
+            setLocalNotifications(auth.notifications || []);
+        }
         setLocalUnreadCount(auth.unreadNotificationsCount || 0);
     }, [auth.notifications, auth.unreadNotificationsCount]);
 
@@ -473,10 +506,24 @@ export default function SidebarLayout({
                                             ))}
                                         </div>
 
-                                        {/* 🟢 NEW: View All Footer Link securely added to the bottom */}
-                                        <div className="block px-4 py-2.5 bg-gray-50 text-center border-t border-gray-100 rounded-b-md text-xs text-gray-400 font-medium">
-    Showing recent notifications
-</div>
+                                        {/* 🟢 UPDATED: "Load More" Footer Button */}
+                                        {hasMore && (
+                                            <div className="block bg-gray-50 text-center border-t border-gray-100 rounded-b-md">
+                                                <button 
+                                                    onClick={loadMoreNotifications}
+                                                    disabled={isLoadingMore}
+                                                    className="block w-full py-2.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-gray-100 transition disabled:opacity-50"
+                                                >
+                                                    {isLoadingMore ? 'Loading older alerts...' : 'Show Previous Notifications'}
+                                                </button>
+                                            </div>
+                                        )}
+                                        
+                                        {!hasMore && localNotifications.length > 0 && (
+                                            <div className="block px-4 py-2.5 bg-gray-50 text-center border-t border-gray-100 rounded-b-md text-xs text-gray-400 font-medium">
+                                                End of notification history
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </Dropdown.Content>
@@ -513,7 +560,7 @@ export default function SidebarLayout({
                                     <Dropdown.Link href={route('admin.duty-meals.index')}>
                                         Duty Meal Module
                                     </Dropdown.Link>
-                                )}
+                               )}
                             </Dropdown.Content>
                         </Dropdown>
 
