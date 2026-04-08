@@ -10,6 +10,10 @@ class CompanyContent extends Model
         'type',
         'title',
         'content',
+        'content_html', // Added for Rich Text
         'image_path',
+        'image_zoom',     // Added for Cropper
+        'image_offset_x', // Added for Cropper
+        'image_offset_y', // Added for Cropper
     ];
 }
