@@ -77,7 +77,7 @@
                 Contact: {{ $po->supplier->contact_person ?? 'N/A' }}<br>
                 Phone: {{ $po->supplier->contact_number ?? 'N/A' }}<br>
                 Address: {{ $po->supplier->address ?? 'N/A' }}<br>
-                Supplier TIN: {{ $po->supplier->tin ?? 'N/A' }}
+                TIN: {{ $po->supplier->tin ?? 'N/A' }}
             </td>
             <td>
                 <span class="info-label">Shipping Details:</span>
