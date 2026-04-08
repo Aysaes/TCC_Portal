@@ -283,7 +283,7 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Budget Ref. <span className="text-red-500">*</span></label>
+                                <label className="block text-sm font-medium text-gray-700">Budget Ref.</label>
                                 <input type="text" value={data.budget_ref} onChange={e => setData('budget_ref', e.target.value)} className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.budget_ref ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'}`} placeholder="Enter Ref..." />
                                 {errors.budget_ref && <p className="mt-2 text-sm text-red-600">{errors.budget_ref}</p>}
                             </div>

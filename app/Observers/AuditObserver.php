@@ -19,9 +19,13 @@ class AuditObserver
             \App\Models\CompanyContent::class => 'Company Content',
             \App\Models\OrgChartMember::class => 'Organizational Chart',
 
+            // THE DOCUMENT MODELS HERE:
+            \App\Models\Document::class => 'Document Repository',
+            \App\Models\DocumentCategory::class => 'Document Repository',
+
             // HR Module
             \App\Models\HrRequest::class => 'HR Module',
-            \App\Models\ManpowerRequest::class => 'Manpower Request',
+            \App\Models\ManpowerRequest::class => 'HR Module',
 
             // PR/PO Module
             \App\Models\Product::class => 'PR/PO Module',

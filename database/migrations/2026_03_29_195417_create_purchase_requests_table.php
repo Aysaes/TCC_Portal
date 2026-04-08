@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('purchase_requests', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // The person who created it
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('branch');
             $table->string('department');
             $table->date('date_prepared');
@@ -18,11 +18,11 @@ return new class extends Migration
             $table->string('priority')->nullable();
             $table->date('date_needed')->nullable();
             $table->string('budget_status')->nullable();
-            $table->string('budget_ref');
+            $table->string('budget_ref')->nullable();
             $table->integer('no_of_quotations');
             $table->text('purpose_of_request')->nullable();
             $table->text('impact_if_not_procured')->nullable();
-            $table->string('status')->default('pending_inventory_assistant'); // Initial status
+            $table->string('status')->default('pending_inventory_assistant');
             $table->timestamps();
         });
     }

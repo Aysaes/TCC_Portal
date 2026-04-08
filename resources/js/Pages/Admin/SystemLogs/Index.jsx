@@ -140,17 +140,15 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                             <option value="">All Modules</option>
                             <option value="Authentication">Authentication</option>
                             <option value="Employee Management">Employee Management</option>
-                            <option value="Org Chart">Org Chart</option>
+                            <option value="Organizational Chart">Organizational Chart</option>
                             <option value="Announcements">Announcements</option>
                             <option value="Company Content">Company Content</option>
                             <option value="Document Repository">Document Repository</option>
-                            <option value="HR Requests">HR Requests</option>
+                            <option value="HR Module">HR Module</option>
                             <option value="Manpower Requests">Manpower Requests</option>
                             <option value="Feedback">Feedback</option>
-                            <option value="Purchase Requests">Purchase Requests (PR)</option>
-                            <option value="Purchase Orders">Purchase Orders (PO)</option>
-                            <option value="Products Masterlist">Products Masterlist</option>
-                            <option value="Duty Meals">Duty Meals</option>
+                            <option value="PR/PO Module">PR/PO Module</option>
+                            <option value="Duty Meal Module">Duty Meal Module</option>
                         </select>
 
                         {/* ACTIONS (FIXED EXACT MATCHES) */}

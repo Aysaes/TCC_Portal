@@ -21,6 +21,13 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         window.dispatchEvent(new CustomEvent('flash-toast', { detail: { message, type } }));
     };
 
+    // Helper to check if a role is an admin
+    const isAdminRole = (roleId) => {
+        if (!roleId) return false;
+        const role = roles.find(r => r.id.toString() === roleId.toString());
+        return role && (role.name.toLowerCase() === 'admin' || role.name.toLowerCase() === 'super admin');
+    };
+
     // Global Confirm Modal
     const [confirmDialog, setConfirmDialog] = useState({
         isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {}
@@ -311,6 +318,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
         role_id: '',
         department_id: '',
         position_id: '',
+        device_limit: 2,
         branch_ids: [],
     });
 
@@ -376,7 +384,7 @@ export default function EmployeeManagement({ users = [], departments = [], posit
             role_id: user.role_id,
             department_id: user.department_id,
             position_id: user.position_id,
-            device_limit: user.device_limit,
+            device_limit: user.device_limit || 2,
             branch_ids: user.branches ? user.branches.map(b => b.id) : [],
         });
         setEditUserModalOpen(true);
@@ -1120,7 +1128,19 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
                             <div className="mt-4">
                                 <InputLabel htmlFor="role_id" value="System Role" />
-                                <select id="role_id" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value={userData.role_id} onChange={(e) => setUserData('role_id', e.target.value)} required>
+                                <select 
+                                    id="role_id" 
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                                    value={userData.role_id} 
+                                    onChange={(e) => {
+                                        const newRoleId = e.target.value;
+                                        setUserData('role_id', newRoleId);
+                                        if (!isAdminRole(newRoleId) && userData.device_limit > 2) {
+                                            setUserData('device_limit', 2);
+                                        }
+                                    }} 
+                                    required
+                                >
                                     <option value="" disabled>Select Role</option>
                                     {roles.map((role) => (
                                         <option key={role.id} value={role.id} className="capitalize">{role.name}</option>
@@ -1131,7 +1151,25 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
                             <div className="mt-4">
                                 <InputLabel htmlFor="device_limit" value="Device Login Limit" />
-                                <TextInput id="device_limit" type="number" min="1" className="mt-1 block w-full" value={userData.device_limit} onChange={(e) => setUserData('device_limit', e.target.value)} required />
+                                <TextInput 
+                                    id="device_limit" 
+                                    type="number" 
+                                    min="1" 
+                                    max={!isAdminRole(userData.role_id) ? "2" : ""} 
+                                    className="mt-1 block w-full" 
+                                    value={userData.device_limit} 
+                                    onChange={(e) => {
+                                        let val = parseInt(e.target.value);
+                                        if (!isAdminRole(userData.role_id) && val > 2) {
+                                            val = 2;
+                                        }
+                                        setUserData('device_limit', val || '');
+                                    }} 
+                                    required 
+                                />
+                                {!isAdminRole(userData.role_id) && userData.role_id !== '' && (
+                                    <p className="mt-1 text-xs text-orange-500">Non-admin roles are limited to a maximum of 2 devices.</p>
+                                )}
                                 <InputError message={userErrors.device_limit} className="mt-2" />
                             </div>
                         </div>
@@ -1200,7 +1238,19 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
                             <div className="mt-4">
                                 <InputLabel htmlFor="edit_role_id" value="System Role" />
-                                <select id="edit_role_id" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" value={editUserData.role_id} onChange={(e) => setEditData('role_id', e.target.value)} required>
+                                <select 
+                                    id="edit_role_id" 
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                                    value={editUserData.role_id} 
+                                    onChange={(e) => {
+                                        const newRoleId = e.target.value;
+                                        setEditData('role_id', newRoleId);
+                                        if (!isAdminRole(newRoleId) && editUserData.device_limit > 2) {
+                                            setEditData('device_limit', 2);
+                                        }
+                                    }} 
+                                    required
+                                >
                                     <option value="" disabled>Select Role</option>
                                     {roles.map((role) => <option key={role.id} value={role.id} className="capitalize">{role.name}</option>)}
                                 </select>
@@ -1209,7 +1259,25 @@ export default function EmployeeManagement({ users = [], departments = [], posit
 
                             <div className="mt-4">
                                 <InputLabel htmlFor="edit_device_limit" value="Device Login Limit" />
-                                <TextInput id="edit_device_limit" type="number" min="1" className="mt-1 block w-full" value={editUserData.device_limit} onChange={(e) => setEditData('device_limit', e.target.value)} required />
+                                <TextInput 
+                                    id="edit_device_limit" 
+                                    type="number" 
+                                    min="1" 
+                                    max={!isAdminRole(editUserData.role_id) ? "2" : ""} 
+                                    className="mt-1 block w-full" 
+                                    value={editUserData.device_limit} 
+                                    onChange={(e) => {
+                                        let val = parseInt(e.target.value);
+                                        if (!isAdminRole(editUserData.role_id) && val > 2) {
+                                            val = 2;
+                                        }
+                                        setEditData('device_limit', val || '');
+                                    }} 
+                                    required 
+                                />
+                                {!isAdminRole(editUserData.role_id) && (
+                                    <p className="mt-1 text-xs text-orange-500">Non-admin roles are limited to a maximum of 2 devices.</p>
+                                )}
                                 <InputError message={editErrors.device_limit} className="mt-2" />
                             </div>
                         </div>

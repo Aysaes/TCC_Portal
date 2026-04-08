@@ -86,7 +86,7 @@ class PurchaseRequestController extends Controller
             'priority' => 'nullable|string|max:255',
             'date_needed' => 'nullable|date|after_or_equal:today', 
             'budget_status' => 'nullable|string|max:255',
-            'budget_ref' => 'required|string|max:255',
+            'budget_ref' => 'nullable|string|max:255',
             'no_of_quotations' => 'required|integer|min:0',
             'purpose_of_request' => 'nullable|string',
             'impact_if_not_procured' => 'nullable|string',

@@ -5,13 +5,11 @@ import TextInput from '@/Components/TextInput';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
-// 1. IMPORT YOUR DYNAMIC LINKS GENERATOR
 import { getHRLinks } from '@/Config/navigation';
 
 export default function ManpowerRequest({ auth, branches = [], departments = [], positions = [], managers = [] }) {
     const { system } = usePage().props;
     
-    // 2. GENERATE THE LINKS FOR THIS SPECIFIC USER
     const hrLinks = getHRLinks(auth.user.role?.name || 'Employee', auth);
 
     // Auto-calculate the minimum date (30 calendar days notice)
@@ -19,7 +17,7 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     const minDateNeeded = thirtyDaysFromNow.toISOString().split('T')[0];
 
-    // Initialize all form fields based on your exact specifications
+    // Initialize all form fields
     const { data, setData, post, processing, errors, reset } = useForm({
         branch_id: '',
         department_id: '',
@@ -50,6 +48,27 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
     // Filter positions dynamically when a department is selected
     const availablePositions = positions.filter(pos => String(pos.department_id) === String(data.department_id));
 
+    // 🟢 1. INTERN ELIGIBILITY LOGIC
+    const internEligibleDepartments = [
+        'Accounting',
+        'Human Resources',
+        'Information Technology',
+        'Marketing',
+        'Procurement',
+        'Veterinary Technicians'
+    ];
+
+    const selectedDept = departments.find(d => String(d.id) === String(data.department_id));
+    const isInternEligible = selectedDept ? internEligibleDepartments.includes(selectedDept.name) : false;
+
+    useEffect(() => {
+        // Auto-clear Employment Status if they select "Intern" and switch to an ineligible department
+        if (data.employment_status === 'Intern' && !isInternEligible) {
+            setData('employment_status', '');
+        }
+    }, [data.department_id, isInternEligible]);
+
+
     // Clear conditional child fields automatically if the parent selection changes
     useEffect(() => { if (data.is_budgeted === '1') setData('unbudgeted_purpose', ''); }, [data.is_budgeted]);
     useEffect(() => { if (data.employment_status !== 'Reliever') setData('reliever_info', ''); }, [data.employment_status]);
@@ -64,9 +83,7 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
         });
     };
 
-
     return (
-        // 3. PASS THE LINKS INTO THE LAYOUT!
         <SidebarLayout user={auth.user} activeModule="HR" sidebarLinks={hrLinks}>
             <Head title="Manpower Request" />
 
@@ -92,9 +109,17 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
                             {/* Branch */}
                             <div>
                                 <InputLabel htmlFor="branch_id" value="Target Branch" />
-                                <select id="branch_id" className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500" value={data.branch_id} onChange={e => setData('branch_id', e.target.value)}>
+                                <select 
+                                    id="branch_id" 
+                                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500" 
+                                    value={data.branch_id} 
+                                    onChange={e => setData('branch_id', e.target.value)}
+                                >
                                     <option value="">Select Branch...</option>
-                                    {/* Added a fallback so you know if data is reaching React */}
+                                    
+                                    {/* 🟢 2. ADDED "ALL BRANCH" OPTION HERE */}
+                                    <option value="all">All Branch</option> 
+
                                     {branches && branches.length > 0 ? (
                                         branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)
                                     ) : (
@@ -199,6 +224,12 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
                                         <option value="Part-time">Part-time</option>
                                         <option value="Reliever">Reliever</option>
                                         <option value="Project-based">Project-based</option>
+                                        
+                                        {/* 🟢 3. DYNAMIC INTERN OPTION */}
+                                        {isInternEligible && (
+                                            <option value="Intern">Intern</option>
+                                        )}
+                                        
                                     </select>
                                     <InputError message={errors.employment_status} className="mt-2" />
                                 </div>

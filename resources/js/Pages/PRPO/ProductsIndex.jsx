@@ -190,7 +190,9 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
     const { data: supData, setData: setSupData, post: postSup, put: putSup, processing: supProcessing, errors: supErrors, reset: resetSup, clearErrors: clearSupErrors } = useForm({ 
         name: '',
         contact_person: '',
-        contact_number: ''
+        contact_number: '',
+        address: '',
+        tin: ''
     });
 
     const closeSupplierModal = () => {
@@ -220,7 +222,9 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
         setSupData({
             name: sup.name,
             contact_person: sup.contact_person || '',
-            contact_number: sup.contact_number || ''
+            contact_number: sup.contact_number || '',
+            address: sup.address || '',
+            tin: sup.tin || ''
         });
     };
 
@@ -596,33 +600,81 @@ export default function ProductsIndex({ auth, products = [], suppliers = [] }) {
                 <div className="p-6">
                     <h2 className="text-lg font-medium text-gray-900 mb-4">Manage Suppliers</h2>
 
-                    <form onSubmit={submitSupplier} className="mb-6 flex items-end gap-3 rounded-md bg-gray-50 p-4 border border-gray-100">
-                        <div className="flex-grow">
-                            <InputLabel htmlFor="sup_name" value={editingSupplier ? "Update Supplier Name" : "New Supplier Name"} />
-                            <TextInput id="sup_name" className="mt-1 block w-full" value={supData.name} onChange={(e) => setSupData('name', e.target.value)} required placeholder="e.g. MedCorp Inc." />
-                            <InputError message={supErrors.name} className="mt-2" />
-                        </div>
+                    <form onSubmit={submitSupplier} className="mb-6 rounded-md bg-gray-50 p-4 border border-gray-100">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            {/* Row 1: Name */}
+                            <div className="sm:col-span-2">
+                                <InputLabel htmlFor="sup_name" value={editingSupplier ? "Update Supplier Name" : "New Supplier Name"} />
+                                <TextInput id="sup_name" className="mt-1 block w-full" value={supData.name} onChange={(e) => setSupData('name', e.target.value)} required placeholder="e.g. MedCorp Inc." />
+                                <InputError message={supErrors.name} className="mt-2" />
+                            </div>
 
-                        <div>
+                            {/* Row 2: Contact Info */}
+                            <div>
                                 <InputLabel htmlFor="contact_person" value="Contact Person" />
                                 <TextInput id="contact_person" className="mt-1 block w-full" value={supData.contact_person} onChange={(e) => setSupData('contact_person', e.target.value)} placeholder="e.g. Jane Doe" />
                                 <InputError message={supErrors.contact_person} className="mt-2" />
                             </div>
 
-                        
                             <div>
                                 <InputLabel htmlFor="contact_number" value="Contact Number" />
-                                <TextInput id="contact_number" className="mt-1 block w-full" value={supData.contact_number} onChange={(e) => setSupData('contact_number', e.target.value)} placeholder="e.g. 0917-123-4567" />
+                                <TextInput 
+                                    id="contact_number" 
+                                    className="mt-1 block w-full" 
+                                    value={supData.contact_number} 
+                                    onChange={(e) => {
+                                        // This regex removes anything that is NOT a digit (0-9)
+                                        const numericValue = e.target.value.replace(/\D/g, '');
+                                        setSupData('contact_number', numericValue);
+                                    }} 
+                                    placeholder="e.g. 09171234567" 
+                                    maxLength="15" // Optional: Prevents them from typing an infinitely long number
+                                />
                                 <InputError message={supErrors.contact_number} className="mt-2" />
                             </div>
 
-                        
-                        {editingSupplier && (
-                            <SecondaryButton type="button" onClick={() => { setEditingSupplier(null); resetSup(); }} className="mb-1">Cancel</SecondaryButton>
-                        )}
-                        <PrimaryButton disabled={supProcessing} className="mb-1">
-                            {editingSupplier ? 'Update' : 'Add'}
-                        </PrimaryButton>
+                            {/* Row 3: Address & TIN */}
+                            <div>
+                                <InputLabel htmlFor="address" value="Address" />
+                                <TextInput id="address" className="mt-1 block w-full" value={supData.address} onChange={(e) => setSupData('address', e.target.value)} placeholder="e.g. 123 Main St, City" />
+                                <InputError message={supErrors.address} className="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="tin" value="TIN" />
+                                <TextInput 
+                                    id="tin" 
+                                    className="mt-1 block w-full" 
+                                    value={supData.tin} 
+                                    onChange={(e) => {
+                                        // 1. Remove anything that isn't a number
+                                        let val = e.target.value.replace(/\D/g, '');
+                                        
+                                        // 2. Limit to exactly 12 digits max
+                                        val = val.substring(0, 12);
+                                        
+                                        // 3. Group by 3s and join with dashes
+                                        const formattedTIN = val.match(/.{1,3}/g)?.join('-') || '';
+                                        
+                                        // 4. Save the formatted string to the form state
+                                        setSupData('tin', formattedTIN);
+                                    }} 
+                                    placeholder="e.g. 123-456-789-000" 
+                                    maxLength="15" // 12 numbers + 3 dashes = 15 characters total
+                                />
+                                <InputError message={supErrors.tin} className="mt-2" />
+                            </div>
+                        </div>
+
+                        {/* Form Actions */}
+                        <div className="flex justify-end gap-2">
+                            {editingSupplier && (
+                                <SecondaryButton type="button" onClick={() => { setEditingSupplier(null); resetSup(); }}>Cancel</SecondaryButton>
+                            )}
+                            <PrimaryButton disabled={supProcessing}>
+                                {editingSupplier ? 'Update' : 'Add'}
+                            </PrimaryButton>
+                        </div>
                     </form>
 
                     <h3 className="text-sm font-semibold text-gray-700 mb-2">Existing Suppliers</h3>
