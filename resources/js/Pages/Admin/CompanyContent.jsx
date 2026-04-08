@@ -17,6 +17,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
     const DEFAULT_ZOOM = 1;
     const MIN_ZOOM = 0.3;
     const MAX_ZOOM = 4;
+    const ZOOM_STEP = 0.1;
 
     const normalizedTypeOptions = useMemo(() => {
         return (contentTypes || [])
@@ -270,17 +271,20 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
         setStateFn((prev) => ({ ...prev, dragging: false }));
     };
 
-    const handleCropWheel = (e, data, setDataFn) => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (data.image_zoom || DEFAULT_ZOOM) + delta));
-        setDataFn('image_zoom', Number(nextZoom.toFixed(2)));
-    };
-
     const resetCrop = (setDataFn) => {
         setDataFn('image_zoom', DEFAULT_ZOOM);
         setDataFn('image_offset_x', 0);
         setDataFn('image_offset_y', 0);
+    };
+
+    const zoomImageIn = (data, setDataFn) => {
+        const nextZoom = Math.min(MAX_ZOOM, (data.image_zoom || DEFAULT_ZOOM) + ZOOM_STEP);
+        setDataFn('image_zoom', Number(nextZoom.toFixed(2)));
+    };
+
+    const zoomImageOut = (data, setDataFn) => {
+        const nextZoom = Math.max(MIN_ZOOM, (data.image_zoom || DEFAULT_ZOOM) - ZOOM_STEP);
+        setDataFn('image_zoom', Number(nextZoom.toFixed(2)));
     };
 
     const closeConfirmModal = () => {
@@ -826,13 +830,34 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                     <>
                         <div className="flex items-center justify-between">
                             <p className="text-sm font-medium text-gray-700">Image Crop Preview</p>
-                            <button
-                                type="button"
-                                onClick={() => resetCrop(setDataFn)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                                Reset Crop
-                            </button>
+
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => zoomImageOut(data, setDataFn)}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={(data.image_zoom || DEFAULT_ZOOM) <= MIN_ZOOM}
+                                >
+                                    −
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => zoomImageIn(data, setDataFn)}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={(data.image_zoom || DEFAULT_ZOOM) >= MAX_ZOOM}
+                                >
+                                    +
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => resetCrop(setDataFn)}
+                                    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    Reset
+                                </button>
+                            </div>
                         </div>
 
                         <div
@@ -840,7 +865,6 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                             onMouseMove={(e) => handleCropMove(e, cropState, setDataFn)}
                             onMouseUp={() => stopCropDrag(setCropState)}
                             onMouseLeave={() => stopCropDrag(setCropState)}
-                            onWheel={(e) => handleCropWheel(e, data, setDataFn)}
                         >
                             <img
                                 src={imageSrc}
@@ -860,7 +884,7 @@ export default function CompanyContent({ auth, contents = [], contentTypes = [] 
                         </div>
 
                         <p className="text-xs text-gray-500">
-                            Drag the image to position it inside the fixed frame. Use your mouse wheel to zoom.
+                            Drag to reposition. Use − and + to zoom.
                         </p>
                     </>
                 ) : (

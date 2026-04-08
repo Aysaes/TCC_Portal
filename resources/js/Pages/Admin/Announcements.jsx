@@ -14,10 +14,11 @@ export default function Announcements({ auth, announcements = [], branches = [],
     const adminLinks = getAdminLinks();
     const { system } = usePage().props;
 
-    const FRAME_RATIO_CLASS = 'aspect-[16/9] w-full';
+    const FRAME_RATIO_CLASS = 'aspect-[16/9] w-full max-w-[720px]';
     const DEFAULT_ZOOM = 1;
-    const MIN_ZOOM = 0.3;
-    const MAX_ZOOM = 4;
+    const MIN_ZOOM = 0.6;
+    const MAX_ZOOM = 2.2;
+    const ZOOM_STEP = 0.1;
 
     // --- FILTER STATES ---
     const [titleSearch, setTitleSearch] = useState('');
@@ -240,10 +241,13 @@ export default function Announcements({ auth, announcements = [], branches = [],
         setStateFn((prev) => ({ ...prev, dragging: false }));
     };
 
-    const handleCropWheel = (e, data, setDataFn) => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (data.image_zoom || DEFAULT_ZOOM) + delta));
+    const zoomImageIn = (data, setDataFn) => {
+        const nextZoom = Math.min(MAX_ZOOM, (data.image_zoom || DEFAULT_ZOOM) + ZOOM_STEP);
+        setDataFn('image_zoom', Number(nextZoom.toFixed(2)));
+    };
+
+    const zoomImageOut = (data, setDataFn) => {
+        const nextZoom = Math.max(MIN_ZOOM, (data.image_zoom || DEFAULT_ZOOM) - ZOOM_STEP);
         setDataFn('image_zoom', Number(nextZoom.toFixed(2)));
     };
 
@@ -582,43 +586,65 @@ export default function Announcements({ auth, announcements = [], branches = [],
 
                 {imageSrc ? (
                     <>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
                             <p className="text-sm font-medium text-gray-700">Cover Photo Preview</p>
-                            <button
-                                type="button"
-                                onClick={() => resetCrop(setDataFn)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                                Reset Crop
-                            </button>
+
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => zoomImageOut(data, setDataFn)}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={(data.image_zoom || DEFAULT_ZOOM) <= MIN_ZOOM}
+                                >
+                                    −
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => zoomImageIn(data, setDataFn)}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={(data.image_zoom || DEFAULT_ZOOM) >= MAX_ZOOM}
+                                >
+                                    +
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => resetCrop(setDataFn)}
+                                    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    Reset
+                                </button>
+                            </div>
                         </div>
 
-                        <div
-                            className={`${FRAME_RATIO_CLASS} relative overflow-hidden rounded-lg border border-gray-200 bg-white`}
-                            onMouseMove={(e) => handleCropMove(e, cropState, setDataFn)}
-                            onMouseUp={() => stopCropDrag(setCropState)}
-                            onMouseLeave={() => stopCropDrag(setCropState)}
-                            onWheel={(e) => handleCropWheel(e, data, setDataFn)}
-                        >
-                            <img
-                                src={imageSrc}
-                                alt="Cover Preview"
-                                draggable={false}
-                                onMouseDown={(e) => startCropDrag(e, data, setCropState)}
-                                className={`${cropState.dragging ? 'cursor-grabbing' : 'cursor-grab'} absolute left-1/2 top-1/2 select-none`}
-                                style={{
-                                    transform: `translate(calc(-50% + ${data.image_offset_x || 0}px), calc(-50% + ${data.image_offset_y || 0}px)) scale(${data.image_zoom || DEFAULT_ZOOM})`,
-                                    transformOrigin: 'center center',
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'contain',
-                                    pointerEvents: 'auto',
-                                }}
-                            />
+                        <div className="flex justify-center">
+                            <div
+                                className={`${FRAME_RATIO_CLASS} relative overflow-hidden rounded-lg border border-gray-200 bg-white`}
+                                onMouseMove={(e) => handleCropMove(e, cropState, setDataFn)}
+                                onMouseUp={() => stopCropDrag(setCropState)}
+                                onMouseLeave={() => stopCropDrag(setCropState)}
+                            >
+                                <img
+                                    src={imageSrc}
+                                    alt="Cover Preview"
+                                    draggable={false}
+                                    onMouseDown={(e) => startCropDrag(e, data, setCropState)}
+                                    className={`${cropState.dragging ? 'cursor-grabbing' : 'cursor-grab'} absolute left-1/2 top-1/2 select-none`}
+                                    style={{
+                                        transform: `translate(calc(-50% + ${data.image_offset_x || 0}px), calc(-50% + ${data.image_offset_y || 0}px)) scale(${data.image_zoom || DEFAULT_ZOOM})`,
+                                        transformOrigin: 'center center',
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'contain',
+                                        pointerEvents: 'auto',
+                                    }}
+                                />
+                            </div>
                         </div>
 
                         <p className="text-xs text-gray-500">
-                            Drag the image to position it inside the fixed frame. Use your mouse wheel to zoom.
+                            Drag the image to reposition it inside the frame. Use the minus and plus buttons to zoom out or in.
                         </p>
                     </>
                 ) : (
