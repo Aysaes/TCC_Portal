@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import ConfirmModal from '@/Components/ConfirmModal';
 
-export default function ApprovalRequest({ auth, requests = [], userRole = '' }) {
+export default function ApprovalRequest({ auth, requests = [], userRole = '', branches = [] }) {
 
     // Global Confirm Modal
     const [confirmDialog, setConfirmDialog] = useState({
@@ -361,7 +361,11 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '' }) 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <h4 className="text-xs font-bold text-gray-500 uppercase border-b pb-2 mb-3">Placement Info</h4>
-                                        <p className="text-sm mb-2"><span className="font-semibold text-gray-700">Branch:</span> {selectedRequest.branch?.name}</p>
+                                        {/* 🟢 FALLBACK TO 'ALL BRANCHES' ADDED HERE */}
+                                        <p className="text-sm mb-2">
+                                            <span className="font-semibold text-gray-700">Branch:</span>{' '}
+                                            {selectedRequest.branch?.name || branches.map(b => b.name).join(', ')}
+                                        </p>
                                         <p className="text-sm mb-2"><span className="font-semibold text-gray-700">Department:</span> {selectedRequest.department?.name}</p>
                                         <p className="text-sm mb-2"><span className="font-semibold text-gray-700">Type:</span> {selectedRequest.employment_status}</p>
                                         {selectedRequest.employment_status === 'Reliever' && <p className="text-sm mb-2 text-amber-600"><span className="font-semibold">Reliever Info:</span> {selectedRequest.reliever_info}</p>}
