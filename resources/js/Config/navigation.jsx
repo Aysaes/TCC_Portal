@@ -126,8 +126,8 @@ export const getHRLinks = (UserRole = 'Employee', auth) => {
     // 🟢 FIX 1: Add 'hrbp' to the isHRAdmin check so they can see HR Admin Overview
     const isHRAdmin = normalizedRole === 'admin' || normalizedRole === 'hr' || normalizedRole === 'hrbp' || userPosition === 'human resources';
     
-    // 🟢 FIX 2: Add 'hrbp' to isAccounting check so they can see Form 2316 Approvals
-    const isAccounting = normalizedRole === 'general accounting' || normalizedRole === 'accounting' || normalizedRole === 'hrbp';
+    // 🟢 STRICT CHECK: ONLY General Accounting allowed!
+    const isAccounting = normalizedRole === 'general accounting';
 
     // 1. Base links
     const links = [
