@@ -23,19 +23,39 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
         setConfirmDialog({ ...confirmDialog, isOpen: false });
     };
     
-    // Modal State
+    // Details Modal State
     const [selectedPR, setSelectedPR] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // 🟢 REJECTION MODAL STATE
+    const [rejectModal, setRejectModal] = useState({ isOpen: false, prId: null, reason: '' });
+
+    const openRejectModal = (id) => {
+        setRejectModal({ isOpen: true, prId: id, reason: '' });
+    };
+
+    const closeRejectModal = () => {
+        setRejectModal({ isOpen: false, prId: null, reason: '' });
+    };
+
+    const submitRejection = () => {
+        router.patch(route('prpo.purchase-requests.update-status', rejectModal.prId), 
+        { action: 'reject', rejection_reason: rejectModal.reason }, 
+        {
+            preserveScroll: true,
+            onSuccess: () => { 
+                closeRejectModal(); 
+                closeModal(); 
+            } 
+        });
+    };
 
     // SECURITY LOGIC: Role-based approval checking
     const canApprove = (pr) => {
         if (!pr) return false;
-        
         const hasBranchAccess = userRole === 'admin' || userBranches.includes(pr.branch);
-
         if (pr.status === 'pending_inv_tl' && isInvTL && hasBranchAccess) return true;
         if (pr.status === 'pending_ops_manager' && isOpsManager && hasBranchAccess) return true;
-        
         return false;
     };
 
@@ -53,12 +73,17 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
     };
 
     const handleAction = (id, actionType) => {
+        // If action is reject, intercept and open the custom reject modal!
+        if (actionType === 'reject') {
+            openRejectModal(id);
+            return;
+        }
+
         const isApprove = actionType === 'approve';
         const isCancel = actionType === 'cancel';
         
-        // 🟢 Dynamic titles and colors
-        let title = isApprove ? 'Approve' : (isCancel ? 'Cancel' : 'Reject');
-        let confirmColor = isApprove ? 'bg-green-600 hover:bg-green-500' : (isCancel ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-500');
+        let title = isApprove ? 'Approve' : 'Cancel';
+        let confirmColor = isApprove ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-600 hover:bg-gray-500';
 
         setConfirmDialog({
             isOpen: true,
@@ -109,7 +134,6 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
         setTimeout(() => setSelectedPR(null), 200); 
     };
 
-    // 🟢 NEW: Dynamic Header Text
     const getHeaderContent = () => {
         switch(currentView) {
             case 'my_requests': return { title: 'My Purchase Requests', desc: 'Track the status of PRs you have submitted.' };
@@ -133,7 +157,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                     </div>
                 </div>
 
-                {/* 🟢 UPDATED: Filter Tabs */}
+                {/* Filter Tabs */}
                 <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
                     
                     <Link 
@@ -143,7 +167,6 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                         My Requests
                     </Link>
 
-                    {/* Approvers get the Action Needed and Finished tabs */}
                     {!isAssistant && (
                         <>
                             <Link 
@@ -180,6 +203,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                                 <th className="px-6 py-3 font-semibold text-gray-900">PR ID / Ref</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Prepared By</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Branch & Dept</th>
+                                <th className="px-6 py-3 font-semibold text-gray-900">Priority</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Date Needed</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Items Count</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Status</th>
@@ -188,7 +212,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                         <tbody className="divide-y divide-gray-200 bg-white">
                             {requests.data.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">No requests found for this view.</td>
+                                    <td colSpan="8" className="px-6 py-8 text-center text-gray-500">No requests found for this view.</td>
                                 </tr>
                             ) : (
                                 requests.data.map((pr) => (
@@ -200,6 +224,22 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                                         <td className="px-6 py-4 font-medium text-indigo-600 hover:text-indigo-900">{pr.pr_number}</td>
                                         <td className="px-6 py-4">{pr.user?.name || 'Unknown'}</td>
                                         <td className="px-6 py-4">{pr.branch} <br/><span className="text-xs text-gray-500">{pr.department}</span></td>
+                                        
+                                        {/* 🟢 RESTORED PRIORITY COLUMN IN TABLE */}
+                                        <td className="px-6 py-4">
+                                            {pr.priority ? (
+                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
+                                                    pr.priority === 'High' ? 'bg-red-50 text-red-700 ring-red-600/20' :
+                                                    pr.priority === 'Normal' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' :
+                                                    'bg-gray-50 text-gray-600 ring-gray-500/10'
+                                                }`}>
+                                                    {pr.priority}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs italic">N/A</span>
+                                            )}
+                                        </td>
+
                                         <td className="px-6 py-4">{pr.date_needed}</td>
                                         <td className="px-6 py-4 font-medium">{pr.items?.length || 0} Items</td>
                                         <td className="px-6 py-4">{formatStatus(pr.status)}</td>
@@ -237,10 +277,10 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                     >
                         <div 
                             onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-5xl rounded-xl bg-white shadow-2xl transition-all"
+                            className="relative w-full max-w-5xl rounded-xl bg-white shadow-2xl transition-all flex flex-col max-h-[90vh]"
                         >
                             {/* Modal Header */}
-                            <div className="flex items-center justify-between border-b px-6 py-4">
+                            <div className="flex items-center justify-between border-b px-6 py-4 shrink-0">
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-900">{selectedPR.pr_number}</h3>
                                     <p className="text-sm text-gray-500">Prepared by {selectedPR.user?.name} on {selectedPR.date_prepared}</p>
@@ -254,11 +294,12 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                             </div>
 
                             {/* Modal Body */}
-                            <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
+                            <div className="overflow-y-auto px-6 py-4 flex-grow">
                                 <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 rounded-lg bg-gray-50 p-4 text-sm">
                                     <div><span className="block font-semibold text-gray-900">Branch</span> {selectedPR.branch}</div>
                                     <div><span className="block font-semibold text-gray-900">Department</span> {selectedPR.department}</div>
                                     <div><span className="block font-semibold text-gray-900">Request Type</span> {selectedPR.request_type || 'N/A'}</div>
+                                    
                                     <div><span className="block font-semibold text-gray-900">Priority</span> {selectedPR.priority || 'N/A'}</div>
                                     
                                     <div><span className="block font-semibold text-gray-900">Date Needed</span> <span className="text-red-600 font-bold">{selectedPR.date_needed}</span></div>
@@ -274,8 +315,16 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                                     )}
                                 </div>
 
+                                {/* 🟢 REJECTION REASON DISPLAY */}
+                                {selectedPR.status === 'rejected' && selectedPR.rejection_reason && (
+                                    <div className="mb-6 rounded-lg bg-red-50 p-4 border border-red-100">
+                                        <span className="block font-bold text-red-800 text-sm mb-1">Reason for Rejection:</span>
+                                        <p className="text-red-700 text-sm whitespace-pre-wrap">{selectedPR.rejection_reason}</p>
+                                    </div>
+                                )}
+
                                 <h4 className="mb-2 font-bold text-gray-900 border-b pb-1">Requested Items ({selectedPR.items.length})</h4>
-                                <div className="overflow-x-auto rounded-lg border">
+                                <div className="overflow-x-auto rounded-lg border mb-6">
                                     <table className="min-w-full divide-y divide-gray-200 text-sm text-left table-fixed">
                                         <thead className="bg-gray-100">
                                             <tr>
@@ -317,26 +366,26 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                                         </tfoot>
                                     </table>
                                 </div>
+
+                                {/* Tracker Component */}
+                                <div className="px-4 sm:px-12">
+                                    <TrackingStepper currentStatus={selectedPR.status} type="PR" />
+                                </div>
                             </div>
 
-                            {/* Tracker Component */}
-                             <div className="mb-8 px-4 sm:px-12">
-                                 <TrackingStepper currentStatus={selectedPR.status} type="PR" />
-                             </div>
-
                             {/* Modal Footer (Actions) */}
-                            <div className="flex items-center justify-end gap-3 rounded-b-xl border-t bg-gray-50 px-6 py-4">
+                            <div className="flex items-center justify-end gap-3 rounded-b-xl border-t bg-gray-50 px-6 py-4 shrink-0">
 
                                 {currentView === 'my_requests' && ['pending_inv_tl', 'pending_ops_manager', 'approved'].includes(selectedPR.status) && (
                                     <button 
                                         onClick={() => handleAction(selectedPR.id, 'cancel')}
-                                        className="rounded-md bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 transition-colors"
+                                        className="rounded-md bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-50 transition-colors"
                                     >
                                         Cancel Request
                                     </button>
                                 )}
 
-                                <button onClick={closeModal} className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2">
+                                <button onClick={closeModal} className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-100">
                                     Close Window
                                 </button>
                                 
@@ -344,13 +393,13 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                                     <>
                                         <button 
                                             onClick={() => handleAction(selectedPR.id, 'reject')}
-                                            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+                                            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 transition-colors"
                                         >
                                             Reject Request
                                         </button>
                                         <button 
                                             onClick={() => handleAction(selectedPR.id, 'approve')}
-                                            className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+                                            className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 transition-colors"
                                         >
                                             Approve Request
                                         </button>
@@ -371,6 +420,40 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                     </div>
                 )}
             </div>
+
+            {/* 🟢 NEW REJECTION MODAL */}
+            {rejectModal.isOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-red-50">
+                            <h3 className="text-lg font-bold text-red-900">Reject Purchase Request</h3>
+                        </div>
+                        <div className="p-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Please provide a reason for rejection:</label>
+                            <textarea
+                                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+                                rows="4"
+                                value={rejectModal.reason}
+                                onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
+                                placeholder="Explain why this request is being rejected..."
+                                autoFocus
+                            ></textarea>
+                        </div>
+                        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                            <button onClick={closeRejectModal} className="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100">
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={submitRejection} 
+                                className="px-6 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
+                                disabled={!rejectModal.reason.trim()}
+                            >
+                                Submit Rejection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <ConfirmModal 
                 show={confirmDialog.isOpen}

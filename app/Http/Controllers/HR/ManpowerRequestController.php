@@ -319,31 +319,21 @@ class ManpowerRequestController extends Controller
             'position:id,name',
         ]);
 
-        // 🟢 NEW DYNAMIC ROLE-BASED VISIBILITY 🟢
         if (in_array($userRole, ['TL', 'Marketing Manager'])) {
-            // Team Leaders only see what they submitted
             $query->where('user_id', $user->id);
             
         } elseif (in_array($userRole, ['admin', 'HR','HRBP' ,'Director of Corporate Services and Operations'])) {
-            // High-level roles pull everything. React will filter their specific "Action Required" tab.
-            
+            // High-level roles pull everything.
         } else {
-            // Get the Middle Manager's allowed branches
             $primaryBranchId = $user->branch_id;
             $rotatingBranchIds = DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray();
             $allowedBranchIds = array_filter(array_unique(array_merge((array) $primaryBranchId, $rotatingBranchIds)));
 
-            // Middle Managers see their own submissions OR requests in their workflow path THAT MATCH THEIR BRANCH
             $query->where(function ($q) use ($user, $userRole, $allowedBranchIds) {
-                // 1. Always show them requests they submitted themselves
                 $q->where('user_id', $user->id)
-                  // 2. Show requests waiting for their role
                   ->orWhere(function ($subQ) use ($userRole, $allowedBranchIds) {
                       $subQ->whereJsonContains('workflow_path', $userRole);
-                      
-                      // If they are an Operations Manager, they see all branches. Otherwise, restrict them!
                       if ($userRole !== 'Operations Manager') {
-                          // 🟢 MODIFIED: Include null branch_id so they can see "All Branches" requests routed to them
                           $subQ->where(function($branchQuery) use ($allowedBranchIds) {
                               $branchQuery->whereIn('branch_id', $allowedBranchIds)
                                           ->orWhereNull('branch_id');
@@ -353,9 +343,13 @@ class ManpowerRequestController extends Controller
             });
         }
 
+        // 🟢 FETCH ALL BRANCHES TO SEND TO REACT
+        $allBranches = Branch::select('id', 'name')->orderBy('name')->get();
+
         return Inertia::render('HR/Admin/ApprovalRequest', [
             'requests' => $query->latest()->get(),
             'userRole' => $userRole, 
+            'branches' => $allBranches, // 🟢 PASS THEM HERE
         ]);
     }
 
@@ -364,20 +358,26 @@ class ManpowerRequestController extends Controller
     // ----------------------------------------------------------------------
     public function updateStatus(Request $request, ManpowerRequest $manpowerRequest)
     {
+        // 🟢 1. Update Validation to require a reason if Rejected
         $request->validate([
-            'status' => 'required|in:Approved,Rejected'
+            'status' => 'required|in:Approved,Rejected',
+            'rejection_reason' => 'required_if:status,Rejected|nullable|string' 
         ]);
 
         $requesterName = $manpowerRequest->requester->name ?? 'An Employee';
         $originalRequester = $manpowerRequest->requester;
-        
         $currentApproverRole = Auth::user()->role->name ?? 'Management';
 
         if ($request->status === 'Rejected') {
-            $manpowerRequest->update(['status' => 'Rejected']);
+            // 🟢 2. Save the rejection reason to the database
+            $manpowerRequest->update([
+                'status' => 'Rejected',
+                'rejection_reason' => $request->rejection_reason
+            ]);
             
             if ($originalRequester) {
-                $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Rejected by {$currentApproverRole}."));
+                // 🟢 3. Include the reason in the notification sent to the user
+                $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Rejected by {$currentApproverRole}. Reason: " . $request->rejection_reason));
             }
 
             return back()->with('success', "Request has been officially rejected.");
