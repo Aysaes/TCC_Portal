@@ -58,7 +58,8 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
             
             newSchedule.push({
                 date: currentDate.toISOString().split('T')[0],
-                dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }), // Mon, Tue, etc.
+                // 🟢 CHANGED: 'short' to 'long' for full day names (Monday, Tuesday)
+                dayName: currentDate.toLocaleDateString('en-US', { weekday: 'long' }), 
                 main_meal: '',
                 alt_meal: '',
                 participants: []
@@ -280,7 +281,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                             </div>
 
                             <div>
-                                <InputLabel value={`${activeDay.dayName} Alternative Meal (Optional)`} />
+                                <InputLabel value={`${activeDay.dayName} Alternative Meal`} />
                                 <TextInput placeholder="e.g. Tofu Stir-fry (Vegan)" className="mt-1 block w-full" 
                                     value={activeDay.alt_meal} onChange={e => handleMealChange('alt_meal', e.target.value)} />
                             </div>
@@ -304,19 +305,33 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                                 </div>
                                 
                                 {/* Filters */}
-                                <div className="flex gap-2 mb-4 w-full">
-                                    <TextInput placeholder="Search name..." className="flex-1 text-sm min-w-[100px]"
-                                        value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setFilterPosition(''); }} />
-                                    <select className="flex-1 rounded-md border-gray-300 shadow-sm text-sm"
-                                        value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
-                                        <option value="All">All Depts</option>
-                                        {departments.map(dept => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
-                                    </select>
-                                    <select className="flex-1 rounded-md border-gray-300 shadow-sm text-sm"
-                                        value={filterPosition} onChange={e => setFilterPosition(e.target.value)}>
-                                        <option value="">All Positions</option>
-                                        {availablePositions.map(pos => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
-                                    </select>
+                                <div className="flex flex-col gap-3 mb-4 w-full">
+                                    <TextInput 
+                                        placeholder="Search employee name..." 
+                                        className="w-full text-sm"
+                                        value={searchQuery} 
+                                        onChange={e => { setSearchQuery(e.target.value); setFilterPosition(''); }} 
+                                    />
+                                    
+                                    <div className="flex gap-2 w-full">
+                                        <select 
+                                            className="flex-1 w-0 rounded-md border-gray-300 shadow-sm text-sm truncate pr-8"
+                                            value={departmentFilter} 
+                                            onChange={e => setDepartmentFilter(e.target.value)}
+                                        >
+                                            <option value="All">All Departments</option>
+                                            {departments.map(dept => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
+                                        </select>
+                                        
+                                        <select 
+                                            className="flex-1 w-0 rounded-md border-gray-300 shadow-sm text-sm truncate pr-8"
+                                            value={filterPosition} 
+                                            onChange={e => setFilterPosition(e.target.value)}
+                                        >
+                                            <option value="">All Positions</option>
+                                            {availablePositions.map(pos => <option key={pos.id} value={pos.id}>{pos.name}</option>)}
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {/* List */}
