@@ -265,7 +265,7 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                                     <option value="Low">Low</option>
                                     <option value="Normal">Normal</option>
                                     <option value="High">High</option>
-                                    <option value="Urgent">Urgent</option>
+                                    {/* REMOVED URGENT OPTION HERE */}
                                 </select>
                             </div>
                             <div>

@@ -12,7 +12,8 @@ class PurchaseRequest extends Model
     protected $fillable = [
         'user_id', 'branch', 'department', 'date_prepared', 'request_type', 
         'priority', 'date_needed', 'budget_status', 'budget_ref', 
-        'no_of_quotations', 'purpose_of_request', 'impact_if_not_procured', 'status'
+        'no_of_quotations', 'purpose_of_request', 'impact_if_not_procured', 'status',
+        'rejection_reason' // 🟢 ADDED HERE
     ];
 
     protected $appends = ['pr_number'];

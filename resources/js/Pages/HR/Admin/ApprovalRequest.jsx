@@ -30,6 +30,25 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // --- REJECTION MODAL STATE ---
+    const [rejectModal, setRejectModal] = useState({ isOpen: false, requestId: null, reason: '' });
+
+    const openRejectModal = (requestId) => setRejectModal({ isOpen: true, requestId, reason: '' });
+    const closeRejectModal = () => setRejectModal({ isOpen: false, requestId: null, reason: '' });
+
+    const submitRejection = () => {
+        router.patch(route('hr.manpower-requests.update-status', rejectModal.requestId), {
+            status: 'Rejected',
+            rejection_reason: rejectModal.reason
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeRejectModal();
+                closeModal(); // Close the details modal if it was open
+            }
+        });
+    };
+
     // --- SORTING / PAGINATION ---
     const ITEMS_PER_PAGE = 10;
     const [sortField, setSortField] = useState('requester');
@@ -59,30 +78,12 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                 onClick={() => toggleSort(field)}
                 className="ml-2 inline-flex items-center justify-center hover:opacity-80 transition"
             >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="w-4 h-4"
-                >
-                    <g
-                        className={upClass}
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="w-4 h-4">
+                    <g className={upClass} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M7 17V7" />
                         <path d="M4 10l3-3 3 3" />
                     </g>
-
-                    <g
-                        className={downClass}
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
+                    <g className={downClass} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17 7v10" />
                         <path d="M14 14l3 3 3-3" />
                     </g>
@@ -93,28 +94,26 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
 
     const getSortableValue = (req, field) => {
         switch (field) {
-            case 'requester':
-                return req.requester?.name || '';
-            case 'position':
-                return req.position?.name || '';
-            case 'status':
-                return req.status || '';
-            default:
-                return '';
+            case 'requester': return req.requester?.name || '';
+            case 'position': return req.position?.name || '';
+            case 'status': return req.status || '';
+            default: return '';
         }
     };
 
-    // --- NEW SIMPLIFIED ACTION HELPER ---
+    // --- SIMPLIFIED ACTION HELPER (For Approvals) ---
     const confirmAction = (requestId, status) => {
-        const isApprove = status === 'Approved';
-        const actionWord = isApprove ? 'Endorse' : 'Reject';
+        if (status === 'Rejected') {
+            openRejectModal(requestId);
+            return;
+        }
 
         setConfirmDialog({
             isOpen: true,
-            title: `${actionWord} Request`,
-            message: `Are you sure you want to ${actionWord.toLowerCase()} this manpower request?`,
-            confirmText: actionWord,
-            confirmColor: isApprove ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-red-600 hover:bg-red-500',
+            title: `Endorse Request`,
+            message: `Are you sure you want to endorse this manpower request?`,
+            confirmText: 'Endorse',
+            confirmColor: 'bg-indigo-600 hover:bg-indigo-700',
             onConfirm: () => {
                 router.patch(route('hr.manpower-requests.update-status', requestId), {
                     status: status
@@ -129,9 +128,7 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
         });
     };
 
-    const closeConfirmModal = () => {
-        setConfirmDialog({ ...confirmDialog, isOpen: false });
-    };
+    const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false });
 
     const openModal = (req) => {
         setSelectedRequest(req);
@@ -159,30 +156,20 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
 
     const displayedRequests = useMemo(() => {
         const filtered = getFilteredRequests();
-
         return [...filtered].sort((a, b) => {
             const aValue = getSortableValue(a, sortField).toLowerCase();
             const bValue = getSortableValue(b, sortField).toLowerCase();
-
-            const comparison = aValue.localeCompare(bValue, undefined, {
-                numeric: true,
-                sensitivity: 'base',
-            });
-
+            const comparison = aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' });
             return sortDirection === 'asc' ? comparison : -comparison;
         });
     }, [requests, activeTab, sortField, sortDirection, exactUserRole, isAdmin]);
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [activeTab, sortField, sortDirection]);
+    useEffect(() => { setCurrentPage(1); }, [activeTab, sortField, sortDirection]);
 
     const totalPages = Math.max(1, Math.ceil(displayedRequests.length / ITEMS_PER_PAGE));
 
     useEffect(() => {
-        if (currentPage > totalPages) {
-            setCurrentPage(totalPages);
-        }
+        if (currentPage > totalPages) setCurrentPage(totalPages);
     }, [currentPage, totalPages]);
 
     const paginatedRequests = useMemo(() => {
@@ -277,15 +264,13 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                                                 {getStatusBadge(req.status)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap flex justify-end gap-2">
-
                                                 <button onClick={() => openModal(req)} className="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md font-bold transition">
                                                     View Details
                                                 </button>
 
                                                 {activeTab === 'action-required' && req.status !== 'Rejected' && (
                                                     <>
-                                                        <button onClick={() => confirmAction(req.id, 'Rejected')} className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md font-bold transition">Reject</button>
-
+                                                        <button onClick={() => openRejectModal(req.id)} className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md font-bold transition">Reject</button>
                                                         <button onClick={() => confirmAction(req.id, 'Approved')} className="text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md font-bold transition">Endorse</button>
                                                     </>
                                                 )}
@@ -302,29 +287,10 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                             <p className="text-sm text-gray-500">
                                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, displayedRequests.length)} of {displayedRequests.length} requests
                             </p>
-
                             <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    Previous
-                                </button>
-
-                                <span className="text-sm text-gray-600">
-                                    Page {currentPage} of {totalPages}
-                                </span>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                    className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    Next
-                                </button>
+                                <button type="button" onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Previous</button>
+                                <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
+                                <button type="button" onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Next</button>
                             </div>
                         </div>
                     )}
@@ -335,7 +301,6 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900/60 backdrop-blur-sm p-4 sm:p-0">
                         <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
 
-                            {/* Modal Header */}
                             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-gray-50 shrink-0">
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-900">Request Details: {selectedRequest.position?.name}</h3>
@@ -346,26 +311,32 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                                 </button>
                             </div>
 
-                            {/* Modal Body */}
                             <div className="p-6 overflow-y-auto space-y-6 flex-grow">
-
-                                <div className="flex flex-wrap gap-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-                                    <div><span className="text-xs text-indigo-400 uppercase font-bold block">Status</span> {getStatusBadge(selectedRequest.status)}</div>
-                                    <div><span className="text-xs text-indigo-400 uppercase font-bold block">Headcount</span> <span className="font-bold text-indigo-900">{selectedRequest.headcount}</span></div>
-                                    <div><span className="text-xs text-indigo-400 uppercase font-bold block">Target Date</span> <span className="font-bold text-indigo-900">{new Date(selectedRequest.date_needed).toLocaleDateString()}</span></div>
-                                    <div><span className="text-xs text-indigo-400 uppercase font-bold block">Budgeted?</span>
-                                        {selectedRequest.is_budgeted ? <span className="text-green-700 font-bold text-sm">Yes (Plantilla)</span> : <span className="text-red-600 font-bold text-sm">No (Unbudgeted)</span>}
+                                <div className="flex flex-col gap-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                                    <div className="flex flex-wrap gap-4">
+                                        <div><span className="text-xs text-indigo-400 uppercase font-bold block">Status</span> {getStatusBadge(selectedRequest.status)}</div>
+                                        <div><span className="text-xs text-indigo-400 uppercase font-bold block">Headcount</span> <span className="font-bold text-indigo-900">{selectedRequest.headcount}</span></div>
+                                        <div><span className="text-xs text-indigo-400 uppercase font-bold block">Target Date</span> <span className="font-bold text-indigo-900">{new Date(selectedRequest.date_needed).toLocaleDateString()}</span></div>
+                                        <div><span className="text-xs text-indigo-400 uppercase font-bold block">Budgeted?</span>
+                                            {selectedRequest.is_budgeted ? <span className="text-green-700 font-bold text-sm">Yes (Plantilla)</span> : <span className="text-red-600 font-bold text-sm">No (Unbudgeted)</span>}
+                                        </div>
                                     </div>
+                                    
+                                    {/* 🟢 DISPLAY REJECTION REASON IF EXISTS */}
+                                    {selectedRequest.status === 'Rejected' && selectedRequest.rejection_reason && (
+                                        <div className="w-full pt-3 border-t border-indigo-200">
+                                            <span className="text-xs text-red-500 uppercase font-bold block mb-1">Reason for Rejection:</span>
+                                            <p className="text-sm font-semibold text-red-800 bg-red-100/50 p-3 rounded-md border border-red-200">
+                                                {selectedRequest.rejection_reason}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <h4 className="text-xs font-bold text-gray-500 uppercase border-b pb-2 mb-3">Placement Info</h4>
-                                        {/* 🟢 FALLBACK TO 'ALL BRANCHES' ADDED HERE */}
-                                        <p className="text-sm mb-2">
-                                            <span className="font-semibold text-gray-700">Branch:</span>{' '}
-                                            {selectedRequest.branch?.name || branches.map(b => b.name).join(', ')}
-                                        </p>
+                                        <p className="text-sm mb-2"><span className="font-semibold text-gray-700">Branch:</span> {selectedRequest.branch?.name || branches.map(b => b.name).join(', ')}</p>
                                         <p className="text-sm mb-2"><span className="font-semibold text-gray-700">Department:</span> {selectedRequest.department?.name}</p>
                                         <p className="text-sm mb-2"><span className="font-semibold text-gray-700">Type:</span> {selectedRequest.employment_status}</p>
                                         {selectedRequest.employment_status === 'Reliever' && <p className="text-sm mb-2 text-amber-600"><span className="font-semibold">Reliever Info:</span> {selectedRequest.reliever_info}</p>}
@@ -379,31 +350,26 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
 
                                 <div>
                                     <h4 className="text-xs font-bold text-gray-500 uppercase border-b pb-2 mb-3">Justification & Requirements</h4>
-
                                     {!selectedRequest.is_budgeted && (
                                         <div className="mb-4 bg-red-50 p-3 rounded-lg border border-red-100">
                                             <span className="font-bold text-red-800 text-sm block mb-1">Unbudgeted Justification:</span>
                                             <p className="text-sm text-red-700">{selectedRequest.unbudgeted_purpose}</p>
                                         </div>
                                     )}
-
                                     <div className="mb-4">
                                         <span className="font-semibold text-gray-700 text-sm block">General Purpose:</span>
                                         <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded mt-1">{selectedRequest.purpose}</p>
                                     </div>
-
                                     {selectedRequest.is_new_position === 1 && (
                                         <div className="mb-4">
                                             <span className="font-semibold text-gray-700 text-sm block">Job Description:</span>
                                             <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded mt-1 whitespace-pre-wrap">{selectedRequest.job_description}</p>
                                         </div>
                                     )}
-
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                         <p className="text-sm"><span className="font-semibold text-gray-700 block">Education:</span> {selectedRequest.educational_background}</p>
                                         <p className="text-sm"><span className="font-semibold text-gray-700 block">Experience:</span> {selectedRequest.years_experience}</p>
                                     </div>
-
                                     <div className="mt-4">
                                         <span className="font-semibold text-gray-700 text-sm block">Required Skills:</span>
                                         <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded mt-1 whitespace-pre-wrap">{selectedRequest.skills_required}</p>
@@ -428,31 +394,53 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                                         })}
                                     </div>
                                 </div>
-
                             </div>
 
-                            {/* Modal Footer */}
                             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 shrink-0">
-                                <button onClick={closeModal} className="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition">
-                                    Close
-                                </button>
-
+                                <button onClick={closeModal} className="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition">Close</button>
                                 {activeTab === 'action-required' && selectedRequest.status === 'Pending' && (
                                     <>
-                                        <button onClick={() => confirmAction(selectedRequest.id, 'Rejected')} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition">
-                                            Reject Request
-                                        </button>
-                                        <button onClick={() => confirmAction(selectedRequest.id, 'Approved')} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition">
-                                            Endorse Request
-                                        </button>
+                                        <button onClick={() => openRejectModal(selectedRequest.id)} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition">Reject Request</button>
+                                        <button onClick={() => confirmAction(selectedRequest.id, 'Approved')} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition">Endorse Request</button>
                                     </>
                                 )}
                             </div>
-
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* 🟢 REJECT REASON MODAL */}
+            {rejectModal.isOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-red-50">
+                            <h3 className="text-lg font-bold text-red-900">Reject Manpower Request</h3>
+                        </div>
+                        <div className="p-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Please provide a reason for rejection:</label>
+                            <textarea
+                                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
+                                rows="4"
+                                value={rejectModal.reason}
+                                onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
+                                placeholder="State the reason here. This will be sent to the requester..."
+                                autoFocus
+                            ></textarea>
+                        </div>
+                        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                            <button onClick={closeRejectModal} className="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100">Cancel</button>
+                            <button 
+                                onClick={submitRejection} 
+                                className="px-6 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" 
+                                disabled={!rejectModal.reason.trim()}
+                            >
+                                Submit Rejection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <ConfirmModal
                 show={confirmDialog.isOpen}
@@ -463,7 +451,6 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                 confirmColor={confirmDialog.confirmColor}
                 onConfirm={confirmDialog.onConfirm}
             />
-
         </SidebarLayout>
     );
 }

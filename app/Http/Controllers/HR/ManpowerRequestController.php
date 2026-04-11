@@ -358,20 +358,26 @@ class ManpowerRequestController extends Controller
     // ----------------------------------------------------------------------
     public function updateStatus(Request $request, ManpowerRequest $manpowerRequest)
     {
+        // 🟢 1. Update Validation to require a reason if Rejected
         $request->validate([
-            'status' => 'required|in:Approved,Rejected'
+            'status' => 'required|in:Approved,Rejected',
+            'rejection_reason' => 'required_if:status,Rejected|nullable|string' 
         ]);
 
         $requesterName = $manpowerRequest->requester->name ?? 'An Employee';
         $originalRequester = $manpowerRequest->requester;
-        
         $currentApproverRole = Auth::user()->role->name ?? 'Management';
 
         if ($request->status === 'Rejected') {
-            $manpowerRequest->update(['status' => 'Rejected']);
+            // 🟢 2. Save the rejection reason to the database
+            $manpowerRequest->update([
+                'status' => 'Rejected',
+                'rejection_reason' => $request->rejection_reason
+            ]);
             
             if ($originalRequester) {
-                $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Rejected by {$currentApproverRole}."));
+                // 🟢 3. Include the reason in the notification sent to the user
+                $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Rejected by {$currentApproverRole}. Reason: " . $request->rejection_reason));
             }
 
             return back()->with('success', "Request has been officially rejected.");

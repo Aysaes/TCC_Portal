@@ -20,7 +20,8 @@ class ManpowerRequest extends Model
         'is_new_position', 'job_description', 'is_replacement', 'replaced_employee_name', 
         'poc_name', 'requesting_manager_id',
         'manager_approval_status', 'hr_approval_status', 'director_approval_status', 'status',
-        'workflow_path', 'current_step'
+        'workflow_path', 'current_step',
+        'rejection_reason' // 🟢 REJECTION REASON ADDED HERE
     ];
 
     protected $casts = [
