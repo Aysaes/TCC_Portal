@@ -1,8 +1,6 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
-import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
@@ -17,42 +15,6 @@ export default function AuthenticatedLayout({ header, children }) {
             <nav className="relative border-b border-gray-100 bg-white">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between">
-                        <div className="flex">
-                            <div className="-ms-5 flex shrink-0 items-center sm:-ms-4">
-                                <Link href={route('dashboard')}>
-                                    <ApplicationLogo className="block h-16 w-auto fill-current text-gray-800" />
-                                </Link>
-                            </div>
-
-                            <div className="flex items-center ps-3 sm:hidden">
-                                <Link
-                                    href={route('dashboard')}
-                                    className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-900"
-                                >
-                                    <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
-                                    </svg>
-                                    Dashboard
-                                </Link>
-                            </div>
-
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
-                                >
-                                    <span className="inline-flex items-center gap-2">
-                                        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
-                                        </svg>
-                                        Dashboard
-                                    </span>
-                                </NavLink>
-                            </div>
-                        </div>
-
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
                             <div className="relative ms-3">
                                 <Dropdown>

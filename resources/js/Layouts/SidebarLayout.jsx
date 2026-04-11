@@ -344,54 +344,54 @@ export default function SidebarLayout({
                 </div>
 
                 <div className="overflow-y-auto px-4 py-6 text-sm font-medium">
-                    {activeModule !== 'General' && (
-                        <div className="mb-4">
-                            <Link
-                                href={route('dashboard')}
-                                className="flex items-center gap-2 rounded-lg px-4 py-2 text-black hover:bg-gray-100 hover:text-black transition ease-in-out duration-150"
-                            >
-                                <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
-                                </svg>
-                                Dashboard
-                            </Link>
-                        </div>
-                    )}
+                    {!['General', 'Profile'].includes(activeModule) && (
+    <div className="mb-4">
+        <Link
+            href={route('dashboard')}
+            className="flex items-center gap-2 rounded-lg px-4 py-2 text-black hover:bg-gray-100 hover:text-black transition ease-in-out duration-150"
+        >
+            <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
+            </svg>
+            Dashboard
+        </Link>
+    </div>
+)}
 
-                    {activeModule === 'General' && (
-                        <div className="mb-4">
-                            <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                Quick Links
-                            </div>
-                            <ul className="space-y-2">
-                                <li>
-                                    <Link
-                                        href={route('staff.duty-meals.index')}
-                                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                                    >
-                                        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l7 7-7 7" />
-                                        </svg>
-                                        Duty Meal
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link
-                                        href={route('admin.documents.index')}
-                                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                                    >
-                                        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 2h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v4h8" />
-                                        </svg>
-                                        Document Repository
-                                    </Link>
-                                </li>
-                            </ul>
-                        </div>
-                    )}
+                    {['General', 'Profile'].includes(activeModule) && (
+    <div className="mb-4">
+        <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Quick Links
+        </div>
+        <ul className="space-y-2">
+            <li>
+                <Link
+                    href={route('staff.duty-meals.index')}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                >
+                    <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l7 7-7 7" />
+                    </svg>
+                    Duty Meal
+                </Link>
+            </li>
+            <li>
+                <Link
+                    href={route('admin.documents.index')}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                >
+                    <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v4h8" />
+                    </svg>
+                    Document Repository
+                </Link>
+            </li>
+        </ul>
+    </div>
+)}
 
                     {priorityLink && (
                         <div className="mb-4">
