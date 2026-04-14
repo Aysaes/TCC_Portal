@@ -161,14 +161,14 @@ class EmployeeController extends Controller
     // SAFE DELETE METHODS (BULLETPROOF)
     // =====================================
 
-    public function destroyRole(\App\Models\Role $role)
+    public function destroyRole(Role $role)
     {
         try {
             if (strtolower($role->name) === 'admin' || strtolower($role->name) === 'super admin') {
                 return back()->with('error', 'Cannot delete core system roles.');
             }
 
-            if (\Illuminate\Support\Facades\DB::table('users')->where('role_id', $role->id)->exists()) {
+            if (DB::table('users')->where('role_id', $role->id)->exists()) {
                 return back()->with('error', 'Cannot delete this Role because it is assigned to existing or archived employees. Reassign them first.');
             }
             
@@ -179,14 +179,14 @@ class EmployeeController extends Controller
         }
     }
 
-    public function destroyDepartment(\App\Models\Department $department)
+    public function destroyDepartment(Department $department)
     {
         try {
-            if (\Illuminate\Support\Facades\DB::table('users')->where('department_id', $department->id)->exists()) {
+            if (DB::table('users')->where('department_id', $department->id)->exists()) {
                 return back()->with('error', 'Cannot delete this Department because it has employees assigned to it.');
             }
             
-            if (\Illuminate\Support\Facades\DB::table('positions')->where('department_id', $department->id)->exists()) {
+            if (DB::table('positions')->where('department_id', $department->id)->exists()) {
                 return back()->with('error', 'Cannot delete this Department because it has positions attached to it. Delete the positions first.');
             }
             
@@ -197,10 +197,10 @@ class EmployeeController extends Controller
         }
     }
 
-    public function destroyPosition(\App\Models\Position $position)
+    public function destroyPosition(Position $position)
     {
         try {
-            if (\Illuminate\Support\Facades\DB::table('users')->where('position_id', $position->id)->exists()) {
+            if (DB::table('users')->where('position_id', $position->id)->exists()) {
                 return back()->with('error', 'Cannot delete this Position because it is assigned to existing or archived employees.');
             }
             
@@ -211,14 +211,14 @@ class EmployeeController extends Controller
         }
     }
 
-    public function destroyBranch(\App\Models\Branch $branch)
+    public function destroyBranch(Branch $branch)
     {
         try {
-            if (\Illuminate\Support\Facades\DB::table('branch_user')->where('branch_id', $branch->id)->exists()) {
+            if (DB::table('branch_user')->where('branch_id', $branch->id)->exists()) {
                 return back()->with('error', 'Cannot delete this Branch because it is assigned to existing employees.');
             }
             
-            \Illuminate\Support\Facades\DB::table('announcement_branch')->where('branch_id', $branch->id)->delete();
+            DB::table('announcement_branch')->where('branch_id', $branch->id)->delete();
             
             $branch->delete();
             return back()->with('success', 'Branch deleted successfully.');
@@ -359,6 +359,8 @@ class EmployeeController extends Controller
         $token = $broker->createToken($user);
         
         $user->notify(new AdminPasswordReset($token));
+        $user->status = 'Password Reset';
+        $user->save();
 
         return back()->with('success', 'Password reset link sent to ' . $user->email);
     }

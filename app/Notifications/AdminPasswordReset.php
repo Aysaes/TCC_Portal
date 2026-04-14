@@ -34,7 +34,10 @@ class AdminPasswordReset extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $url = url('/setup-account?token=' . $this->token . '&email=' . urlencode($notifiable->email));
+        $url = route('password.reset-link', [
+        'token' => $this->token,
+        'email' => $notifiable->email
+    ]);
 
         return (new MailMessage)
             ->subject('The CAT Clinic - Password Reset Required')

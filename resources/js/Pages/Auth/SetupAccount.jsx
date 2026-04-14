@@ -1,3 +1,8 @@
+import InputError from '@/Components/InputError';
+import InputLabel from '@/Components/InputLabel';
+import PrimaryButton from '@/Components/PrimaryButton';
+import TextInput from '@/Components/TextInput';
+import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 
 export default function SetupAccount({ email, token }) {
@@ -14,51 +19,71 @@ export default function SetupAccount({ email, token }) {
     };
 
     return (
-        <div className="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
+        <GuestLayout>
             <Head title="Setup Account" />
 
-            <div className="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">Set Your Password</h2>
-                
-                <form onSubmit={submit}>
-                    {/* Hidden inputs to pass data safely */}
-                    <input type="hidden" value={data.token} />
-                    <input type="hidden" value={data.email} />
+            {/* Optional Title matching the previous setup, but fitting the new layout */}
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-6">
+                Set Your Password
+            </h2>
 
-                    <div className="mb-4">
-                        <label className="block font-medium text-sm text-gray-700">Email Address</label>
-                        <input type="email" value={data.email} disabled className="mt-1 block w-full border-gray-300 bg-gray-50 rounded-md shadow-sm" />
-                        {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
-                    </div>
+            <form onSubmit={submit}>
+                <div>
+                    <InputLabel htmlFor="email" value="Email Address" />
 
-                    <div className="mb-4">
-                        <label className="block font-medium text-sm text-gray-700">New Password</label>
-                        <input 
-                            type="password" 
-                            value={data.password} 
-                            onChange={e => setData('password', e.target.value)} 
-                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" 
-                            required 
-                        />
-                        {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
-                    </div>
+                    <TextInput
+                        id="email"
+                        type="email"
+                        name="email"
+                        value={data.email}
+                        className="mt-1 block w-full opacity-70" // Slight opacity to show it's disabled
+                        autoComplete="username"
+                        onChange={(e) => setData('email', e.target.value)}
+                        disabled
+                    />
 
-                    <div className="mb-6">
-                        <label className="block font-medium text-sm text-gray-700">Confirm Password</label>
-                        <input 
-                            type="password" 
-                            value={data.password_confirmation} 
-                            onChange={e => setData('password_confirmation', e.target.value)} 
-                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" 
-                            required 
-                        />
-                    </div>
+                    <InputError message={errors.email} className="mt-2" />
+                </div>
 
-                    <button disabled={processing} className="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 transition">
-                        {processing ? 'Saving...' : 'Save Password & Activate'}
-                    </button>
-                </form>
-            </div>
-        </div>
+                <div className="mt-4">
+                    <InputLabel htmlFor="password" value="New Password" />
+
+                    <TextInput
+                        id="password"
+                        type="password"
+                        name="password"
+                        value={data.password}
+                        className="mt-1 block w-full"
+                        autoComplete="new-password"
+                        isFocused={true}
+                        onChange={(e) => setData('password', e.target.value)}
+                    />
+
+                    <InputError message={errors.password} className="mt-2" />
+                </div>
+
+                <div className="mt-4">
+                    <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
+
+                    <TextInput
+                        type="password"
+                        id="password_confirmation"
+                        name="password_confirmation"
+                        value={data.password_confirmation}
+                        className="mt-1 block w-full"
+                        autoComplete="new-password"
+                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                    />
+
+                    <InputError message={errors.password_confirmation} className="mt-2" />
+                </div>
+
+                <div className="mt-4 flex items-center justify-end">
+                    <PrimaryButton className="ms-4" disabled={processing}>
+                        Save Password & Activate
+                    </PrimaryButton>
+                </div>
+            </form>
+        </GuestLayout>
     );
 }

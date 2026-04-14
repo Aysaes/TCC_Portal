@@ -1,9 +1,8 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
 import BackgroundCarousel from '@/Components/BackgroundCarousel';
-import { Link } from '@inertiajs/react';
 
 export default function GuestLayout({ children }) {
     return (
+        
         <div className="relative flex min-h-screen flex-col items-center justify-center bg-white px-4 py-8 sm:px-0 sm:py-0">
             <BackgroundCarousel />
             <div className="absolute inset-0 bg-black/30"></div>

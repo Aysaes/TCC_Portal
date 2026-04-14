@@ -10,6 +10,7 @@ use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\CheckDutyMealAccess;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\AnnouncementController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\DutyMealController;
 use App\Http\Controllers\Admin\OrgChartController;
@@ -217,6 +218,9 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['guest'])->group(function () {
     Route::get('/setup-account', [SetupAccountController::class, 'showSetupForm'])->name('setup.account');
     Route::post('/setup-account', [SetupAccountController::class, 'setupPassword'])->name('setup.account.store');
+    
+    Route::get('/reset-password', [PasswordResetLinkController::class, 'showResetForm'])->name('password.reset-link');
+    Route::post('/reset-password', [PasswordResetLinkController::class, 'resetPassword'])->name('password.reset-link.store');
 });
 
 

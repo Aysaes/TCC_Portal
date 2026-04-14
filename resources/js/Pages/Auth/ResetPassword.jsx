@@ -16,15 +16,16 @@ export default function ResetPassword({ token, email }) {
     const submit = (e) => {
         e.preventDefault();
 
-        post(route('password.store'), {
-            onFinish: () => reset('password', 'password_confirmation'),
+        post(route('password.reset-link.store'), {
         });
     };
 
     return (
         <GuestLayout>
             <Head title="Reset Password" />
-
+             <h2 className="text-xl font-bold text-center text-gray-800 mb-6">
+                Reset Your Password
+            </h2>
             <form onSubmit={submit}>
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
@@ -34,9 +35,10 @@ export default function ResetPassword({ token, email }) {
                         type="email"
                         name="email"
                         value={data.email}
-                        className="mt-1 block w-full"
+                        className="mt-1 block w-full opacity-70"
                         autoComplete="username"
                         onChange={(e) => setData('email', e.target.value)}
+                        disabled
                     />
 
                     <InputError message={errors.email} className="mt-2" />

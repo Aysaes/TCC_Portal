@@ -3,22 +3,50 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Validation\ValidationException;
+use App\Notifications\PasswordResetSuccess;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class PasswordResetLinkController extends Controller
 {
     /**
      * Display the password reset link request view.
      */
-    public function create(): Response
+    public function showResetForm(Request $request)
     {
-        return Inertia::render('Auth/ForgotPassword', [
-            'status' => session('status'),
+
+        $email = $request->email;
+        $token = $request->token;
+
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Invalid request. Please contact IT support for assistance.');
+        }
+
+        $tokenRecord = DB::table('password_reset_tokens')
+        ->where('email', $user->email)
+        ->first();
+
+        $isValid = $tokenRecord && 
+               Hash::check($token, $tokenRecord->token) &&
+               Carbon::parse($tokenRecord->created_at)->addMinutes(config('auth.passwords.users.expire', 60))->isFuture();
+
+        if (!$isValid) {
+            return redirect()->route('login')->with('error', 'This setup link is invalid or has expired. Please contact IT support for assistance.');
+        }
+
+        return Inertia::render('Auth/ResetPassword', [
+            'email' => $email,
+            'token' => $token,
         ]);
     }
 
@@ -27,25 +55,41 @@ class PasswordResetLinkController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function resetPassword(Request $request)
     {
         $request->validate([
+            'token' => 'required',
             'email' => 'required|email',
+            'password' => 'required|min:8|confirmed',
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
+        $status = Password::broker()->reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->password = Hash::make($password);
+                
+                // 🟢 Safety catch: Guarantee the red badge is cleared
+                $user->status = 'Active'; 
+                $user->save();
+
+                
+                event(new PasswordReset($user));
+
+                // 🟢 NEW: Notify the Admin team
+                $admins = User::whereHas('role', function ($q) {
+                    $q->where('name', 'Admin');
+                })->get();
+
+                if ($admins->isNotEmpty()) {
+                    Notification::send($admins, new PasswordResetSuccess($user));
+                }
+            }
         );
 
-        if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
-        }
+        if ($status === Password::PASSWORD_RESET) {
+            return redirect()->route('login')->with('success', 'Password set successfully! You may now log in.');
+        }   
 
-        throw ValidationException::withMessages([
-            'email' => [trans($status)],
-        ]);
+        return back()->withErrors(['email' => __($status)]);
     }
 }

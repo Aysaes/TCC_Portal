@@ -110,6 +110,10 @@ return [
     |
     */
 
+    'verification'=>[
+        'expire' => 60,
+    ],
+
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
 ];

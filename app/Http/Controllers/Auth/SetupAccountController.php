@@ -10,15 +10,38 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Notifications\PasswordResetSuccess;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
 class SetupAccountController extends Controller
 {
     public function showSetupForm(Request $request)
     {
+        $email = $request->email;
+        $token = $request->token;
+
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Invalid request. Please contact IT support for assistance.');
+        }
+
+        $tokenRecord = DB::table('password_reset_tokens')
+        ->where('email', $user->email)
+        ->first();
+
+        $isValid = $tokenRecord && 
+               Hash::check($token, $tokenRecord->token) &&
+               Carbon::parse($tokenRecord->created_at)->addMinutes(config('auth.passwords.users.expire', 60))->isFuture();
+
+        if (!$isValid) {
+            return redirect()->route('login')->with('error', 'This setup link is invalid or has expired. Please contact IT support for assistance.');
+        }
+
         return Inertia::render('Auth/SetupAccount', [
-            'email' => $request->email,
-            'token' => $request->token,
+            'email' => $email,
+            'token' => $token,
         ]);
     }
 
@@ -36,7 +59,7 @@ class SetupAccountController extends Controller
                 $user->password = Hash::make($password);
                 
                 // 🟢 Safety catch: Guarantee the red badge is cleared
-                $user->status = null; 
+                $user->status = 'Active'; 
                 $user->save();
                 
                 event(new PasswordReset($user));
