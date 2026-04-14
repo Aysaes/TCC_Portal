@@ -149,6 +149,7 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                             <option value="Feedback">Feedback</option>
                             <option value="PR/PO Module">PR/PO Module</option>
                             <option value="Duty Meal Module">Duty Meal Module</option>
+                            <option value="Profile">Profile</option>
                         </select>
 
                         {/* ACTIONS (FIXED EXACT MATCHES) */}
@@ -237,18 +238,18 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                     <table className="min-w-full text-sm">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3">Timestamp</th>
-                                <th className="px-6 py-3">User</th>
-                                <th className="px-6 py-3">Module & Action</th>
-                                <th className="px-6 py-3">Description</th>
-                                <th className="px-6 py-3">Security</th>
-                                <th className="px-6 py-3">Status</th>
+                                <th className="px-6 py-3 text-left">Timestamp</th>
+                                <th className="px-6 py-3 text-left">User</th>
+                                <th className="px-6 py-3 text-left">Module & Action</th>
+                                <th className="px-6 py-3 text-left">Description</th>
+                                <th className="px-6 py-3 text-left">Security</th>
+                                <th className="px-6 py-3 text-left">Status</th>
                             </tr>
                         </thead>
 
                         <tbody>
                             {logs.data.map((log) => (
-                                <tr key={log.id}>
+                                <tr key={log.id} className="border-b">
                                     <td className="px-6 py-4">
                                         {new Date(log.created_at).toLocaleString('en-US')}
                                     </td>
@@ -264,11 +265,20 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
                                     <td className="px-6 py-4">{getStatusBadge(log.status)}</td>
                                 </tr>
                             ))}
+                            {logs.data.length === 0 && (
+                                <tr>
+                                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                                        No logs found matching your criteria.
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
 
-                <Pagination links={logs.links} />
+                <div className="mt-6">
+                   <Pagination links={logs.links} />
+                </div>
             </div>
         </SidebarLayout>
     );
