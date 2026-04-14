@@ -51,7 +51,7 @@ export default function UpdateProfileInformation({ className = '' }) {
                 <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">
                     Department
                 </span>
-                <span className="mt-1 text-base font-medium text-indigo-700 break-words">
+                <span className="mt-1 text-base font-medium text-gray-900 break-words">
                     {user.department?.name || 'N/A'}
                 </span>
             </div>
