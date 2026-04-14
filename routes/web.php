@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\OrgChartController;
 use App\Http\Controllers\HrRequestController;
 use App\Http\Controllers\HR\ManpowerRequestController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Auth\LinkExpired;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequestController;
@@ -221,6 +222,8 @@ Route::middleware(['guest'])->group(function () {
     
     Route::get('/reset-password', [PasswordResetLinkController::class, 'showResetForm'])->name('password.reset-link');
     Route::post('/reset-password', [PasswordResetLinkController::class, 'resetPassword'])->name('password.reset-link.store');
+
+    Route::get('/link-expired', [LinkExpired::class, 'index'])->name('link.expired');
 });
 
 

@@ -41,7 +41,7 @@ class PasswordResetLinkController extends Controller
                Carbon::parse($tokenRecord->created_at)->addMinutes(config('auth.passwords.users.expire', 60))->isFuture();
 
         if (!$isValid) {
-            return redirect()->route('login')->with('error', 'This setup link is invalid or has expired. Please contact IT support for assistance.');
+            return redirect()->route('link.expired')->with('error', 'This setup link is invalid or has expired. Please contact IT support for assistance.');
         }
 
         return Inertia::render('Auth/ResetPassword', [
