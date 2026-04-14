@@ -25,7 +25,7 @@ export default function LinkExpired() {
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-8 text-left">
                     <p className="text-sm text-gray-700">
                         <strong className="text-gray-900 block mb-1">What should I do?</strong>
-                        Please contact your <span className="font-semibold text-indigo-600">IT Support</span> or <span className="font-semibold text-indigo-600">HR Department</span> to request a fresh activation link.
+                        Please contact your <span className="font-semibold text-indigo-600">IT Support</span> to request a fresh activation link.
                     </p>
                 </div>
 
