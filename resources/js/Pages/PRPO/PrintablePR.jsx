@@ -6,7 +6,6 @@ export default function PrintablePR({ pr }) {
     
     // Auto-trigger the print dialog when the page loads
     useEffect(() => {
-        // A slight delay ensures fonts and logos are fully loaded
         const timer = setTimeout(() => {
             window.print();
         }, 500);
@@ -18,11 +17,27 @@ export default function PrintablePR({ pr }) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-200 py-8 print:py-0 print:bg-white font-sans text-gray-900">
+        <div className="min-h-screen bg-gray-200 py-8 print:py-0 font-sans">
             <Head title={`Purchase Request #${pr.id}`} />
 
+            {/* FORCE LANDSCAPE WITH TIGHT MARGINS */}
+            <style>
+                {`
+                    @media print {
+                        @page { 
+                            size: landscape; 
+                            margin: 8mm; 
+                        }
+                        body { 
+                            -webkit-print-color-adjust: exact; 
+                            print-color-adjust: exact; 
+                        }
+                    }
+                `}
+            </style>
+
             {/* ACTION BUTTONS (Hidden when printing) */}
-            <div className="max-w-4xl mx-auto mb-4 flex justify-between items-center print:hidden px-4">
+            <div className="max-w-5xl mx-auto mb-4 flex justify-between items-center print:hidden px-4">
                 <button 
                     onClick={() => window.close()} 
                     className="text-gray-600 hover:text-gray-900 font-semibold flex items-center gap-2"
@@ -37,103 +52,113 @@ export default function PrintablePR({ pr }) {
                 </button>
             </div>
 
-            {/* THE A4 DOCUMENT */}
-            <div className="max-w-4xl mx-auto bg-white p-10 sm:p-16 shadow-xl print:shadow-none print:p-0 border border-gray-300 print:border-none aspect-[1/1.414] w-full relative">
+            {/* 🟢 THE DOCUMENT - LOCKED INTO MICRO-TYPOGRAPHY FOR SCREEN & PRINT */}
+            <div className="max-w-5xl mx-auto bg-white p-8 shadow-xl print:shadow-none print:p-0 border border-gray-300 print:border-none w-full flex flex-col text-[9px] leading-[1.15] text-[#333]">
                 
-                {/* Header Section */}
-                <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-8">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16">
+                {/* 🟢 MASTER HEADER (Side-by-side matching the PO) */}
+                <div className="flex border-b-2 border-gray-900 pb-2 mb-3">
+                    
+                    {/* Col 1: Logo & Clinic */}
+                    <div className="w-[25%] flex items-center gap-2 pr-2">
+                        <div className="w-12 h-12 flex-shrink-0">
                             <ApplicationLogo className="w-full h-full text-indigo-900" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black uppercase tracking-wider text-gray-900">The Cat Clinic</h1>
-                            <p className="text-sm text-gray-600">Purchase Request Document</p>
+                            <h1 className="text-[16px] font-bold text-gray-900 leading-tight m-0">The Cat Clinic</h1>
+                            <div className="text-[9px] text-gray-600 mt-0.5">Makati City, Metro Manila</div>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <h2 className="text-3xl font-bold text-gray-300 mb-1">{pr.pr_number}</h2>
-                        <p className="text-sm font-semibold">Date Prepared: <span className="font-normal">{pr.date_prepared}</span></p>
-                        <p className="text-sm font-semibold">Date Needed: <span className="font-normal text-red-600">{pr.date_needed}</span></p>
+
+                    {/* Col 2: Prepared By */}
+                    <div className="w-[30%] border-l border-gray-300 pl-3">
+                        <span className="text-[8px] font-bold text-gray-500 uppercase block mb-0.5">Prepared By:</span>
+                        <span className="text-[10px] font-bold text-gray-900">{pr.user?.name}</span><br />
+                        <span className="text-[9px] text-gray-600">{pr.department} - {pr.branch}</span>
+                    </div>
+
+                    {/* Col 3: Budget Info */}
+                    <div className="w-[25%] border-l border-gray-300 pl-3">
+                        <span className="text-[8px] font-bold text-gray-500 uppercase block mb-0.5">Budget Information:</span>
+                        <span className="text-[10px] font-bold text-gray-900 block">Ref: <span className="font-normal">{pr.budget_ref}</span></span>
+                        <span className="text-[10px] font-bold text-gray-900 block mt-0.5">Status: <span className="font-normal">{pr.budget_status || 'N/A'}</span></span>
+                    </div>
+
+                    {/* Col 4: Title & Dates */}
+                    <div className="w-[20%] text-right flex flex-col justify-center">
+                        <h2 className="text-[20px] font-bold text-indigo-600 leading-none m-0">PURCHASE REQUEST</h2>
+                        <div className="font-bold text-[11px] mt-1">PR #: {pr.pr_number}</div>
+                        <div className="text-[9px] font-semibold text-gray-600 mt-1">
+                            Prepared: <span className="font-normal">{pr.date_prepared}</span><br />
+                            Needed: <span className="font-normal text-red-600">{pr.date_needed}</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Request Details Grid */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8 text-sm">
-                    <div>
-                        <p className="text-gray-500 text-xs font-bold uppercase mb-1">Prepared By</p>
-                        <p className="font-semibold text-base">{pr.user?.name}</p>
-                        <p className="text-gray-600">{pr.department} - {pr.branch}</p>
+                {/* Purpose of Request */}
+                {pr.purpose_of_request && (
+                    <div className="mb-2 p-2 bg-gray-50 border border-gray-200 rounded-sm">
+                        <span className="text-[8px] font-bold text-gray-500 uppercase block mb-0.5">Purpose of Request</span>
+                        <p className="text-[9px] text-gray-800 italic m-0">{pr.purpose_of_request}</p>
                     </div>
-                    <div>
-                        <p className="text-gray-500 text-xs font-bold uppercase mb-1">Budget Information</p>
-                        <p className="font-semibold">Ref: <span className="font-normal">{pr.budget_ref}</span></p>
-                        <p className="font-semibold">Status: <span className="font-normal">{pr.budget_status || 'N/A'}</span></p>
-                    </div>
-                    
-                    {pr.purpose_of_request && (
-                        <div className="col-span-2 mt-2 p-4 bg-gray-50 border border-gray-200 rounded-md">
-                            <p className="text-gray-500 text-xs font-bold uppercase mb-1">Purpose of Request</p>
-                            <p className="text-gray-800 italic">{pr.purpose_of_request}</p>
-                        </div>
-                    )}
-                </div>
+                )}
 
                 {/* Items Table */}
-                <h3 className="text-lg font-bold text-gray-900 mb-3 border-b pb-1">Requested Items</h3>
-                <table className="w-full text-sm text-left mb-8 border-collapse">
-                    <thead className="bg-gray-100 border-y border-gray-300">
-                        <tr>
-                            <th className="py-2 px-3 font-bold text-gray-800 w-12 text-center">#</th>
-                            <th className="py-2 px-3 font-bold text-gray-800">Description & Specs</th>
-                            <th className="py-2 px-3 font-bold text-gray-800 text-center w-24">Qty</th>
-                            <th className="py-2 px-3 font-bold text-gray-800 text-right w-32">Est. Unit Cost</th>
-                            <th className="py-2 px-3 font-bold text-gray-800 text-right w-32">Total Cost</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                        {pr.items.map((item, index) => (
-                            <tr key={item.id}>
-                                <td className="py-3 px-3 text-center text-gray-500">{index + 1}</td>
-                                <td className="py-3 px-3">
-                                    <p className="font-bold text-gray-900">{item.product?.name || `Product ID: ${item.product_id}`}</p>
-                                    <p className="text-xs text-gray-500 mt-0.5">{item.specifications}</p>
-                                    {item.supplier?.name && <p className="text-xs text-indigo-600 mt-1">Pref. Supplier: {item.supplier.name}</p>}
-                                </td>
-                                <td className="py-3 px-3 text-center font-semibold">{item.qty_requested} <span className="text-xs text-gray-500">{item.unit}</span></td>
-                                <td className="py-3 px-3 text-right text-gray-600">{formatCurrency(item.est_unit_cost)}</td>
-                                <td className="py-3 px-3 text-right font-bold text-gray-900">{formatCurrency(item.total_cost)}</td>
+                <div className="flex-grow">
+                    <table className="w-full text-[9px] text-left mb-2 border-collapse">
+                        <thead className="bg-gray-100 border-y border-gray-300">
+                            <tr>
+                                <th className="py-[3px] px-2 font-bold text-gray-800 w-[3%] text-center">#</th>
+                                <th className="py-[3px] px-2 font-bold text-gray-800 w-[45%]">Description & Specs</th>
+                                <th className="py-[3px] px-2 font-bold text-gray-800 text-center w-[12%]">Qty</th>
+                                <th className="py-[3px] px-2 font-bold text-gray-800 text-right w-[20%]">Est. Unit Cost</th>
+                                <th className="py-[3px] px-2 font-bold text-gray-800 text-right w-[20%]">Total Cost</th>
                             </tr>
-                        ))}
-                    </tbody>
-                    <tfoot className="border-t-2 border-gray-800">
-                        <tr>
-                            <td colSpan="4" className="py-3 px-3 text-right font-bold uppercase text-gray-700">Estimated Grand Total:</td>
-                            <td className="py-3 px-3 text-right font-black text-lg text-gray-900">
-                                {formatCurrency(pr.items.reduce((sum, item) => sum + Number(item.total_cost), 0))}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
+                        </thead>
+                        <tbody>
+                            {pr.items.map((item, index) => (
+                                <tr key={item.id} className="border-b border-gray-200 break-inside-avoid">
+                                    <td className="py-[2px] px-2 text-center text-gray-500">{index + 1}</td>
+                                    
+                                    {/* Product Details - Inlined to save vertical height */}
+                                    <td className="py-[2px] px-2">
+                                        <strong className="text-gray-900">{item.product?.name || `Product ID: ${item.product_id}`}</strong>
+                                        {item.specifications && <span className="text-[8px] text-gray-500 ml-1 pl-1 border-l border-gray-400"> {item.specifications}</span>}
+                                        {item.supplier?.name && <span className="text-[8px] text-indigo-600 ml-1 pl-1 border-l border-gray-400">Pref: {item.supplier.name}</span>}
+                                    </td>
+
+                                    <td className="py-[2px] px-2 text-center font-semibold">{item.qty_requested} <span className="text-[8px] text-gray-500">{item.unit}</span></td>
+                                    <td className="py-[2px] px-2 text-right text-gray-600">{formatCurrency(item.est_unit_cost)}</td>
+                                    <td className="py-[2px] px-2 text-right font-bold text-gray-900">{formatCurrency(item.total_cost)}</td>
+                                </tr>
+                            ))}
+                            
+                            {/* Grand Total Row */}
+                            <tr className="border-t-2 border-gray-800 break-inside-avoid">
+                                <td colSpan="4" className="py-2 px-2 text-right font-bold uppercase text-gray-700 text-[10px]">Estimated Grand Total:</td>
+                                <td className="py-2 px-2 text-right font-black text-[12px] text-gray-900 bg-gray-50">
+                                    {formatCurrency(pr.items.reduce((sum, item) => sum + Number(item.total_cost), 0))}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 {/* Signatures Section */}
-                <div className="absolute bottom-16 left-10 right-10">
-                    <div className="grid grid-cols-3 gap-8">
-                        <div>
-                            <div className="border-b border-gray-400 h-10 mb-2"></div>
-                            <p className="text-xs font-bold text-gray-800 uppercase text-center">Requested By</p>
-                            <p className="text-xs text-center text-gray-500">{pr.user?.name}</p>
-                        </div>
-                        <div>
-                            <div className="border-b border-gray-400 h-10 mb-2"></div>
-                            <p className="text-xs font-bold text-gray-800 uppercase text-center">Noted By</p>
-                            <p className="text-xs text-center text-gray-500">Department Head / TL</p>
-                        </div>
-                        <div>
-                            <div className="border-b border-gray-400 h-10 mb-2"></div>
-                            <p className="text-xs font-bold text-gray-800 uppercase text-center">Approved By</p>
-                            <p className="text-xs text-center text-gray-500">Procurement / DCSO</p>
-                        </div>
+                <div className="mt-4 break-inside-avoid w-full flex justify-between gap-12">
+                    <div className="w-[30%]">
+                        <div className="border-b border-gray-900 h-8 mb-1"></div>
+                        <div className="text-[10px] font-bold text-gray-900 uppercase text-center leading-tight">Requested By</div>
+                        <div className="text-[9px] text-center text-gray-500 leading-tight">{pr.user?.name}</div>
+                    </div>
+                    <div className="w-[30%]">
+                        <div className="border-b border-gray-900 h-8 mb-1"></div>
+                        <div className="text-[10px] font-bold text-gray-900 uppercase text-center leading-tight">Noted By</div>
+                        <div className="text-[9px] text-center text-gray-500 leading-tight">Department Head / TL</div>
+                    </div>
+                    <div className="w-[30%]">
+                        <div className="border-b border-gray-900 h-8 mb-1"></div>
+                        <div className="text-[10px] font-bold text-gray-900 uppercase text-center leading-tight">Approved By</div>
+                        <div className="text-[9px] text-center text-gray-500 leading-tight">Procurement / DCSO</div>
                     </div>
                 </div>
 

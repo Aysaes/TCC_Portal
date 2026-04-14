@@ -2,7 +2,6 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
 import { useRef } from 'react';
 
@@ -17,7 +16,6 @@ export default function UpdatePasswordForm({ className = '' }) {
         put,
         reset,
         processing,
-        recentlySuccessful,
     } = useForm({
         current_password: '',
         password: '',
@@ -57,7 +55,6 @@ export default function UpdatePasswordForm({ className = '' }) {
                 </p>
             </header>
 
-            {/* Added the responsive full-width card wrapper to match the profile section */}
             <div className="w-full bg-white p-5 sm:p-8 shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
                 <form onSubmit={updatePassword} className="space-y-6">
                     <div>
@@ -123,21 +120,8 @@ export default function UpdatePasswordForm({ className = '' }) {
                         />
                     </div>
 
-                    {/* Added a subtle border and padding to separate the Save button from the inputs */}
                     <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
                         <PrimaryButton disabled={processing}>Save</PrimaryButton>
-
-                        <Transition
-                            show={recentlySuccessful}
-                            enter="transition ease-in-out"
-                            enterFrom="opacity-0"
-                            leave="transition ease-in-out"
-                            leaveTo="opacity-0"
-                        >
-                            <p className="text-sm font-medium text-green-600">
-                                Saved.
-                            </p>
-                        </Transition>
                     </div>
                 </form>
             </div>
