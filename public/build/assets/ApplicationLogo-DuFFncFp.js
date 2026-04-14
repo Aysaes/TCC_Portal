@@ -1,0 +1,1 @@
+import{j as t}from"./app-DKW55dgR.js";const a="/build/assets/tcc_logo-BxaawbDH.png";function c(o){return t.jsx("img",{...o,src:a,alt:"The Cat Clinic Logo",className:`w-auto object-contain ${o.className||""}`})}export{c as A};

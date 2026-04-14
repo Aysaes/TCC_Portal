@@ -28,13 +28,14 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
-    public function share(Request $request): array
+   public function share(Request $request): array
     {
         $user = $request->user();
 
         // If the user is logged in, load their role and position names from the database!
         if ($user) {
-            $user->load(['role', 'position', 'department']);
+            // 🟢 ADDED: 'branch' and 'branches' to the eager load
+            $user->load(['role', 'position', 'department', 'branch', 'branches']);
         }
 
         return [
@@ -49,6 +50,10 @@ class HandleInertiaRequests extends Middleware
                     'role' => $user->role, 
                     'position' => $user->position,
                     'department' => $user->department,
+                    
+                    // 🟢 ADDED: Send the branch data to React
+                    'branch' => $user->branch,
+                    'branches' => $user->branches,
                     
                     'is_rotating' => $user->is_rotating,
                     

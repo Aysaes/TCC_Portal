@@ -1,0 +1,1 @@
+import{j as n}from"./app-DKW55dgR.js";function a({value:t,className:o="",children:s,...e}){return n.jsx("label",{...e,className:"block text-lg font-medium text-gray-700 font-sans drop-shadow-md "+o,children:t||s})}export{a as I};
