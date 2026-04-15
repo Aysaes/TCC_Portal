@@ -20,7 +20,7 @@
         body { 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             color: #333; 
-            font-size: 9px; /* Shrunk font to fit 30 lines */
+            font-size: 10px; /* Increased from 9px */
             line-height: 1.15; 
             margin: 0; 
             padding: 0; 
@@ -32,15 +32,15 @@
         .master-header td { vertical-align: top; }
         .border-left { border-left: 1px solid #e5e7eb; padding-left: 10px; margin-left: 10px; }
         
-        .company-title { font-size: 16px; font-weight: bold; color: #111827; margin: 0; }
-        .doc-title { font-size: 20px; font-weight: bold; color: #4f46e5; margin: 0; }
+        .company-title { font-size: 17px; font-weight: bold; color: #111827; margin: 0; } /* Increased from 16px */
+        .doc-title { font-size: 21px; font-weight: bold; color: #4f46e5; margin: 0; } /* Increased from 20px */
         
-        .info-label { font-size: 8px; font-weight: bold; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 1px; }
-        .info-value { font-size: 10px; font-weight: bold; color: #111827; }
+        .info-label { font-size: 9px; font-weight: bold; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 1px; } /* Increased from 8px */
+        .info-value { font-size: 11px; font-weight: bold; color: #111827; } /* Increased from 10px */
         
         /* 🟢 ULTRA COMPACT ITEMS TABLE */
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        .items-table th { background-color: #f3f4f6; padding: 3px 4px; text-align: left; font-size: 9px; border-bottom: 2px solid #d1d5db; }
+        .items-table th { background-color: #f3f4f6; padding: 3px 4px; text-align: left; font-size: 10px; border-bottom: 2px solid #d1d5db; } /* Increased from 9px */
         /* 2px vertical padding is what allows 30 rows to fit! */
         .items-table td { padding: 2px 4px; border-bottom: 1px solid #e5e7eb; } 
         
@@ -56,14 +56,14 @@
         /* Totals Block */
         .totals-table { width: 220px; border-collapse: collapse; float: right; }
         .totals-table td { padding: 3px 6px; border-bottom: 1px solid #e5e7eb; }
-        .grand-total { font-size: 12px; font-weight: bold; color: #111827; background-color: #f3f4f6; }
+        .grand-total { font-size: 13px; font-weight: bold; color: #111827; background-color: #f3f4f6; } /* Increased from 12px */
         
         /* Signatures Block */
         .signatures { display: flex; justify-content: flex-start; gap: 40px; width: 100%; }
         .sig-block { width: 180px; }
         .sig-line { border-bottom: 1px solid #000; margin-bottom: 3px; height: 30px; }
-        .sig-name { font-weight: bold; font-size: 10px; }
-        .sig-title { font-size: 9px; color: #6b7280; }
+        .sig-name { font-weight: bold; font-size: 11px; } /* Increased from 10px */
+        .sig-title { font-size: 10px; color: #6b7280; } /* Increased from 9px */
     </style>
 </head>
 <body>
@@ -87,7 +87,7 @@
                     @endif
                     <div>
                         <h1 class="company-title" style="line-height: 1.1;">The CAT Clinic</h1>
-                        <div style="color: #6b7280; font-size: 9px; margin-top: 1px;">Makati City, Metro Manila</div>
+                        <div style="color: #6b7280; font-size: 10px; margin-top: 1px;">Makati City, Metro Manila</div> {{-- Increased from 9px --}}
                     </div>
                 </div>
             </td>
@@ -112,7 +112,7 @@
             {{-- Column 4: Document Title --}}
             <td style="width: 20%; text-align: right; vertical-align: middle;">
                 <h2 class="doc-title">PURCHASE ORDER</h2>
-                <div style="font-weight: bold; margin-top: 2px; font-size: 11px;">PO #: {{ $po->po_number }}</div>
+                <div style="font-weight: bold; margin-top: 2px; font-size: 12px;">PO #: {{ $po->po_number }}</div> {{-- Increased from 11px --}}
             </td>
         </tr>
     </table>
@@ -136,13 +136,14 @@
                 <td>
                     <strong>{{ $item->product->name ?? $item->description }}</strong>
                     @if($item->specifications)
-                        <span style="font-size: 8px; color: #6b7280;"> | {{ $item->specifications }}</span>
+                        {{-- Fixed missing number by adding 10px --}}
+                        <span style="font-size: 10px; color: #6b7280;"> | {{ $item->specifications }}</span> 
                     @endif
                 </td>
                 
                 <td>
                     @if($item->notes)
-                        <span style="font-size: 8px; color: #4f46e5; font-weight: bold;">{{ $item->notes }}</span>
+                        <span style="font-size: 9px; color: #4f46e5; font-weight: bold;">{{ $item->notes }}</span> {{-- Increased from 8px --}}
                     @else
                         <span style="color: #d1d5db;">-</span>
                     @endif
