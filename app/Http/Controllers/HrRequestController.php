@@ -88,11 +88,11 @@ class HrRequestController extends Controller
     {
         $roleName = strtolower(Auth::user()?->role?->name ?? '');
 
-        // Only Admin and HRBP can approve/reject
+        // Only Admin and HRBP can approve
         $allowedRoles = ['admin', 'hrbp'];
 
         if (!in_array($roleName, $allowedRoles)) {
-            abort(403, 'UNAUTHORIZED ACCESS. ONLY HRBP CAN ACCEPT OR ENDORSE REQUESTS.');
+            abort(403, 'UNAUTHORIZED ACCESS. ONLY HRBP CAN APPROVE OR ENDORSE REQUESTS.');
         }
     }
 
@@ -110,28 +110,15 @@ class HrRequestController extends Controller
 
    public function updateStatus(Request $request, HrRequest $hrRequest)
     {
-        // 🟢 NEW: HR Assistants will hit a brick wall here and get a 403 error!
+        // 🟢 HR Assistants will hit a brick wall here and get a 403 error!
         $this->checkHrbpAccess();
 
+        // 🟢 Validation updated to strictly expect "approve"
         $request->validate([
-            'action' => 'required|in:accept,reject',
-            'remarks' => 'nullable|string' 
+            'action' => 'required|in:approve', 
         ]);
 
         $originalRequester = $hrRequest->user;
-
-        if ($request->action === 'reject') {
-            $hrRequest->update([
-                'status' => 'Rejected',
-                'remarks' => $request->filled('remarks') ? 'HR|' . $request->remarks : null
-            ]);
-            
-            if ($originalRequester) {
-                $originalRequester->notify(new \App\Notifications\DocumentStatusUpdate($hrRequest, "Rejected by HR."));
-            }
-            
-            return back()->with('success', 'Request has been rejected.');
-        }
 
         if ($hrRequest->type === '2316') {
             $hrRequest->update(['status' => 'General Accounting']);
@@ -176,7 +163,8 @@ class HrRequestController extends Controller
 
         $requests = HrRequest::with('user') 
                         ->where('type', '2316')
-                        ->whereIn('status', ['General Accounting', 'Released', 'Rejected'])
+                        // 🟢 Removed 'Rejected' from the filter array
+                        ->whereIn('status', ['General Accounting', 'Released'])
                         ->latest()
                         ->get();
 
@@ -189,28 +177,20 @@ class HrRequestController extends Controller
     {
         $this->checkAccountingAccess();
 
+        // 🟢 Validation strictly expects "Released"
         $request->validate([
-            'status' => 'required|in:Released,Rejected',
-            'remarks' => 'nullable|string'
+            'status' => 'required|in:Released'
         ]);
 
         $docRequest = HrRequest::findOrFail($id);
         $docRequest->status = $request->status;
-
-        if ($request->status === 'Rejected' && $request->filled('remarks')) {
-            $docRequest->remarks = 'ACCOUNTING|' . $request->remarks; 
-        }
-
         $docRequest->save();
 
         $originalRequester = $docRequest->user;
 
-        if ($originalRequester) {
-            if ($request->status === 'Released') {
-                $originalRequester->notify(new \App\Notifications\DocumentStatusUpdate($docRequest, "Your 2316 is ready for release!"));
-            } elseif ($request->status === 'Rejected') {
-                $originalRequester->notify(new \App\Notifications\DocumentStatusUpdate($docRequest, "Rejected by General Accounting."));
-            }
+        // Notify user of release
+        if ($originalRequester && $request->status === 'Released') {
+            $originalRequester->notify(new \App\Notifications\DocumentStatusUpdate($docRequest, "Your 2316 is ready for release!"));
         }
 
         return redirect()->back()->with('success', 'Document status updated successfully.');

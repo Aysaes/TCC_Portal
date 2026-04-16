@@ -13,34 +13,36 @@ export default function Home({ contents }) {
             headerClassName="mx-auto mb-1 w-full max-w-[96rem] sm:mb-6 2xl:max-w-[112rem]"
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Mission & Vision
+                    About Us
                 </h2>
             }
         >
-            <Head title="Mission & Vision" />
+            <Head title="About Us" />
 
             <div className="py-0 sm:py-12">
                 <div className="mx-auto w-full max-w-[96rem] sm:px-2 lg:px-4 2xl:max-w-[112rem]">
                     
-                    {/* 2. Replaced the single white box with a CSS Grid */}
+                    {/* Replaced the single white box with a CSS Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         
-                        {/* 3. Loop through the contents array from the database */}
+                        {/* Loop through the contents array from the database */}
                         {contents && contents.length > 0 ? (
                             contents.map((content) => (
-                                <div key={content.id} className="overflow-hidden bg-white shadow-sm sm:rounded-lg border border-gray-100">
+                                <div key={content.id} className="overflow-hidden bg-white shadow-sm sm:rounded-lg border border-gray-100 flex flex-col">
                                     
-                                    {/* Image display */}
+                                    {/* Image display - UPDATED to use object-contain */}
                                     {content.image_path && (
-                                        <img 
-                                            src={`/storage/${content.image_path}`} 
-                                            alt={content.title || "Company Content"} 
-                                            className="w-full h-64 object-cover"
-                                        />
+                                        <div className="w-full bg-gray-50 flex items-center justify-center border-b border-gray-100 p-2">
+                                            <img 
+                                                src={`/storage/${content.image_path}`} 
+                                                alt={content.title || "Company Content"} 
+                                                className="w-full h-auto max-h-[400px] object-contain"
+                                            />
+                                        </div>
                                     )}
                                     
                                     {/* Text display */}
-                                    <div className="p-6">
+                                    <div className="p-6 flex-1">
                                         <span className="block mb-2 text-xs font-bold tracking-wider text-gray-500 uppercase">
                                             {content.type}
                                         </span>

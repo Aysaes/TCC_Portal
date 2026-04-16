@@ -398,13 +398,18 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                                                             </div>
                                                         )}
 
-                                                        <div className="h-44 w-full shrink-0 bg-gray-200 relative">
+                                                        {/* UPDATED: Image uses object-contain inside the announcement card */}
+                                                        <div className="h-44 w-full shrink-0 bg-gray-100 relative flex items-center justify-center">
                                                             {item.image_path ? (
-                                                                <img src={`/storage/${item.image_path}`} alt={item.title} className="h-full w-full object-cover" />
+                                                                <img 
+                                                                    src={`/storage/${item.image_path}`} 
+                                                                    alt={item.title} 
+                                                                    className="h-full w-full object-contain" 
+                                                                />
                                                             ) : (
                                                                 <div className="flex h-full items-center justify-center text-sm text-gray-400 font-medium italic">No Attachment</div>
                                                             )}
-                                                            <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-transparent h-14"></div>
+                                                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent h-14"></div>
                                                         </div>
                                                         
                                                         <div className="flex flex-1 flex-col p-5">
@@ -460,12 +465,13 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
             <Modal show={isModalOpen} onClose={closeModal} maxWidth="2xl">
                 {selectedAnnouncement && (
                     <div className="flex flex-col bg-white overflow-hidden max-h-[85vh]">
+                        {/* UPDATED: Image uses object-contain inside the modal view */}
                         {selectedAnnouncement.image_path && (
-                            <div className="relative w-full h-48 sm:h-64 shrink-0 bg-gray-100 border-b border-gray-200">
+                            <div className="relative w-full h-auto max-h-80 shrink-0 bg-gray-50 border-b border-gray-200 flex items-center justify-center py-4">
                                 <img 
                                     src={`/storage/${selectedAnnouncement.image_path}`} 
                                     alt={selectedAnnouncement.title} 
-                                    className="w-full h-full object-cover object-center" 
+                                    className="w-full h-full max-h-72 object-contain object-center" 
                                 />
                             </div>
                         )}

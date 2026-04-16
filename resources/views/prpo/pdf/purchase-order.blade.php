@@ -159,14 +159,14 @@
                     {{-- Prepared By Block - CORRECTED ORDER --}}
                     <div class="sig-block">
                         <div class="sig-line"></div>
-                        <div class="sig-title">Prepared By (Procurement)</div>
+                        <div class="sig-title">Prepared By</div>
                         <div class="sig-name">{{ $po->preparedBy->name ?? 'barabim' }}</div>
                     </div>
                     
                     {{-- Approved By Block - CORRECTED ORDER --}}
                     <div class="sig-block">
                         <div class="sig-line"></div>
-                        <div class="sig-title">Approved By (DCSO)</div>
+                        <div class="sig-title">Approved By</div>
                         <div class="sig-name">Director of Corporate Services</div>
                     </div>
                 </div>
@@ -208,4 +208,4 @@
         }
     </script>
 </body>
-</html>
+</html>     

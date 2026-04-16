@@ -23,7 +23,8 @@ export default function StaffOverview({ auth, requests }) {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    // 🟢 FIX 1: Added clearErrors to destructuring
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         type: '2316',
         name: auth.user.name,
         reason: '',
@@ -176,20 +177,25 @@ export default function StaffOverview({ auth, requests }) {
         );
     };
 
+    // 🟢 FIX 2: Explicitly clear the state here instead of relying on prevData
     const openModal = (requestType) => {
-        reset();
-        setData((prevData) => ({
-            ...prevData,
+        clearErrors(); // Clears any red validation errors
+        setData({
             type: requestType,
             name: auth.user.name,
             reason: requestType === 'COE' ? COE_REASONS[0] : '',
-        }));
+            specific_details: '', // Force the text box to be completely empty
+        });
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
-        setTimeout(() => reset(), 300);
+        // 🟢 FIX 3: Wait for animation to close, then nuke the form
+        setTimeout(() => {
+            reset();
+            clearErrors();
+        }, 300);
     };
 
     const openViewModal = (req) => {
@@ -214,7 +220,7 @@ export default function StaffOverview({ auth, requests }) {
             case 'Visa Application': return 'Specify Country / Passport No.';
             case 'Travel': return 'Specify Leave Dates';
             case 'Others': return 'Please Specify';
-            default: return 'Additional Details (Optional)';
+            default: return 'Additional Details';
         }
     };
 

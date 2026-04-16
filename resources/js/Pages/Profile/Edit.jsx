@@ -1,7 +1,6 @@
 import { getDashboardLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head } from '@inertiajs/react';
-import CompanyLinks from './Partials/CompanyLinks';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 
@@ -36,9 +35,7 @@ export default function Edit({ mustVerifyEmail, status }) {
                         <UpdatePasswordForm className="max-w-xl" />
                     </div>
 
-                    <div>
-                        <CompanyLinks className="w-full"/>
-                    </div>
+
                 </div>
             </div>
         </SidebarLayout>
