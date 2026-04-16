@@ -1,4 +1,4 @@
-import settingsIcon from '@/assets/settings.png';
+import settingsIcon from '@/Assets/settings.png';
 import ConfirmModal from '@/Components/ConfirmModal';
 import { getAdminLinks } from "@/Config/navigation";
 import SidebarLayout from '@/Layouts/SidebarLayout';
