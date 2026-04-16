@@ -13,7 +13,7 @@ export const getDashboardLinks = () => [
         active: route().current('dashboard.announcements'),
     },
     {
-        label: 'Mission & Vision',
+        label: 'About Us',
         href: route('dashboard.mission-vision'),
         active: route().current('dashboard.mission-vision'),
     },

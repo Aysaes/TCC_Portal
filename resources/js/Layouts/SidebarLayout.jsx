@@ -14,12 +14,12 @@ export default function SidebarLayout({
 }) {
     const { auth } = usePage().props;
     
-    // 🟢 NEW: Store notifications and count in local state
+    // 🟢 Store notifications and count in local state
     const [localNotifications, setLocalNotifications] = useState(auth.notifications || []);
     const [localUnreadCount, setLocalUnreadCount] = useState(auth.unreadNotificationsCount || 0);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-    // 🟢 FIX 1: Calculate hasMore dynamically so it NEVER gets out of sync!
+    // 🟢 Calculate hasMore dynamically
     const totalNotificationsCount = auth.totalNotificationsCount || 0;
     const hasMore = totalNotificationsCount > localNotifications.length;
 
@@ -49,15 +49,13 @@ export default function SidebarLayout({
 
     // Keep local state synced if Inertia pushes fresh props from the server
     useEffect(() => {
-        // 🟢 FIX 2: Only overwrite local notifications if the backend sends a completely fresh/smaller list.
-        // This prevents Inertia from wiping out the user's history if they click "Load More" and then trigger a page reload!
         if (localNotifications.length <= (auth.notifications?.length || 0)) {
             setLocalNotifications(auth.notifications || []);
         }
         setLocalUnreadCount(auth.unreadNotificationsCount || 0);
     }, [auth.notifications, auth.unreadNotificationsCount]);
 
-    // 🟢 UPDATED: Mark as read without deleting from the list
+    // 🟢 Mark as read without deleting from the list
     const markAsRead = (notificationId, url) => {
         // 1. Instantly update UI: Mark as read and decrement count
         const notification = localNotifications.find(n => n.id === notificationId);
@@ -137,7 +135,7 @@ export default function SidebarLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 17h6" />
             </svg>
         ),
-        'Mission & Vision': (
+        'About Us': (
             <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3m9-9h-3m-12 0H3m15.364-6.364l-2.121 2.121m-9.192 9.192l-2.121 2.121m0-12.727l2.121 2.121m9.192 9.192l2.121 2.121" />
             </svg>
@@ -304,7 +302,7 @@ export default function SidebarLayout({
 
     const markAllAsRead = (e) => {
         e.preventDefault();
-        e.stopPropagation(); // Keep the dropdown open if desired, or remove to let it close
+        e.stopPropagation();
 
         if (localUnreadCount === 0) return;
 
@@ -345,53 +343,53 @@ export default function SidebarLayout({
 
                 <div className="overflow-y-auto px-4 py-6 text-sm font-medium">
                     {!['General', 'Profile'].includes(activeModule) && (
-    <div className="mb-4">
-        <Link
-            href={route('dashboard')}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-black hover:bg-gray-100 hover:text-black transition ease-in-out duration-150"
-        >
-            <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
-            </svg>
-            Dashboard
-        </Link>
-    </div>
-)}
+                        <div className="mb-4">
+                            <Link
+                                href={route('dashboard')}
+                                className="flex items-center gap-2 rounded-lg px-4 py-2 text-black hover:bg-gray-100 hover:text-black transition ease-in-out duration-150"
+                            >
+                                <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 21V9h6v12" />
+                                </svg>
+                                Dashboard
+                            </Link>
+                        </div>
+                    )}
 
                     {['General', 'Profile'].includes(activeModule) && (
-    <div className="mb-4">
-        <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-            Quick Links
-        </div>
-        <ul className="space-y-2">
-            <li>
-                <Link
-                    href={route('staff.duty-meals.index')}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                >
-                    <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l7 7-7 7" />
-                    </svg>
-                    Duty Meal
-                </Link>
-            </li>
-            <li>
-                <Link
-                    href={route('admin.documents.index')}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                >
-                    <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v4h8" />
-                    </svg>
-                    Document Repository
-                </Link>
-            </li>
-        </ul>
-    </div>
-)}
+                        <div className="mb-4">
+                            <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                Quick Links
+                            </div>
+                            <ul className="space-y-2">
+                                <li>
+                                    <Link
+                                        href={route('staff.duty-meals.index')}
+                                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                    >
+                                        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l7 7-7 7" />
+                                        </svg>
+                                        Duty Meal
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link
+                                        href={route('admin.documents.index')}
+                                        className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                    >
+                                        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 2h8l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v4h8" />
+                                        </svg>
+                                        Document Repository
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+                    )}
 
                     {priorityLink && (
                         <div className="mb-4">
@@ -426,11 +424,67 @@ export default function SidebarLayout({
                             </li>
                         ))}
                     </ul>
+
+                    {/* 🟢 RESOURCES SECTION */}
+                    {['General', 'Profile'].includes(activeModule) && (
+                        <div className="mt-8 mb-4">
+                            <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                Resources
+                            </div>
+                            <ul className="space-y-2">
+                                <li>
+                                    <Link
+                                        href={route('resources.internal')}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${
+                                            route().current('resources.internal') ? 'bg-gray-100 font-bold text-gray-900' : ''
+                                        }`}
+                                    >
+                                        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                        </svg>
+                                        Internal Links
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link
+                                        href={route('resources.external')}
+                                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${
+                                            route().current('resources.external') ? 'bg-gray-100 font-bold text-gray-900' : ''
+                                        }`}
+                                    >
+                                        <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                        </svg>
+                                        External Links
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+                    )}
                 </div>
             </aside>
 
-            <div className="flex flex-1 flex-col overflow-hidden">
-                <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6">
+            <div className="flex flex-1 flex-col overflow-hidden relative">
+                
+                {/* 🔽 CSS FIX FOR MOBILE NOTIFICATION DROPDOWN 🔽 */}
+                <style>{`
+                    @media (max-width: 639px) {
+                        .mobile-notification-fix > div > .absolute.z-50,
+                        .mobile-notification-fix .absolute.z-50 {
+                            position: fixed !important;
+                            top: 4.5rem !important; 
+                            left: 50% !important;
+                            right: auto !important;
+                            transform: translateX(-50%) !important;
+                            width: 95vw !important;
+                            max-width: 400px !important;
+                        }
+                    }
+                `}</style>
+
+                {/* 🔽 RESPONSIVE HEADER 🔽 */}
+                <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-3 sm:px-6 z-50">
+                    {/* Mobile Hamburger Menu */}
                     <button
                         onClick={() => setIsMobileSidebarOpen(true)}
                         className="text-gray-500 hover:text-gray-700 focus:outline-none sm:hidden"
@@ -440,139 +494,138 @@ export default function SidebarLayout({
                         </svg>
                     </button>
 
-                    <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
-                        <Dropdown>
-                            <Dropdown.Trigger>
-                                <button
-                                    type="button"
-                                    className="relative inline-flex h-[42px] w-[42px] items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none"
-                                    aria-label="Notifications"
-                                >
-                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.563 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                                    </svg>
-                                    
-                                    {/* 🟢 The Red Dot Badge uses local state so it clears instantly */}
-                                    {localUnreadCount > 0 && (
-                                        <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white">
-                                            {localUnreadCount}
-                                        </span>
-                                    )}
-                                </button>
-                            </Dropdown.Trigger>
-                            
-                            <Dropdown.Content align="right" width="80">
-
-                                <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">
-                                    <span className="text-sm font-semibold text-gray-900">
-                                        Notifications
-                                    </span>
-                                    {localUnreadCount > 0 && (
-                                        <button
-                                            onClick={markAllAsRead}
-                                            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors"
-                                        >
-                                            Mark all as read
-                                        </button>
-                                    )}
-                                </div>
-                                
-                                {localNotifications.length === 0 ? (
-                                    <div className="px-4 py-3">
-                                        <p className="mt-1 text-xs text-gray-500">No new notifications yet.</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {/* 🟢 Dropdown container max height with scrolling */}
-                                        <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
-                                            {localNotifications.map((notification) => (
-                                                <button 
-                                                    key={notification.id}
-                                                    onClick={() => markAsRead(notification.id, notification.data.action_url)}
-                                                    // 🟢 Dynamic background based on read state
-                                                    className={`block w-full text-left px-4 py-3 transition ${
-                                                        notification.read_at 
-                                                            ? 'bg-white hover:bg-slate-50' 
-                                                            : 'bg-indigo-50/60 hover:bg-indigo-50'
-                                                    }`}
-                                                >
-                                                    <p className={`text-sm ${notification.read_at ? 'font-medium text-slate-600' : 'font-bold text-slate-900'}`}>
-                                                        {notification.data.message}
-                                                    </p>
-                                                    <p className="text-xs text-slate-500 mt-1">
-                                                        {notification.data.user_email || notification.data.details}
-                                                    </p>
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* 🟢 UPDATED: "Load More" Footer Button */}
-                                        {hasMore && (
-                                            <div className="block bg-gray-50 text-center border-t border-gray-100 rounded-b-md">
-                                                <button 
-                                                    onClick={loadMoreNotifications}
-                                                    disabled={isLoadingMore}
-                                                    className="block w-full py-2.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-gray-100 transition disabled:opacity-50"
-                                                >
-                                                    {isLoadingMore ? 'Loading older alerts...' : 'Show Previous Notifications'}
-                                                </button>
-                                            </div>
-                                        )}
+                    {/* Right Side Header Items - Reduced gap on mobile */}
+                    <div className="flex flex-1 items-center justify-end gap-1.5 sm:gap-3">
+                        
+                        {/* 🔽 Wrapped Notifications Dropdown 🔽 */}
+                        <div className="mobile-notification-fix">
+                            <Dropdown>
+                                <Dropdown.Trigger>
+                                    <button
+                                        type="button"
+                                        className="relative inline-flex h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none"
+                                        aria-label="Notifications"
+                                    >
+                                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.563 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                                        </svg>
                                         
-                                        {!hasMore && localNotifications.length > 0 && (
-                                            <div className="block px-4 py-2.5 bg-gray-50 text-center border-t border-gray-100 rounded-b-md text-xs text-gray-400 font-medium">
-                                                End of notification history
-                                            </div>
+                                        {localUnreadCount > 0 && (
+                                            <span className="absolute right-0 top-0 sm:right-1 sm:top-1 flex h-3.5 w-3.5 sm:h-4 sm:w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] sm:text-[10px] font-bold text-white ring-2 ring-white">
+                                                {localUnreadCount}
+                                            </span>
                                         )}
-                                    </>
-                                )}
-                            </Dropdown.Content>
-                        </Dropdown>
+                                    </button>
+                                </Dropdown.Trigger>
+                                
+                                <Dropdown.Content align="right" width="80">
+                                    <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-white">
+                                        <span className="text-sm font-semibold text-gray-900">Notifications</span>
+                                        {localUnreadCount > 0 && (
+                                            <button onClick={markAllAsRead} className="text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors">
+                                                Mark all as read
+                                            </button>
+                                        )}
+                                    </div>
+                                    
+                                    {localNotifications.length === 0 ? (
+                                        <div className="px-4 py-3">
+                                            <p className="mt-1 text-xs text-gray-500">No new notifications yet.</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                                                {localNotifications.map((notification) => (
+                                                    <button 
+                                                        key={notification.id}
+                                                        onClick={() => markAsRead(notification.id, notification.data.action_url)}
+                                                        className={`block w-full text-left px-4 py-3 transition ${notification.read_at ? 'bg-white hover:bg-slate-50' : 'bg-indigo-50/60 hover:bg-indigo-50'}`}
+                                                    >
+                                                        <p className={`text-sm ${notification.read_at ? 'font-medium text-slate-600' : 'font-bold text-slate-900'}`}>
+                                                            {notification.data.message}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500 mt-1">
+                                                            {notification.data.user_email || notification.data.details}
+                                                        </p>
+                                                    </button>
+                                                ))}
+                                            </div>
 
+                                            {hasMore && (
+                                                <div className="block bg-gray-50 text-center border-t border-gray-100 rounded-b-md">
+                                                    <button 
+                                                        onClick={loadMoreNotifications}
+                                                        disabled={isLoadingMore}
+                                                        className="block w-full py-2.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-gray-100 transition disabled:opacity-50"
+                                                    >
+                                                        {isLoadingMore ? 'Loading older alerts...' : 'Show Previous Notifications'}
+                                                    </button>
+                                                </div>
+                                            )}
+                                            
+                                            {!hasMore && localNotifications.length > 0 && (
+                                                <div className="block px-4 py-2.5 bg-gray-50 text-center border-t border-gray-100 rounded-b-md text-xs text-gray-400 font-medium">
+                                                    End of notification history
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </Dropdown.Content>
+                            </Dropdown>
+                        </div>
+
+                        {/* Module Selection Dropdown */}
                         <Dropdown>
                             <Dropdown.Trigger>
-                                <button className="inline-flex min-h-[42px] items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none sm:px-4">
-                                    {currentModuleLabel}
-                                    <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <button className="inline-flex min-h-[36px] sm:min-h-[42px] items-center gap-1 sm:gap-2 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none">
+                                    
+                                    {/* Hide text on mobile */}
+                                    <span className="hidden sm:block">{currentModuleLabel}</span>
+                                    
+                                    {/* Show grid icon on mobile instead */}
+                                    <svg className="h-4 w-4 sm:hidden text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                                    </svg>
+
+                                    <svg className="h-3 w-3 sm:h-4 sm:w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
                                 </button>
                             </Dropdown.Trigger>
 
                             <Dropdown.Content>
-                               {['admin', 'director of corporate services and operations'].includes(auth.user.role.name.toLowerCase()) && (
-                                    <Dropdown.Link href={route('admin.dashboard')}>
-                                        Admin Module
-                                    </Dropdown.Link>
+                                {['admin', 'director of corporate services and operations'].includes(auth.user.role.name.toLowerCase()) && (
+                                    <Dropdown.Link href={route('admin.dashboard')}>Admin Module</Dropdown.Link>
                                 )}
-
-                                <Dropdown.Link href={route('hr.index')}>
-                                    HR Module
-                                </Dropdown.Link>
-                                
+                                <Dropdown.Link href={route('hr.index')}>HR Module</Dropdown.Link>
                                 {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations', 'Operations Manager'].includes(user.role?.name) && (
-                                    <Dropdown.Link href={route('prpo.purchase-requests.create')}>
-                                        PR/PO Module
-                                    </Dropdown.Link>
+                                    <Dropdown.Link href={route('prpo.purchase-requests.create')}>PR/PO Module</Dropdown.Link>
                                 )}
-                                
                                 {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL'].includes(user.role?.name) && (
-                                    <Dropdown.Link href={route('admin.duty-meals.index')}>
-                                        Duty Meal Module
-                                    </Dropdown.Link>
+                                    <Dropdown.Link href={route('admin.duty-meals.index')}>Duty Meal Module</Dropdown.Link>
                                 )}
                             </Dropdown.Content>
                         </Dropdown>
 
+                        {/* User Dropdown */}
                         <Dropdown>
                             <Dropdown.Trigger>
-                                <button className="inline-flex min-h-[42px] items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none sm:px-4">
-                                    {user.name}
-                                    <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <button className="inline-flex min-h-[36px] sm:min-h-[42px] items-center gap-1 sm:gap-2 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none">
+                                    
+                                    {/* Hide text on mobile, truncate if it gets too long on desktop */}
+                                    <span className="hidden sm:block max-w-[100px] lg:max-w-[150px] truncate">{user.name}</span>
+                                    
+                                    {/* Show simple user icon on mobile instead */}
+                                    <svg className="h-4 w-4 sm:hidden text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                    </svg>
+
+                                    <svg className="h-3 w-3 sm:h-4 sm:w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
                                 </button>
                             </Dropdown.Trigger>
+                            
                             <Dropdown.Content>
                                 <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
                                 <Dropdown.Link href={route('logout')} method="post" as="button">Log Out</Dropdown.Link>

@@ -12,7 +12,14 @@ class DutyMealParticipant extends Model
         'user_id',
         'choice',
         'custom_request',
-        'shift_type',
+        'is_graveyard', 
+        'is_delivered', // <-- Added this to allow saving
+        'shift_type',   // <-- Added this to allow saving your new React shift selections!
+    ];
+
+    protected $casts = [
+        'is_graveyard' => 'boolean',
+        'is_delivered' => 'boolean', // <-- Good practice to cast this to boolean
     ];
 
     public function dutyMeal(): BelongsTo
@@ -24,5 +31,4 @@ class DutyMealParticipant extends Model
     {
         return $this->belongsTo(User::class);
     }
-
 }

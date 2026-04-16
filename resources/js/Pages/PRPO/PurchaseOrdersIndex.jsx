@@ -1,5 +1,6 @@
 import ConfirmModal from '@/Components/ConfirmModal';
 import TrackingStepper from '@/Components/TrackingStepper';
+import Modal from '@/Components/Modal'; 
 import { getPRPOLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
@@ -35,9 +36,10 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
     const [isRemovedModalOpen, setIsRemovedModalOpen] = useState(false);
 
     const [discountType, setDiscountType] = useState('amount');
-    
-    // 🟢 NEW STATE: Track selected checkboxes
     const [selectedItemIds, setSelectedItemIds] = useState([]);
+
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
 
     const { data, setData, processing, reset } = useForm({
         delivery_date: '',
@@ -56,13 +58,11 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
             const activeItems = selectedPO.items.filter(item => !removedItemIds.includes(item.id) && item.status !== 'removed');
             const gross = activeItems.reduce((sum, item) => sum + parseFloat(item.net_payable), 0);
             
-            // Calculate discount based on Type
             const rawDiscountInput = parseFloat(data.discount_total) || 0;
             const actualDiscount = discountType === 'percentage' 
                 ? gross * (rawDiscountInput / 100) 
                 : rawDiscountInput;
             
-            // 🟢 FIXED: Using actualDiscount instead of the old 'discount' variable
             const net = gross - actualDiscount; 
             const vatRate = parseFloat(data.vat_rate) || 0;
             const vat = net * (vatRate / 100);
@@ -77,7 +77,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
         setNewFiles([]); 
         setRemovedItemIds([]); 
         setSelectedItemIds([]);
-        setDiscountType('amount'); // 🟢 Reset selections
+        setDiscountType('amount');
         
         const formattedDeliveryDate = po.delivery_date ? po.delivery_date.split('T')[0] : '';
 
@@ -113,9 +113,36 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
         });
     };
 
+    const submitRejection = (e) => {
+        e.preventDefault();
+        router.post(route('prpo.purchase-orders.update', selectedPO.id), {
+            ...data,
+            discount_total: liveTotals.actualDiscount,
+            status: 'cancelled', 
+            remarks: rejectReason, 
+            _method: 'put',
+            new_attachments: newFiles,
+            removed_item_ids: removedItemIds
+        }, {
+            preserveScroll: true,
+            forceFormData: true,
+            onSuccess: () => {
+                setIsRejectModalOpen(false);
+                setRejectReason('');
+                closeModal();
+            }
+        });
+    };
+
     const confirmSave = (newStatus) => {
         if (newStatus === 'drafted' && selectedPO.status === 'drafted') {
             handleSave(newStatus);
+            return;
+        }
+
+        if (newStatus === 'cancelled') {
+            setRejectReason('');
+            setIsRejectModalOpen(true);
             return;
         }
 
@@ -127,8 +154,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
             title = 'Approve Purchase Order'; message = 'Are you sure you want to finalize and approve this PO? This will lock the document.'; confirmText = 'Approve PO'; confirmColor = 'bg-green-600 hover:bg-green-500';
         } else if (newStatus === 'drafted' && selectedPO.status === 'pending_approval') {
             title = 'Return to Draft'; message = 'Are you sure you want to return this PO to Procurement so they can make corrections?'; confirmText = 'Return to Draft'; confirmColor = 'bg-orange-500 hover:bg-orange-600';
-        } else if (newStatus === 'cancelled') {
-            title = 'Cancel Purchase Order'; message = 'Are you sure you want to completely cancel this PO? This action cannot be undone.'; confirmText = 'Cancel PO'; confirmColor = 'bg-red-600 hover:bg-red-500';
         }
 
         setConfirmDialog({
@@ -147,11 +172,9 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
         ));
     };
 
-    // 🟢 UPDATED: Point this to data.items instead of selectedPO.items
     const activeItems = data.items?.filter(item => !removedItemIds.includes(item.id) && item.status !== 'removed') || [];
     const removedItems = selectedPO?.items?.filter(item => removedItemIds.includes(item.id) || item.status === 'removed') || [];
 
-    // 🟢 NEW: Handle Checkbox Selection
     const handleSelectAll = (e) => {
         if (e.target.checked) {
             setSelectedItemIds(activeItems.map(i => i.id));
@@ -164,10 +187,8 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
         setSelectedItemIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
 
-    // 🟢 UPDATED: Single Item Removal
     const handleRemoveItem = (itemId) => {
         if (activeItems.length === 1) {
-            // Auto-cancel if it's the very last item
             setConfirmDialog({
                 isOpen: true, title: 'Cancel Purchase Order',
                 message: 'Dropping the last remaining item will completely cancel this Purchase Order. Proceed?',
@@ -181,14 +202,13 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                 confirmText: 'Drop Item', confirmColor: 'bg-red-600 hover:bg-red-500',
                 onConfirm: () => { 
                     setRemovedItemIds(prev => [...prev, itemId]); 
-                    setSelectedItemIds(prev => prev.filter(id => id !== itemId)); // Uncheck if dropped
+                    setSelectedItemIds(prev => prev.filter(id => id !== itemId));
                     closeConfirmModal(); 
                 }
             });
         }
     };
 
-    // 🟢 NEW: Bulk Action Handler
     const handleBulkAction = () => {
         const isCancelling = selectedItemIds.length === activeItems.length;
 
@@ -270,7 +290,10 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                         <td className="px-6 py-4 text-gray-500">{po.po_date}</td>
                                         <td className="px-6 py-4 text-gray-500">{formatCurrency(po.gross_amount)}</td>
                                         <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(po.grand_total)}</td>
-                                        <td className="px-6 py-4">{formatStatus(po.status)}</td>
+                                        
+                                        <td className="px-6 py-4">
+                                            {formatStatus(po.status)}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -328,6 +351,20 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                     <TrackingStepper currentStatus={modalView === 'PO' ? selectedPO.status : selectedPO.purchase_request?.status} type={modalView === 'PO' ? 'PO' : 'PR'} />
                                 </div>
 
+                                {selectedPO.status === 'cancelled' && selectedPO.remarks && (
+                                    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                                        <label className="block text-xs font-bold text-red-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            Reason for Cancellation / Rejection
+                                        </label>
+                                        <p className="text-sm text-red-700 whitespace-pre-wrap leading-relaxed break-all">
+                                            {selectedPO.remarks}
+                                        </p>
+                                    </div>
+                                )}
+
                                 {modalView === 'PO' ? (
                                     <>
                                         <div className="mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -383,7 +420,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                         <div className="flex flex-col lg:flex-row gap-8">
                                             <div className="flex-1">
                                                 
-                                                {/* 🟢 NEW: Bulk Actions Bar */}
                                                 {selectedItemIds.length > 0 && selectedPO.status === 'drafted' && isProcurement && (
                                                     <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-lg flex justify-between items-center mb-4 transition-all">
                                                         <span className="text-sm font-semibold text-indigo-800">
@@ -402,7 +438,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                                                         <thead className="bg-gray-100">
                                                             <tr>
-                                                                {/* 🟢 NEW: Master Checkbox Header */}
                                                                 {selectedPO.status === 'drafted' && isProcurement && (
                                                                     <th className="px-4 py-2 w-10 text-center">
                                                                         <input 
@@ -424,7 +459,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                                         <tbody className="divide-y divide-gray-200 bg-white">
                                                             {activeItems.map((item) => (
                                                                 <tr key={item.id} className={selectedItemIds.includes(item.id) ? 'bg-indigo-50/50' : ''}>
-                                                                    {/* 🟢 NEW: Row Checkbox */}
                                                                     {selectedPO.status === 'drafted' && isProcurement && (
                                                                         <td className="px-4 py-3 text-center">
                                                                             <input 
@@ -437,15 +471,15 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                                                     )}
                                                                     <td className="px-4 py-3 font-medium text-gray-900">{item.description}</td>
                                                                     <td className="px-4 py-3">
-    <input 
-        type="text" 
-        value={item.notes || ''} 
-        onChange={(e) => handleItemNoteChange(item.id, e.target.value)}
-        disabled={selectedPO.status !== 'drafted' || !isProcurement}
-        placeholder="e.g. 15+1 Freebie"
-        className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent disabled:p-0 disabled:text-gray-600 font-medium"
-    />
-</td>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            value={item.notes || ''} 
+                                                                            onChange={(e) => handleItemNoteChange(item.id, e.target.value)}
+                                                                            disabled={selectedPO.status !== 'drafted' || !isProcurement}
+                                                                            placeholder="e.g. 15+1 Freebie"
+                                                                            className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent disabled:p-0 disabled:text-gray-600 font-medium"
+                                                                        />
+                                                                    </td>
                                                                     <td className="px-4 py-3 text-center">{item.qty} {item.unit}</td>
                                                                     <td className="px-4 py-3 text-right">₱{item.unit_price}</td>
                                                                     <td className="px-4 py-3 text-right font-medium">₱{item.net_payable}</td>
@@ -529,7 +563,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                     </>
                                 ) : (
                                     <div className="animate-in fade-in duration-300">
-                                        {/* PR View Content (Unchanged) */}
                                         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm">
                                             <div><span className="block font-semibold text-gray-900">Branch</span> {selectedPO.purchase_request?.branch}</div>
                                             <div><span className="block font-semibold text-gray-900">Department</span> {selectedPO.purchase_request?.department}</div>
@@ -539,6 +572,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
                                             <div><span className="block font-semibold text-gray-900">Budget Status</span> {selectedPO.purchase_request?.budget_status || 'N/A'}</div>
                                             <div><span className="block font-semibold text-gray-900">Budget Ref.</span> {selectedPO.purchase_request?.budget_ref}</div>
                                         </div>
+                                        
                                         <h4 className="mb-2 mt-6 font-bold text-gray-900 border-b pb-1">All Items Originally Requested</h4>
                                         <div className="overflow-x-auto rounded-lg border border-gray-200">
                                             <table className="min-w-full divide-y divide-gray-200 text-sm text-left table-fixed">
@@ -628,6 +662,50 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
             )}
 
             <ConfirmModal show={confirmDialog.isOpen} onClose={closeConfirmModal} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} confirmColor={confirmDialog.confirmColor} onConfirm={confirmDialog.onConfirm} />
+
+            <Modal show={isRejectModalOpen} onClose={() => setIsRejectModalOpen(false)} maxWidth="md">
+                <div className="p-6 max-h-[85vh] overflow-y-auto">
+                    <div className="flex items-center justify-between border-b pb-4 mb-5">
+                        <h2 className="text-xl font-bold text-gray-900">Reason for Rejection</h2>
+                        <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    
+                    <form onSubmit={submitRejection}>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">
+                                Please provide a brief reason why this Purchase Order is being rejected.
+                            </label>
+                            <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                rows="4"
+                                placeholder="e.g., Exceeds budget, incorrect item specifications..."
+                                required
+                            />
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
+                            <button
+                                type="button"
+                                onClick={() => setIsRejectModalOpen(false)}
+                                className="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="rounded-md bg-red-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-500 transition-colors disabled:opacity-50"
+                            >
+                                Confirm Reject
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
         </SidebarLayout>
     );
 }

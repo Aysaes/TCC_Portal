@@ -70,6 +70,7 @@ class PurchaseOrderController extends Controller
             'discount_total' => 'nullable|numeric|min:0',
             'vat_rate' => 'nullable|numeric|min:0|max:100', 
             'status' => 'required|in:drafted,pending_approval,approved,cancelled',
+            'remarks' => 'nullable|string', // 🟢 NEW: Allow remarks (rejection reason)
             'removed_item_ids' => 'nullable', // Relaxed array rule
             'new_attachments' => 'nullable',  // Relaxed array rule
             'new_attachments.*' => 'file|max:10240',
@@ -142,7 +143,8 @@ class PurchaseOrderController extends Controller
             'vat_total' => $vatTotal,
             'grand_total' => $grandTotal,
             'status' => $validated['status'],
-            'attachments' => empty($attachments) ? null : $attachments, // 🟢 Forces save!
+            'remarks' => $validated['remarks'] ?? $purchaseOrder->remarks, // 🟢 NEW: Save remarks securely
+            'attachments' => empty($attachments) ? null : $attachments, // Forces save!
         ]);
 
         $status = $validated['status'];
@@ -189,7 +191,6 @@ class PurchaseOrderController extends Controller
 
         return back()->with('success', $message);
     }
-
 
     public function generateFromPR(Request $request, PurchaseRequest $purchaseRequest)
     {
@@ -307,10 +308,6 @@ class PurchaseOrderController extends Controller
         ]);
 
         // 2. Return the PDF view
-        // Note: If you use barryvdh/laravel-dompdf, you would do this instead:
-        // $pdf = \PDF::loadView('prpo.pdf.purchase-order', ['po' => $purchaseOrder]);
-        // return $pdf->stream($purchaseOrder->po_number . '.pdf');
-
         return view('prpo.pdf.purchase-order', ['po' => $purchaseOrder]);
     }
 }

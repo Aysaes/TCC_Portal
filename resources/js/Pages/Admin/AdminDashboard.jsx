@@ -13,7 +13,7 @@ export default function AdminDashboard({ totalActiveEmployees = 0, totalBranches
             sidebarLinks={adminLinks}
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Admin Control Panel
+                    Admin Dashboard
                 </h2>
             }
         >

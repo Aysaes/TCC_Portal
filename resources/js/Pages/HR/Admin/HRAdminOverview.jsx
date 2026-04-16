@@ -9,7 +9,6 @@ export default function HRAdminOverview({ auth, requests }) {
     const hrLinks = getHRAdminLinks(auth);
     const { system } = usePage().props;
 
-    // 🟢 NEW: Define who is allowed to click the action buttons!
     const currentRole = auth.user?.role?.name || 'Guest';
     const roleName = currentRole.toLowerCase();
     const canAct = ['admin', 'hrbp'].includes(roleName);
@@ -38,11 +37,8 @@ export default function HRAdminOverview({ auth, requests }) {
 
     const renderHeaderSortButton = (field) => {
         const isActive = sortField === field;
-
-        const upClass =
-            isActive && sortDirection === 'asc' ? 'text-gray-900' : 'text-gray-300';
-        const downClass =
-            isActive && sortDirection === 'desc' ? 'text-gray-900' : 'text-gray-300';
+        const upClass = isActive && sortDirection === 'asc' ? 'text-gray-900' : 'text-gray-300';
+        const downClass = isActive && sortDirection === 'desc' ? 'text-gray-900' : 'text-gray-300';
 
         return (
             <button
@@ -50,30 +46,12 @@ export default function HRAdminOverview({ auth, requests }) {
                 onClick={() => toggleSort(field)}
                 className="ml-2 inline-flex items-center justify-center hover:opacity-80 transition"
             >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="w-4 h-4"
-                >
-                    <g
-                        className={upClass}
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" className="w-4 h-4">
+                    <g className={upClass} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M7 17V7" />
                         <path d="M4 10l3-3 3 3" />
                     </g>
-
-                    <g
-                        className={downClass}
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
+                    <g className={downClass} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17 7v10" />
                         <path d="M14 14l3 3 3-3" />
                     </g>
@@ -96,57 +74,28 @@ export default function HRAdminOverview({ auth, requests }) {
         setTimeout(() => setSelectedRequest(null), 300);
     };
 
-    // --- REJECTION MODAL STATE ---
-    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-    const [rejectingId, setRejectingId] = useState(null);
-    const [rejectReason, setRejectReason] = useState('');
-
-
-    // --- ACCEPT MODAL STATE ---
-    const [isAcceptModalOpen, setIsAcceptModalOpen] = useState(false);
-    const [acceptingId, setAcceptingId] = useState(null);
+    // --- APPROVE MODAL STATE ---
+    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+    const [approvingId, setApprovingId] = useState(null);
 
     // --- ACTION HANDLER ---
     const handleAction = (id, actionType) => {
-        if (actionType === 'reject') {
-            setRejectingId(id);
-            setRejectReason('');
-            setIsRejectModalOpen(true);
-            return;
-        }
-
-        if (actionType === 'accept') {
-            setAcceptingId(id);
-            setIsAcceptModalOpen(true);
+        if (actionType === 'approve') {
+            setApprovingId(id);
+            setIsApproveModalOpen(true);
             return;
         }
     };
 
-    // --- SUBMIT REJECTION ---
-    const submitRejection = (e) => {
-        e.preventDefault();
-        router.patch(route('hr.admin.update-status', rejectingId), {
-            action: 'reject',
-            remarks: rejectReason
+    // --- SUBMIT APPROVAL ---
+    const submitApprove = () => {
+        router.patch(route('hr.admin.update-status', approvingId), {
+            action: 'approve'
         }, {
             preserveScroll: true,
             onSuccess: () => {
-                setIsRejectModalOpen(false);
-                setRejectingId(null);
-                setRejectReason('');
-            }
-        });
-    };
-
-    // --- SUBMIT ACCEPTANCE ---
-    const submitAccept = () => {
-        router.patch(route('hr.admin.update-status', acceptingId), {
-            action: 'accept'
-        }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setIsAcceptModalOpen(false);
-                setAcceptingId(null);
+                setIsApproveModalOpen(false);
+                setApprovingId(null);
             }
         });
     };
@@ -156,7 +105,6 @@ export default function HRAdminOverview({ auth, requests }) {
             case 'Pending HR': return 'bg-amber-100 text-amber-800 border-amber-200';
             case 'General Accounting': return 'bg-blue-100 text-blue-800 border-blue-200';
             case 'Released': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-            case 'Rejected': return 'bg-red-100 text-red-800 border-red-200';
             default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
@@ -166,7 +114,7 @@ export default function HRAdminOverview({ auth, requests }) {
         return requestList.filter((req) => {
             if (activeTab === 'action-required') return req.status === 'Pending HR';
             if (activeTab === 'in-progress') return req.status === 'General Accounting';
-            if (activeTab === 'completed') return req.status === 'Released' || req.status === 'Rejected';
+            if (activeTab === 'completed') return req.status === 'Released';
             return true;
         });
     }, [requestList, activeTab]);
@@ -182,17 +130,14 @@ export default function HRAdminOverview({ auth, requests }) {
                     aValue = (a.user?.name || '').toLowerCase();
                     bValue = (b.user?.name || '').toLowerCase();
                     break;
-
                 case 'date':
                     aValue = new Date(a.created_at).getTime();
                     bValue = new Date(b.created_at).getTime();
                     return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-
                 case 'type':
                     aValue = (a.type === 'COE' ? 'COE' : 'Form 2316').toLowerCase();
                     bValue = (b.type === 'COE' ? 'COE' : 'Form 2316').toLowerCase();
                     break;
-
                 default:
                     return 0;
             }
@@ -233,7 +178,7 @@ export default function HRAdminOverview({ auth, requests }) {
 
                     <div className="mb-6">
                         <h1 className="text-2xl font-semibold text-gray-900">Pending Document Requests</h1>
-                        <p className="text-gray-500 text-sm mt-1">Review, approve, or reject employee document requests.</p>
+                        <p className="text-gray-500 text-sm mt-1">Review and approve employee document requests.</p>
                     </div>
 
                     {/* TABS */}
@@ -248,7 +193,6 @@ export default function HRAdminOverview({ auth, requests }) {
                         >
                             Action Required
                         </button>
-
                         <button
                             onClick={() => setActiveTab('in-progress')}
                             className={`pb-3 font-semibold text-sm border-b-2 transition-colors ${
@@ -259,7 +203,6 @@ export default function HRAdminOverview({ auth, requests }) {
                         >
                             In Progress
                         </button>
-
                         <button
                             onClick={() => setActiveTab('completed')}
                             className={`pb-3 font-semibold text-sm border-b-2 transition-colors ${
@@ -290,21 +233,18 @@ export default function HRAdminOverview({ auth, requests }) {
                                                         {renderHeaderSortButton('date')}
                                                     </div>
                                                 </th>
-
                                                 <th className="px-6 py-4">
                                                     <div className="flex items-center">
                                                         <span>Requestor</span>
                                                         {renderHeaderSortButton('requestor')}
                                                     </div>
                                                 </th>
-
                                                 <th className="px-6 py-4">
                                                     <div className="flex items-center">
                                                         <span>Document Type</span>
                                                         {renderHeaderSortButton('type')}
                                                     </div>
                                                 </th>
-
                                                 <th className="px-6 py-4">Details / Reason</th>
                                                 <th className="px-6 py-4">Status</th>
                                                 <th className="px-6 py-4 text-right">Actions</th>
@@ -357,20 +297,13 @@ export default function HRAdminOverview({ auth, requests }) {
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
                                                         {activeTab === 'action-required' && req.status === 'Pending HR' ? (
-                                                            // 🟢 NEW: Check if the user is allowed to act!
                                                             canAct ? (
                                                                 <div className="flex items-center justify-end gap-2">
                                                                     <button
-                                                                        onClick={() => handleAction(req.id, 'reject')}
-                                                                        className="rounded border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors"
-                                                                    >
-                                                                        Reject
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleAction(req.id, 'accept')}
+                                                                        onClick={() => handleAction(req.id, 'approve')}
                                                                         className="rounded bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition-colors shadow-sm"
                                                                     >
-                                                                        Accept
+                                                                        Approve
                                                                     </button>
                                                                 </div>
                                                             ) : (
@@ -401,11 +334,9 @@ export default function HRAdminOverview({ auth, requests }) {
                                             >
                                                 Previous
                                             </button>
-
                                             <span className="text-sm text-gray-600">
                                                 Page {currentPage} of {totalPages}
                                             </span>
-
                                             <button
                                                 type="button"
                                                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
@@ -420,7 +351,6 @@ export default function HRAdminOverview({ auth, requests }) {
                             </>
                         )}
                     </div>
-
                 </div>
             </div>
 
@@ -480,22 +410,6 @@ export default function HRAdminOverview({ auth, requests }) {
                                     {selectedRequest.status}
                                 </span>
                             </div>
-
-                            {selectedRequest.status === 'Rejected' && selectedRequest.remarks && (
-                                <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                                    <label className="block text-xs font-bold text-red-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                        Reason for Rejection
-                                    </label>
-                                    <p className="text-sm text-red-700 whitespace-pre-wrap leading-relaxed break-all">
-                                        {selectedRequest.remarks.startsWith('HR|')
-                                            ? selectedRequest.remarks.substring(3)
-                                            : selectedRequest.remarks}
-                                    </p>
-                                </div>
-                            )}
                         </div>
 
                         <div className="mt-8 flex justify-end pt-4 border-t">
@@ -510,58 +424,12 @@ export default function HRAdminOverview({ auth, requests }) {
                 )}
             </Modal>
 
-            {/* --- REJECTION REASON INPUT MODAL --- */}
-            <Modal show={isRejectModalOpen} onClose={() => setIsRejectModalOpen(false)} maxWidth="md">
-                <div className="p-6 max-h-[85vh] overflow-y-auto">
-                    <div className="flex items-center justify-between border-b pb-4 mb-5">
-                        <h2 className="text-xl font-bold text-gray-900">Reason for Rejection</h2>
-                        <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <form onSubmit={submitRejection}>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">
-                                Please provide a brief reason why this document request is being rejected.
-                            </label>
-                            <textarea
-                                value={rejectReason}
-                                onChange={(e) => setRejectReason(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-                                rows="4"
-                                placeholder="e.g., Missing requirements, incorrect form..."
-                                required
-                            />
-                        </div>
-
-                        <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
-                            <button
-                                type="button"
-                                onClick={() => setIsRejectModalOpen(false)}
-                                className="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                className="rounded-md bg-red-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-500 transition-colors"
-                            >
-                                Confirm Reject
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </Modal>
-
-            {/* --- 🟢 NEW: ACCEPT CONFIRMATION MODAL --- */}
-            <Modal show={isAcceptModalOpen} onClose={() => setIsAcceptModalOpen(false)} maxWidth="sm">
+            {/* --- APPROVE CONFIRMATION MODAL --- */}
+            <Modal show={isApproveModalOpen} onClose={() => setIsApproveModalOpen(false)} maxWidth="sm">
                 <div className="p-6">
                     <div className="flex items-center justify-between border-b pb-4 mb-5">
                         <h2 className="text-xl font-bold text-gray-900">Confirm Approval</h2>
-                        <button onClick={() => setIsAcceptModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={() => setIsApproveModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -575,17 +443,17 @@ export default function HRAdminOverview({ auth, requests }) {
                     <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
                         <button
                             type="button"
-                            onClick={() => setIsAcceptModalOpen(false)}
+                            onClick={() => setIsApproveModalOpen(false)}
                             className="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             type="button"
-                            onClick={submitAccept}
+                            onClick={submitApprove}
                             className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-indigo-500 transition-colors"
                         >
-                            Confirm Accept
+                            Confirm Approve
                         </button>
                     </div>
                 </div>

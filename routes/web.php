@@ -85,6 +85,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard.mission-vision');
 
+    // 🟢 NEW: RESOURCES LINKS 🟢
+    Route::get('/resources/internal-links', function () {
+        return Inertia::render('Resources/InternalLinks');
+    })->name('resources.internal');
+
+    Route::get('/resources/external-links', function () {
+        return Inertia::render('Resources/ExternalLinks');
+    })->name('resources.external');
+
     // --- ORGANIZATIONAL CHART (USER VIEW) ---
     Route::get('/dashboard/org-chart', [OrgChartController::class, 'userIndex'])->name('dashboard.org-chart');
 
@@ -124,6 +133,9 @@ Route::get('/notifications/load-more', [NotificationController::class, 'loadMore
 Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admin')->group(function(){
 
     Route::get('/logs', [SystemLogController::class, 'index'])->name('.logs.index');
+    
+    // 👇 NEW EXPORT ROUTE ADDED HERE 👇
+    Route::get('/logs/export', [SystemLogController::class, 'export'])->name('.logs.export');
     
     Route::get('/dashboard', function(){
         // Count users where the status is exactly 'Active'
