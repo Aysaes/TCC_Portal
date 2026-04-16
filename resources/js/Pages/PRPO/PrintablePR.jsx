@@ -17,7 +17,8 @@ export default function PrintablePR({ pr }) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-200 py-8 print:py-0 font-sans">
+        // 👇 ADDED print:bg-white HERE 👇
+        <div className="min-h-screen bg-gray-200 print:bg-white py-8 print:py-0 font-sans">
             <Head title={`Purchase Request #${pr.id}`} />
 
             {/* FORCE LANDSCAPE WITH TIGHT MARGINS */}
@@ -53,7 +54,7 @@ export default function PrintablePR({ pr }) {
             </div>
 
             {/* 🟢 THE DOCUMENT - LOCKED INTO MICRO-TYPOGRAPHY FOR SCREEN & PRINT */}
-            <div className="max-w-5xl mx-auto bg-white p-8 shadow-xl print:shadow-none print:p-0 border border-gray-300 print:border-none w-full flex flex-col text-[9px] leading-[1.15] text-[#333]">
+            <div className="max-w-5xl mx-auto bg-white p-8 shadow-xl print:shadow-none print:p-0 border border-gray-300 print:border-none w-full flex flex-col text-[10px] leading-[1.15] text-[#333]">
                 
                 {/* 🟢 MASTER HEADER (Side-by-side matching the PO) */}
                 <div className="flex border-b-2 border-gray-900 pb-2 mb-3">
@@ -64,30 +65,30 @@ export default function PrintablePR({ pr }) {
                             <ApplicationLogo className="w-full h-full text-indigo-900" />
                         </div>
                         <div>
-                            <h1 className="text-[16px] font-bold text-gray-900 leading-tight m-0">The Cat Clinic</h1>
-                            <div className="text-[9px] text-gray-600 mt-0.5">Makati City, Metro Manila</div>
+                            <h1 className="text-[17px] font-bold text-gray-900 leading-tight m-0">The Cat Clinic</h1>
+                            <div className="text-[10px] text-gray-600 mt-0.5">Makati City, Metro Manila</div>
                         </div>
                     </div>
 
                     {/* Col 2: Prepared By */}
                     <div className="w-[30%] border-l border-gray-300 pl-3">
-                        <span className="text-[8px] font-bold text-gray-500 uppercase block mb-0.5">Prepared By:</span>
-                        <span className="text-[10px] font-bold text-gray-900">{pr.user?.name}</span><br />
-                        <span className="text-[9px] text-gray-600">{pr.department} - {pr.branch}</span>
+                        <span className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Prepared By:</span>
+                        <span className="text-[11px] font-bold text-gray-900 uppercase">{pr.user?.name}</span><br />
+                        <span className="text-[10px] text-gray-600">{pr.department} - {pr.branch}</span>
                     </div>
 
                     {/* Col 3: Budget Info */}
                     <div className="w-[25%] border-l border-gray-300 pl-3">
-                        <span className="text-[8px] font-bold text-gray-500 uppercase block mb-0.5">Budget Information:</span>
-                        <span className="text-[10px] font-bold text-gray-900 block">Ref: <span className="font-normal">{pr.budget_ref}</span></span>
-                        <span className="text-[10px] font-bold text-gray-900 block mt-0.5">Status: <span className="font-normal">{pr.budget_status || 'N/A'}</span></span>
+                        <span className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Budget Information:</span>
+                        <span className="text-[11px] font-bold text-gray-900 block">Ref: <span className="font-normal">{pr.budget_ref}</span></span>
+                        <span className="text-[11px] font-bold text-gray-900 block mt-0.5">Status: <span className="font-normal">{pr.budget_status || 'N/A'}</span></span>
                     </div>
 
                     {/* Col 4: Title & Dates */}
                     <div className="w-[20%] text-right flex flex-col justify-center">
-                        <h2 className="text-[20px] font-bold text-indigo-600 leading-none m-0">PURCHASE REQUEST</h2>
-                        <div className="font-bold text-[11px] mt-1">PR #: {pr.pr_number}</div>
-                        <div className="text-[9px] font-semibold text-gray-600 mt-1">
+                        <h2 className="text-[21px] font-bold text-indigo-600 leading-none m-0">PURCHASE REQUEST</h2>
+                        <div className="font-bold text-[12px] mt-1">PR #: {pr.pr_number}</div>
+                        <div className="text-[10px] font-semibold text-gray-600 mt-1">
                             Prepared: <span className="font-normal">{pr.date_prepared}</span><br />
                             Needed: <span className="font-normal text-red-600">{pr.date_needed}</span>
                         </div>
@@ -97,14 +98,14 @@ export default function PrintablePR({ pr }) {
                 {/* Purpose of Request */}
                 {pr.purpose_of_request && (
                     <div className="mb-2 p-2 bg-gray-50 border border-gray-200 rounded-sm">
-                        <span className="text-[8px] font-bold text-gray-500 uppercase block mb-0.5">Purpose of Request</span>
-                        <p className="text-[9px] text-gray-800 italic m-0">{pr.purpose_of_request}</p>
+                        <span className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Purpose of Request</span>
+                        <p className="text-[10px] text-gray-800 italic m-0">{pr.purpose_of_request}</p>
                     </div>
                 )}
 
                 {/* Items Table */}
                 <div className="flex-grow">
-                    <table className="w-full text-[9px] text-left mb-2 border-collapse">
+                    <table className="w-full text-[10px] text-left mb-2 border-collapse">
                         <thead className="bg-gray-100 border-y border-gray-300">
                             <tr>
                                 <th className="py-[3px] px-2 font-bold text-gray-800 w-[3%] text-center">#</th>
@@ -122,11 +123,11 @@ export default function PrintablePR({ pr }) {
                                     {/* Product Details - Inlined to save vertical height */}
                                     <td className="py-[2px] px-2">
                                         <strong className="text-gray-900">{item.product?.name || `Product ID: ${item.product_id}`}</strong>
-                                        {item.specifications && <span className="text-[8px] text-gray-500 ml-1 pl-1 border-l border-gray-400"> {item.specifications}</span>}
-                                        {item.supplier?.name && <span className="text-[8px] text-indigo-600 ml-1 pl-1 border-l border-gray-400">Pref: {item.supplier.name}</span>}
+                                        {item.specifications && <span className="text-[10px] text-gray-500 ml-1 pl-1 border-l border-gray-400"> {item.specifications}</span>}
+                                        {item.supplier?.name && <span className="text-[9px] text-indigo-600 ml-1 pl-1 border-l border-gray-400">Pref: {item.supplier.name}</span>}
                                     </td>
 
-                                    <td className="py-[2px] px-2 text-center font-semibold">{item.qty_requested} <span className="text-[8px] text-gray-500">{item.unit}</span></td>
+                                    <td className="py-[2px] px-2 text-center font-semibold">{item.qty_requested} <span className="text-[10px] text-gray-500">{item.unit}</span></td>
                                     <td className="py-[2px] px-2 text-right text-gray-600">{formatCurrency(item.est_unit_cost)}</td>
                                     <td className="py-[2px] px-2 text-right font-bold text-gray-900">{formatCurrency(item.total_cost)}</td>
                                 </tr>
@@ -134,8 +135,8 @@ export default function PrintablePR({ pr }) {
                             
                             {/* Grand Total Row */}
                             <tr className="border-t-2 border-gray-800 break-inside-avoid">
-                                <td colSpan="4" className="py-2 px-2 text-right font-bold uppercase text-gray-700 text-[10px]">Estimated Grand Total:</td>
-                                <td className="py-2 px-2 text-right font-black text-[12px] text-gray-900 bg-gray-50">
+                                <td colSpan="4" className="py-2 px-2 text-right font-bold uppercase text-gray-700 text-[11px]">Estimated Grand Total:</td>
+                                <td className="py-2 px-2 text-right font-black text-[13px] text-gray-900 bg-gray-50">
                                     {formatCurrency(pr.items.reduce((sum, item) => sum + Number(item.total_cost), 0))}
                                 </td>
                             </tr>
@@ -147,18 +148,18 @@ export default function PrintablePR({ pr }) {
                 <div className="mt-4 break-inside-avoid w-full flex justify-between gap-12">
                     <div className="w-[30%]">
                         <div className="border-b border-gray-900 h-8 mb-1"></div>
-                        <div className="text-[10px] font-bold text-gray-900 uppercase text-center leading-tight">Requested By</div>
-                        <div className="text-[9px] text-center text-gray-500 leading-tight">{pr.user?.name}</div>
+                        <div className="text-[10px] text-gray-500 text-center leading-tight">Requested By</div>
+                        <div className="text-[11px] font-bold text-gray-900 uppercase text-center leading-tight">{pr.user?.name}</div>
                     </div>
                     <div className="w-[30%]">
                         <div className="border-b border-gray-900 h-8 mb-1"></div>
-                        <div className="text-[10px] font-bold text-gray-900 uppercase text-center leading-tight">Noted By</div>
-                        <div className="text-[9px] text-center text-gray-500 leading-tight">Department Head / TL</div>
+                        <div className="text-[10px] text-gray-500 text-center leading-tight">Noted By</div>
+                        <div className="text-[11px] font-bold text-gray-900 uppercase text-center leading-tight">Department Head / TL</div>
                     </div>
                     <div className="w-[30%]">
                         <div className="border-b border-gray-900 h-8 mb-1"></div>
-                        <div className="text-[10px] font-bold text-gray-900 uppercase text-center leading-tight">Approved By</div>
-                        <div className="text-[9px] text-center text-gray-500 leading-tight">Procurement / DCSO</div>
+                        <div className="text-[10px] text-gray-500 text-center leading-tight">Approved By</div>
+                        <div className="text-[11px] font-bold text-gray-900 uppercase text-center leading-tight">Procurement / DCSO</div>
                     </div>
                 </div>
 
