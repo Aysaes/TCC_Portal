@@ -17,5 +17,5 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/tccpurrtal/htdocs/TCC_Purrtal
+            cd /home/tccpurrtal/htdocs/www.tccpurrtal.tech/TCC_Purrtal
             ./deploy.sh
