@@ -44,7 +44,7 @@ class DocumentController extends Controller
             'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:51200', 
         ]);
 
-        $filePath = $request->file('file')->store('documents');
+        $filePath = $request->file('file')->store('documents', 'public');
 
         try{
             // 🟢 1. Save the document to a variable so we can use its title
