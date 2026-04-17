@@ -3,29 +3,26 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB; // Add this import
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Fix for purchase_orders
+        // 1. Fix purchase_orders
         if (Schema::hasTable('purchase_orders')) {
-            Schema::table('purchase_orders', function (Blueprint $table) {
-                // bigIncrements() handles both PRIMARY KEY and AUTO_INCREMENT in one go
-                $table->bigIncrements('id')->change();
-            });
+            // We use raw SQL to ensure the Primary Key and Auto Increment are set at the same time
+            DB::statement('ALTER TABLE purchase_orders MODIFY id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY');
         }
 
-        // Fix for purchase_order_items
+        // 2. Fix purchase_order_items
         if (Schema::hasTable('purchase_order_items')) {
-            Schema::table('purchase_order_items', function (Blueprint $table) {
-                $table->bigIncrements('id')->change();
-            });
+            DB::statement('ALTER TABLE purchase_order_items MODIFY id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY');
         }
     }
 
     public function down(): void
     {
-        // Usually, we don't downgrade primary keys as it risks data integrity
+        // Down remains empty to protect data
     }
 };
