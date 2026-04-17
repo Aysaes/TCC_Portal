@@ -168,7 +168,7 @@ export default function ApprovalBoard({ auth, requests, currentView, canSeeAll, 
                         My Requests
                     </Link>
 
-                    {!userRole.includes('assist') && (
+                    {!userRole.includes('inventory assist') && (
                         <>
                             <Link 
                                 href={route('prpo.approval-board', { view: 'action_needed' })} 
