@@ -1,1 +1,0 @@
-import{j as s}from"./app-DwDcI_pL.js";function g({src:o,alt:t,className:n=""}){return s.jsx("img",{src:o,alt:t,className:n,onError:r=>{r.target.onerror=null,r.target.src="@/Assets/tcc_logo.png"}})}export{g as I};

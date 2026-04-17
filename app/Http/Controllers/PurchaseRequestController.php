@@ -7,10 +7,13 @@ use App\Models\Supplier;
 use App\Models\PurchaseRequest;
 use App\Models\Branch;
 use App\Models\Department;
+use App\Models\User;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\PendingApprovalNotification;
 
 class PurchaseRequestController extends Controller
 {
@@ -100,9 +103,12 @@ class PurchaseRequestController extends Controller
             foreach ($validated['items'] as $item) {
                 $pr->items()->create($item);
             }
+
+            $this->notifyNextApprovers($pr);
         });
 
-        return redirect()->route('prpo.approval-board')->with('success', 'Purchase Request submitted successfully!');
+        return redirect()->route('prpo.approval-board', ['view' => 'my_requests'])
+                         ->with('success', 'Purchase Request submitted successfully!');
     }
 
     // =====================================================================
@@ -115,7 +121,11 @@ class PurchaseRequestController extends Controller
         $userRole = strtolower($user->role->name ?? '');
         $userBranches = $user->branches()->pluck('name')->toArray(); 
         
-        $defaultView = str_contains($userRole, 'assistant') ? 'all' : 'action_needed';
+        // 🟢 1. Define if they are an assistant to pass to React
+        $isAssistant = str_contains($userRole, 'assistant');
+        
+        // 🟢 2. Default assistants to 'my_requests', everyone else to 'action_needed'
+        $defaultView = $isAssistant ? 'my_requests' : 'action_needed';
         $view = $request->query('view', $defaultView);
 
         $query = PurchaseRequest::with(['user', 'items.product', 'items.supplier'])->latest();
@@ -143,10 +153,14 @@ class PurchaseRequestController extends Controller
             else {
                 $query->whereRaw('1 = 0'); 
             }
-        } else {
-            if (!$isAdmin && str_contains($userRole, 'assistant')) {
-                $query->where('user_id', $user->id);
-            } elseif (!$isAdmin && !empty($userBranches)) {
+        } 
+        // 🟢 3. Add explicit logic for the 'my_requests' tab
+        elseif ($view === 'my_requests') {
+            $query->where('user_id', $user->id);
+        } 
+        // Logic for 'all' or 'finished'
+        else {
+            if (!$isAdmin && !empty($userBranches)) {
                 $query->whereIn('branch', $userBranches);
             }
         }
@@ -157,6 +171,8 @@ class PurchaseRequestController extends Controller
             'requests' => $requests,
             'currentView' => $view,
             'userBranches' => $userBranches, 
+            'isAssistant' => $isAssistant, // 🟢 4. Pass to React so it hides the Action Needed tab!
+            'canSeeAll' => $isAdmin || str_contains($userRole, 'director'), // Optional: Pass your all-access flag
         ]);
     }
 
@@ -192,6 +208,8 @@ class PurchaseRequestController extends Controller
 
         $purchaseRequest->save();
 
+        $this->notifyNextApprovers($purchaseRequest);
+
         return back()->with('success', $message);
     }
 
@@ -202,5 +220,60 @@ class PurchaseRequestController extends Controller
         return Inertia::render('PRPO/PrintablePR', [
             'pr' => $purchaseRequest
         ]);
+    }
+
+    private function notifyNextApprovers(PurchaseRequest $pr)
+    {
+        // 🟢 1. Always start the list with the original requester!
+        $usersToNotify = collect([$pr->user]); 
+        $message = '';
+
+        if ($pr->status === 'pending_inv_tl') {
+            // Find Inventory TLs
+            $approvers = User::whereHas('role', function ($q) {
+                $q->where('name', 'like', '%Inventory TL%');
+            })->whereHas('branches', function ($q) use ($pr) {
+                $q->where('name', $pr->branch);
+            })->get();
+            
+            // Add approvers to our list
+            $usersToNotify = $usersToNotify->merge($approvers);
+            // Adjusted message to make sense for both parties
+            $message = "PR from {$pr->department} ({$pr->branch}) is now pending Inventory TL approval.";
+
+        } elseif ($pr->status === 'pending_ops_manager') {
+            // Find Ops Managers
+            $approvers = User::whereHas('role', function ($q) {
+                $q->where('name', 'like', '%Ops Manager%')->orWhere('name', 'like', '%Operations%');
+            })->whereHas('branches', function ($q) use ($pr) {
+                $q->where('name', $pr->branch);
+            })->get();
+
+            $usersToNotify = $usersToNotify->merge($approvers);
+            $message = "PR from {$pr->department} ({$pr->branch}) is now pending Operations Manager approval.";
+
+        } elseif ($pr->status === 'approved') {
+            // Find Procurement
+            $procurementTeam = User::whereHas('role', function ($q) {
+                $q->where('name', 'like', '%Procurement%');
+            })->get();
+
+            $usersToNotify = $usersToNotify->merge($procurementTeam);
+            $message = "PR from {$pr->department} ({$pr->branch}) is approved. The PO is ready for generation.";
+            
+        } elseif ($pr->status === 'rejected') {
+             $message = "PR from {$pr->department} ({$pr->branch}) was rejected.";
+             
+        } elseif ($pr->status === 'cancelled') {
+             $message = "PR from {$pr->department} ({$pr->branch}) was cancelled.";
+        }
+
+        // 🟢 2. Filter out duplicates (Just in case an Inventory TL made their own request!)
+        $usersToNotify = $usersToNotify->unique('id');
+
+        // Send the notification to everyone on the final list
+        if ($usersToNotify->isNotEmpty()) {
+            Notification::send($usersToNotify, new PendingApprovalNotification($pr, $message));
+        }
     }
 }
