@@ -78,7 +78,8 @@ class PurchaseRequestController extends Controller
 
         if (str_contains($userRole, 'tl')) {
             $initialStatus = 'pending_ops_manager'; 
-        } elseif (str_contains($userRole, 'director') || str_contains($userRole, 'admin')) {
+        } 
+        elseif (str_contains($userRole, 'director') || str_contains($userRole, 'admin') || str_contains($userRole, 'operations') || str_contains($userRole, 'procurement'))  {
             $initialStatus = 'approved'; 
         }
 
