@@ -12,11 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('manpower_request', function (Blueprint $table) {
-            // Adds the JSON column to store the array of approvers
-            $table->json('workflow_path')->nullable();
-            
-            // Adds the integer column to track which step the request is currently on
-            $table->integer('current_step')->default(0);
+    
+        if (!Schema::hasColumn('manpower_request', 'workflow_path')) {
+           $table->json('workflow_path')->nullable();
+        }
+        
+     
+        if (!Schema::hasColumn('manpower_request', 'current_step')) {
+                $table->integer('current_step')->default(0);
+        }
         });
     }
 

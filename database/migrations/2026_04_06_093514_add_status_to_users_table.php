@@ -10,21 +10,22 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::table('users', function (Blueprint $table) {
-            // 🟢 Adds a nullable string column. 
-            // Because it is nullable, your existing users won't be affected at all!
+{
+    Schema::table('users', function (Blueprint $table) {
+        // 🟢 Only add the column if it doesn't already exist
+        if (!Schema::hasColumn('users', 'status')) {
             $table->string('status')->nullable()->after('password'); 
-        });
-    }
+        }
+    });
+}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('users', function (Blueprint $table) {
+public function down(): void
+{
+    Schema::table('users', function (Blueprint $table) {
+        // Safely drop it if we ever need to rollback
+        if (Schema::hasColumn('users', 'status')) {
             $table->dropColumn('status');
-        });
-    }
+        }
+    });
+}
 };

@@ -9,46 +9,39 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        // 1. Define the exact department names you provided
-        $departmentNames = [
-            'Accounting',
-            'Human Resources',
-            'Information Technology',
-            'Marketing',
-            'Procurement',
-            'Veterinary Technicians'
-        ];
+{
+    $departmentNames = [
+        'Accounting',
+        'Human Resources',
+        'Information Technology',
+        'Marketing',
+        'Procurement',
+        'Veterinary Technicians'
+    ];
 
-        // 2. Find the IDs for these departments
-        $departments = DB::table('departments')
-            ->whereIn('name', $departmentNames)
-            ->get();
+    // 1. Get the departments
+    $departments = DB::table('departments')
+        ->whereIn('name', $departmentNames)
+        ->get();
 
-        $newPositions = [];
-
-        // 3. Prepare the insertion data
-        foreach ($departments as $dept) {
-            $newPositions[] = [
+    // 2. Loop and use updateOrInsert to prevent duplicates
+    foreach ($departments as $dept) {
+        DB::table('positions')->updateOrInsert(
+            [
                 'department_id' => $dept->id,
-                'name'          => 'Intern',
+                'name'          => 'Intern'
+            ],
+            [
                 'created_at'    => now(),
                 'updated_at'    => now(),
-            ];
-        }
-
-        // 4. Insert the new positions into the database
-        if (!empty($newPositions)) {
-            DB::table('positions')->insert($newPositions);
-        }
+            ]
+        );
     }
+}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        // Remove the 'Intern' positions if the migration is rolled back
-        DB::table('positions')->where('name', 'Intern')->delete();
-    }
+public function down(): void
+{
+    // Clean up if you ever rollback
+    DB::table('positions')->where('name', 'Intern')->delete();
+}
 };

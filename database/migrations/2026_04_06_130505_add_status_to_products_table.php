@@ -10,19 +10,22 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::table('products', function (Blueprint $table) {
-           $table->string('status')->nullable()->after('price');
-        });
-    }
+{
+    Schema::table('products', function (Blueprint $table) {
+        // Only add the status column if it doesn't already exist
+        if (!Schema::hasColumn('products', 'status')) {
+            $table->string('status')->nullable()->after('price');
+        }
+    });
+}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('products', function (Blueprint $table) {
-            //
-        });
-    }
+public function down(): void
+{
+    Schema::table('products', function (Blueprint $table) {
+        // Safely drop it if you ever need to rollback
+        if (Schema::hasColumn('products', 'status')) {
+            $table->dropColumn('status');
+        }
+    });
+}
 };
