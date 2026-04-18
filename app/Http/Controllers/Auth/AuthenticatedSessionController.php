@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Notifications\PasswordResetAlert;
+use App\Notifications\AccountLockedNotification;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -35,62 +36,84 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-       $request->validate([
-        'email' => 'required|email',
-        'password' => 'required',
-        'device_id' => 'required|string',
-       ]);
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+            'device_id' => 'required|string',
+        ]);
 
-       // Finds user in database
+        // Finds user in database
         $user = User::where('email', $request->email)->first();
 
-       // If user exists and password is correct, check device authorization
-        if ($user && Hash::check ($request->password, $user->password )){
-
-        // Get approved devices list   
-            $currentDevices = $user->authorized_device_ids ?? [];
-            $attemptDevice = $request->device_id;
-
-        //  If current devices not on the list
-            if (!in_array($attemptDevice, $currentDevices)) {
-
-        // Check if user has reached device limit
-                if (count($currentDevices) >= $user->device_limit) {
-                    throw ValidationException::withMessages([
-                        'email' => "Device limit reached ($user->device_limit allowed). Please contact IT support for assistance.",
-                    ]);
-                } 
-
-            // Authorize new device
-            $currentDevices[] = $attemptDevice;
-
-            $user->authorized_device_ids = $currentDevices;
-            $user->save();
-            }
-        }
-
-        // Proceed with normal authentication flow
-        $request->authenticate();
-
-        // 🟢 THE KILL SWITCH CHECK
-        if ($request->user()->status === 'Disabled') {
-            
-            // Immediately log them back out
-            Auth::guard('web')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            // Kick them back to the login screen with an error
+        // 🟢 1. THE KILL SWITCH (Moved to top for better security)
+        // If they are already disabled, stop them before checking anything else
+        if ($user && $user->status === 'Disabled') {
             throw ValidationException::withMessages([
                 'email' => 'This account has been disabled. Please contact the administrator.',
             ]);
         }
 
+        // 2. CHECK CREDENTIALS & DEVICE
+        if ($user) {
+            if (Hash::check($request->password, $user->password)) {
+                
+                // --- SUCCESS: Reset strike counter to 0 ---
+                if ($user->failed_login_attempts > 0) {
+                    $user->update(['failed_login_attempts' => 0]);
+                }
+
+                // --- DEVICE AUTHORIZATION LOGIC ---
+                $currentDevices = $user->authorized_device_ids ?? [];
+                $attemptDevice = $request->device_id;
+
+                if (!in_array($attemptDevice, $currentDevices)) {
+                    if (count($currentDevices) >= $user->device_limit) {
+                        throw ValidationException::withMessages([
+                            'email' => "Device limit reached ($user->device_limit allowed). Please contact IT support for assistance.",
+                        ]);
+                    } 
+                    $currentDevices[] = $attemptDevice;
+                    $user->authorized_device_ids = $currentDevices;
+                    $user->save();
+                }
+
+            } else {
+                
+                // --- FAIL: The 5-Strike Lockout Logic ---
+                $user->increment('failed_login_attempts');
+
+                if ($user->failed_login_attempts >= 5) {
+                    // Lock the account
+                    $user->update(['status' => 'Disabled']);
+
+                    // Find Admins and send Database Notification
+                    $admins = User::whereHas('role', function ($q) {
+                        $q->where('name', 'Admin');
+                    })->get();
+
+                    if ($admins->isNotEmpty()) {
+                        Notification::send($admins, new AccountLockedNotification($user));
+                    }
+
+                    // Kick them back to login
+                    throw ValidationException::withMessages([
+                        'email' => 'You have entered the wrong password 5 times. Your account is now disabled. Please contact IT.',
+                    ]);
+                }
+                
+                // If it's less than 5 strikes, we do nothing here and let $request->authenticate() 
+                // handle throwing the standard "Wrong password" error below.
+            }
+        }
+
+        // Proceed with normal authentication flow (Sets up the session securely)
+        $request->authenticate();
+
         // If they are active, let them in!
         $request->session()->regenerate();
 
         // --- START OF LOGGING CODE (SUCCESSFUL LOGIN) ---
-        // Placed here because they successfully passed the kill switch and device checks!
+        // Placed here because they successfully passed all checks!
         \App\Models\SystemLog::create([
             'user_id' => Auth::id(), 
             'module' => 'Auth',

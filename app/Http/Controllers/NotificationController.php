@@ -25,13 +25,19 @@ class NotificationController extends Controller
      */
     public function markAsRead(Request $request, $id)
     {
-        $notification = $request->user()->notifications()->where('id', $id)->first();
+        // findOrFail is great here so it safely 404s if the ID doesn't exist
+        $notification = $request->user()->notifications()->findOrFail($id);
 
-        if ($notification && !$notification->read_at) {
+        if (!$notification->read_at) {
             $notification->markAsRead();
         }
 
-        return response()->json(['success' => true]);
+        // 🟢 Grab the specific URL we saved in the notification payload
+        // If for some reason it doesn't exist, fallback to the dashboard
+        $url = $notification->data['action_url'] ?? route('dashboard');
+
+        // 🟢 Perform the Inertia redirect
+        return redirect($url);
     }
 
     /**

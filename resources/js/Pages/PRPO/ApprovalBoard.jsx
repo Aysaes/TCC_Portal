@@ -5,14 +5,14 @@ import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function ApprovalBoard({ auth, requests, currentView, isAssistant, canSeeAll, userBranches = [] }) {
+export default function ApprovalBoard({ auth, requests, currentView, canSeeAll, userBranches = [] }) {
     const sidebarLinks = getPRPOLinks(auth);
 
     const userRole = auth.user.role?.name?.toLowerCase().trim() || '';
     const canManagePO = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin'].includes(userRole);
 
     const isInvTL = userRole.includes('inventory tl') || userRole === 'admin';
-    const isOpsManager = userRole.includes('operations') || userRole.includes('ops manager') || userRole === 'admin';
+    const isOpsManager = userRole.includes('operations') || userRole.includes('operations manager') || userRole === 'admin';
 
     // Global Confirm Modal State
     const [confirmDialog, setConfirmDialog] = useState({ 
@@ -159,6 +159,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
 
                 {/* Filter Tabs */}
                 <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
+   
                     
                     <Link 
                         href={route('prpo.approval-board', { view: 'my_requests' })} 
@@ -167,7 +168,7 @@ export default function ApprovalBoard({ auth, requests, currentView, isAssistant
                         My Requests
                     </Link>
 
-                    {!isAssistant && (
+                    {!userRole.includes('inventory assist') && (
                         <>
                             <Link 
                                 href={route('prpo.approval-board', { view: 'action_needed' })} 

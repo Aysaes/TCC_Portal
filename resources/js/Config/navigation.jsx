@@ -224,11 +224,12 @@ export const getPRPOLinks = (auth) => {
     const isAdminOrDCSO = userRole === 'admin' || userRole.includes('director');
     const isProcurement = userRole.includes('procurement');
     const isInventory = userRole.includes('inventory');
+    const isOM = userRole.includes('operations manager') || userRole.includes('operations');
 
     const links = [];
 
     // 2. PR/PO Request (Admin, DCSO, Procurement, Inventory)
-    if (isAdminOrDCSO || isProcurement || isInventory) {
+    if (isAdminOrDCSO || isProcurement || isInventory || isOM) {
         links.push({ 
             label: 'PR Request', 
             href: route('prpo.purchase-requests.create'), 
@@ -237,7 +238,7 @@ export const getPRPOLinks = (auth) => {
     }
 
     // 3. Approval Board (Admin, DCSO, Procurement, Inventory)
-    if (isAdminOrDCSO || isProcurement || isInventory) {
+    if (isAdminOrDCSO || isProcurement || isInventory || isOM) {
         links.push({ 
             label: 'Approval Board', 
             href: route('prpo.approval-board'), 

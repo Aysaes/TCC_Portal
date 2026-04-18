@@ -12,9 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('suppliers', function (Blueprint $table) {
-            // Adds the columns right after the 'name' column
+            if (!Schema::hasColumn('suppliers', 'contact_person')) {
             $table->string('contact_person')->nullable()->after('name');
-            $table->string('contact_number')->nullable()->after('contact_person');
+        }
+        
+        // Do the same for the status column if it's in this file
+        if (!Schema::hasColumn('suppliers', 'contact_person')) {
+             $table->string('contact_number')->nullable()->after('contact_person');
+        }
         });
     }
 

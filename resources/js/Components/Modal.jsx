@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useRef } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
+import { Fragment, useEffect, useRef } from 'react';
 
 const maxWidthClasses = {
     sm: 'sm:max-w-sm',
@@ -118,7 +118,7 @@ export default function Modal({
                     <div className="fixed inset-0 bg-gray-500/75" />
                 </Transition.Child>
 
-                <div className="fixed inset-0 overflow-hidden">
+                <div className="fixed inset-0 z-[100] bg-gray-500/75 backdrop-blur-sm transition-opacity" aria-hidden="true">
                     <div className="flex h-full items-start justify-center p-4 sm:p-6">
                         <Transition.Child
                             as={Fragment}
