@@ -231,7 +231,7 @@ export const getPRPOLinks = (auth) => {
     // 2. PR/PO Request (Admin, DCSO, Procurement, Inventory)
     if (isAdminOrDCSO || isProcurement || isInventory || isOM) {
         links.push({ 
-            label: 'PR Request', 
+            label: 'PR Form', 
             href: route('prpo.purchase-requests.create'), 
             active: route().current('prpo.purchase-requests.*') 
         });

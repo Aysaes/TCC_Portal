@@ -75,6 +75,13 @@ export default function PrintablePR({ pr }) {
                         <span className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Prepared By:</span>
                         <span className="text-[11px] font-bold text-gray-900 uppercase">{pr.user?.name}</span><br />
                         <span className="text-[10px] text-gray-600">{pr.department} - {pr.branch}</span>
+
+                        {pr.cc_user && (
+                            <div className="mt-1 pt-1 border-t border-gray-200 mr-4 flex items-start gap-1">
+                                <span className="text-[9px] font-bold text-gray-500 uppercase">CC:</span>
+                                <span className="text-[10px] font-bold text-gray-800 leading-tight">{pr.cc_user.name}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Col 3: Budget Info */}

@@ -5,7 +5,7 @@ import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function ApprovalBoard({ auth, requests, currentView, canSeeAll, userBranches = [] }) {
+export default function ApprovalBoard({ auth, requests, currentView, userBranches = [] }) {
     const sidebarLinks = getPRPOLinks(auth);
 
     const userRole = auth.user.role?.name?.toLowerCase().trim() || '';
@@ -140,7 +140,7 @@ export default function ApprovalBoard({ auth, requests, currentView, canSeeAll, 
             case 'action_needed': return { title: 'Pending Approvals', desc: 'Review and manage purchase requests awaiting your action.' };
             case 'finished': return { title: 'Finished Requests', desc: 'History of purchase requests you have already processed.' };
             case 'all': return { title: 'All Active PRs', desc: 'Overview of all purchase requests in the system.' };
-            default: return { title: 'PR Approval Board', desc: 'Review and manage purchase requests.' };
+            default: return { title: 'My Purchase Requests', desc: 'Track the status of PRs you have submitted.' };
         }
     };
     const headerContent = getHeaderContent();
@@ -186,7 +186,7 @@ export default function ApprovalBoard({ auth, requests, currentView, canSeeAll, 
                         </>
                     )}
 
-                    {canSeeAll && (
+                    {(userRole.includes('admin') || userRole.includes('director')) && (
                         <Link 
                             href={route('prpo.approval-board', { view: 'all' })} 
                             className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${currentView === 'all' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
@@ -297,6 +297,7 @@ export default function ApprovalBoard({ auth, requests, currentView, canSeeAll, 
                             {/* Modal Body */}
                             <div className="overflow-y-auto px-6 py-4 flex-grow">
                                 <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 rounded-lg bg-gray-50 p-4 text-sm">
+                                    <div><span className="block font-semibold text-gray-900">CC</span> {selectedPR.cc_user?.name || 'N/A'}</div>
                                     <div><span className="block font-semibold text-gray-900">Branch</span> {selectedPR.branch}</div>
                                     <div><span className="block font-semibold text-gray-900">Department</span> {selectedPR.department}</div>
                                     <div><span className="block font-semibold text-gray-900">Request Type</span> {selectedPR.request_type || 'N/A'}</div>

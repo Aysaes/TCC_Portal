@@ -13,7 +13,7 @@ class PurchaseRequest extends Model
         'user_id', 'branch', 'department', 'date_prepared', 'request_type', 
         'priority', 'date_needed', 'budget_status', 'budget_ref', 
         'no_of_quotations', 'purpose_of_request', 'impact_if_not_procured', 'status',
-        'rejection_reason' // 🟢 ADDED HERE
+        'rejection_reason', 'cc_user_id' // 🟢 ADDED HERE
     ];
 
     protected $appends = ['pr_number'];
@@ -32,5 +32,10 @@ class PurchaseRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function cc_user()
+    {
+        return $this->belongsTo(User::class, 'cc_user_id');
     }
 }
