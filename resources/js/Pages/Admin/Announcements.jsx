@@ -384,12 +384,15 @@ export default function Announcements({ auth, announcements = [], branches = [],
         }
     };
 
-    // --- MINI-MODAL FOR NEW PRIORITY ---
-    const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
+    // --- PRIORITIES CRUD LOGIC ---
+    const [isManagePrioritiesModalOpen, setIsManagePrioritiesModalOpen] = useState(false);
+    const [editingPriorityId, setEditingPriorityId] = useState(null);
+
     const {
         data: priorityData,
         setData: setPriorityData,
         post: postPriority,
+        put: putPriority,
         processing: priorityProcessing,
         reset: resetPriority,
         clearErrors: clearPriorityErrors
@@ -398,24 +401,69 @@ export default function Announcements({ auth, announcements = [], branches = [],
         color: '#4F46E5'
     });
 
-    const closePriorityModal = () => {
-        setIsPriorityModalOpen(false);
+    const openManagePriorities = () => {
+        setIsManagePrioritiesModalOpen(true);
+        resetPriority();
+        setEditingPriorityId(null);
+    };
+
+    const closeManagePriorities = () => {
+        setIsManagePrioritiesModalOpen(false);
+        resetPriority();
+        clearPriorityErrors();
+        setEditingPriorityId(null);
+    };
+
+    const startEditPriority = (priority) => {
+        setEditingPriorityId(priority.id);
+        setPriorityData({
+            name: priority.name,
+            color: priority.color
+        });
+    };
+
+    const cancelEditPriority = () => {
+        setEditingPriorityId(null);
         resetPriority();
         clearPriorityErrors();
     };
 
-    const submitPriority = (e) => {
+    const submitSavePriority = (e) => {
         e.preventDefault();
-        postPriority(route('admin.announcements.priority.store'), {
-            preserveScroll: true,
-            onSuccess: () => {
-                closePriorityModal();
-                setAddData({ ...addData, priority: priorityData.name, priority_color: priorityData.color });
+        if (editingPriorityId) {
+            putPriority(route('admin.announcements.priority.update', editingPriorityId), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    cancelEditPriority();
+                }
+            });
+        } else {
+            postPriority(route('admin.announcements.priority.store'), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    resetPriority();
+                }
+            });
+        }
+    };
+
+    const confirmDeletePriority = (priority) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Priority',
+            message: `Are you sure you want to delete the priority "${priority.name}"?`,
+            confirmText: 'Delete Priority',
+            confirmColor: 'bg-red-600 hover:bg-red-500',
+            onConfirm: () => {
+                router.delete(route('admin.announcements.priority.destroy', priority.id), {
+                    preserveScroll: true,
+                    onSuccess: () => closeConfirmModal(),
+                });
             }
         });
     };
 
-    // --- ADD LOGIC ---
+    // --- ADD ANNOUNCEMENT LOGIC ---
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const {
         data: addData,
@@ -472,7 +520,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
         });
     };
 
-    // --- EDIT LOGIC ---
+    // --- EDIT ANNOUNCEMENT LOGIC ---
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const {
@@ -1064,10 +1112,10 @@ export default function Announcements({ auth, announcements = [], branches = [],
 
                                 <button
                                     type="button"
-                                    onClick={() => setIsPriorityModalOpen(true)}
+                                    onClick={openManagePriorities}
                                     className="whitespace-nowrap rounded-md bg-indigo-100 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
                                 >
-                                    + Add Priority
+                                    Manage Priorities
                                 </button>
                             </div>
                             <InputError message={addErrors.priority || addErrors.priority_level_id} className="mt-2" />
@@ -1189,10 +1237,10 @@ export default function Announcements({ auth, announcements = [], branches = [],
 
                                 <button
                                     type="button"
-                                    onClick={() => setIsPriorityModalOpen(true)}
+                                    onClick={openManagePriorities}
                                     className="whitespace-nowrap rounded-md bg-indigo-100 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
                                 >
-                                    + Add Priority
+                                    Manage Priorities
                                 </button>
                             </div>
                             <InputError message={editErrors.priority || editErrors.priority_level_id} className="mt-2" />
@@ -1263,39 +1311,82 @@ export default function Announcements({ auth, announcements = [], branches = [],
                 </form>
             </Modal>
 
-            <Modal show={isPriorityModalOpen} onClose={closePriorityModal} maxWidth="sm">
-                <form onSubmit={submitPriority} className="p-6">
-                    <h2 className="mb-4 text-lg font-medium text-gray-900">Add Custom Priority</h2>
-                    <div className="space-y-4">
-                        <div>
-                            <InputLabel htmlFor="new_priority_name" value="Priority Name (e.g. Holiday)" />
-                            <TextInput
-                                id="new_priority_name"
-                                className="mt-1 block w-full"
-                                value={priorityData.name}
-                                onChange={(e) => setPriorityData('name', e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <InputLabel htmlFor="new_priority_color" value="Badge Color" />
-                            <input
-                                id="new_priority_color"
-                                type="color"
-                                className="mt-1 block h-10 w-full cursor-pointer rounded-md border-gray-300 p-1 shadow-sm"
-                                value={priorityData.color}
-                                onChange={(e) => setPriorityData('color', e.target.value)}
-                                required
-                            />
-                        </div>
+            {/* NEW: Manage Priorities CRUD Modal */}
+            <Modal show={isManagePrioritiesModalOpen} onClose={closeManagePriorities} maxWidth="md">
+                <div className="p-6">
+                    <h2 className="mb-4 text-lg font-medium text-gray-900">Manage Priorities</h2>
+
+                    {/* List of existing priorities */}
+                    <div className="mb-6 space-y-2 max-h-60 overflow-y-auto pr-2">
+                        {priorities.map((p) => (
+                            <div key={p.id} className="flex items-center justify-between rounded-md border p-3">
+                                {editingPriorityId === p.id ? (
+                                    <form onSubmit={submitSavePriority} className="flex w-full items-center gap-2">
+                                        <TextInput
+                                            className="block w-full text-sm"
+                                            value={priorityData.name}
+                                            onChange={(e) => setPriorityData('name', e.target.value)}
+                                            required
+                                        />
+                                        <input
+                                            type="color"
+                                            className="h-8 w-12 cursor-pointer rounded-md border-gray-300 p-0 shadow-sm"
+                                            value={priorityData.color}
+                                            onChange={(e) => setPriorityData('color', e.target.value)}
+                                            required
+                                        />
+                                        <button type="submit" className="text-sm font-semibold text-indigo-600 hover:text-indigo-800">Save</button>
+                                        <button type="button" onClick={cancelEditPriority} className="text-sm font-semibold text-gray-500 hover:text-gray-700">Cancel</button>
+                                    </form>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-4 w-4 rounded-full" style={{ backgroundColor: p.color }}></div>
+                                            <span className="text-sm font-medium text-gray-800">{p.name}</span>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <button type="button" onClick={() => startEditPriority(p)} className="text-sm text-blue-600 hover:text-blue-800">Edit</button>
+                                            <button type="button" onClick={() => confirmDeletePriority(p)} className="text-sm text-red-600 hover:text-red-800">Delete</button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ))}
+                        {priorities.length === 0 && <p className="text-sm text-gray-500 text-center">No priorities found.</p>}
                     </div>
+
+                    {/* Add New Priority Form */}
+                    {!editingPriorityId && (
+                        <form onSubmit={submitSavePriority} className="mt-4 rounded-md bg-gray-50 p-4 border">
+                            <h3 className="mb-3 text-sm font-medium text-gray-700">Add New Priority</h3>
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1">
+                                    <TextInput
+                                        className="block w-full text-sm"
+                                        placeholder="Priority Name (e.g. Urgent)"
+                                        value={priorityData.name}
+                                        onChange={(e) => setPriorityData('name', e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="color"
+                                        className="block h-10 w-12 cursor-pointer rounded-md border-gray-300 p-1 shadow-sm"
+                                        value={priorityData.color}
+                                        onChange={(e) => setPriorityData('color', e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <PrimaryButton disabled={priorityProcessing} className="px-4 py-2">Add</PrimaryButton>
+                            </div>
+                        </form>
+                    )}
+
                     <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closePriorityModal}>Cancel</SecondaryButton>
-                        <PrimaryButton className="ms-3" disabled={priorityProcessing}>
-                            Save Priority
-                        </PrimaryButton>
+                        <SecondaryButton onClick={closeManagePriorities}>Close</SecondaryButton>
                     </div>
-                </form>
+                </div>
             </Modal>
 
             <ConfirmModal
