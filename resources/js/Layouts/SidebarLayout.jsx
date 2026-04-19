@@ -406,7 +406,7 @@ export default function SidebarLayout({
                     )}
 
                     <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        {activeModule} Menu
+                        {activeModule === 'Profile' ? 'General' : activeModule} Menu
                     </div>
 
                     <ul className="space-y-2">

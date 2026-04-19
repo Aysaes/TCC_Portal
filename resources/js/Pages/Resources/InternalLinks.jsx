@@ -37,7 +37,7 @@ export default function InternalLinks() {
             url: '',
             bg: 'bg-blue-50', 
             iconSrc: Tickittenlogo,
-            description: 'Ticketing system for IT support and staff service requests'
+            description: 'Ticketing System for IT Support and Staff Service Requests'
         },
         {
             name: 'ZKBio ZKlink',

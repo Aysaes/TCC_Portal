@@ -230,40 +230,17 @@ export default function Overview({ auth, announcements, contents }) {
             <Head title="Dashboard" />
 
             <style>{`
-                .hide-scroll::-webkit-scrollbar {
-                    display: none;
-                }
-
-                .hide-scroll {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-
-                .smooth-snap {
-                    scroll-snap-type: x mandatory;
-                    -webkit-overflow-scrolling: touch;
-                    overscroll-behavior-x: contain;
-                }
-
-                .announcement-card .announcement-badge {
-                    background: var(--badge-solid-bg);
-                    color: var(--badge-solid-text);
-                    border-color: var(--badge-solid-border);
-                    backdrop-filter: none;
-                    -webkit-backdrop-filter: none;
-                }
-
-                .announcement-card:hover .announcement-badge {
-                    background: var(--badge-glass-bg);
-                    color: var(--badge-glass-text);
-                    border-color: var(--badge-glass-border);
-                    backdrop-filter: blur(8px);
-                    -webkit-backdrop-filter: blur(8px);
-                }
+                .hide-scroll::-webkit-scrollbar { display: none; }
+                .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+                .smooth-snap { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+                .announcement-card .announcement-badge { background: var(--badge-solid-bg); color: var(--badge-solid-text); border-color: var(--badge-solid-border); backdrop-filter: none; -webkit-backdrop-filter: none; }
+                .announcement-card:hover .announcement-badge { background: var(--badge-glass-bg); color: var(--badge-glass-text); border-color: var(--badge-glass-border); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
             `}</style>
 
             <div className="py-0 sm:py-12">
                 <div className="mx-auto w-full max-w-[96rem] space-y-6 sm:px-2 lg:px-4 2xl:max-w-[112rem]">
+                    
+                    {/* ANNOUNCEMENTS SECTION */}
                     <section>
                         <div className="mb-6 flex items-end justify-between">
                             <h3 className="text-lg font-bold uppercase tracking-wide text-gray-700">
@@ -282,19 +259,8 @@ export default function Overview({ auth, announcements, contents }) {
                                     onMouseLeave={() => setIsAutoplayPaused(false)}
                                     className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-black shadow-sm transition-all hover:scale-105 hover:shadow-md focus:outline-none lg:flex"
                                 >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        strokeWidth={2.5}
-                                        stroke="currentColor"
-                                        className="h-5 w-5"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M15.75 19.5L8.25 12l7.5-7.5"
-                                        />
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-5 w-5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                                     </svg>
                                 </button>
                             )}
@@ -357,30 +323,35 @@ export default function Overview({ auth, announcements, contents }) {
                                                                 </div>
                                                             )}
 
-                                                            <div className="relative h-44 w-full shrink-0 bg-gray-200">
+                                                            <div className="aspect-[16/9] w-full shrink-0 bg-gray-100 relative overflow-hidden flex items-center justify-center">
                                                                 {item.image_path ? (
                                                                     <img
                                                                         src={`/storage/${item.image_path}`}
                                                                         alt={item.title}
-                                                                        className="h-full w-full object-cover"
+                                                                        className="absolute left-1/2 top-1/2"
+                                                                        style={{
+                                                                            transform: `translate(calc(-50% + ${item.image_offset_x ?? 0}px), calc(-50% + ${item.image_offset_y ?? 0}px)) scale(${item.image_zoom ?? 1})`,
+                                                                            transformOrigin: 'center center',
+                                                                            width: '100%',
+                                                                            height: '100%',
+                                                                            objectFit: 'contain',
+                                                                        }}
                                                                     />
                                                                 ) : (
                                                                     <div className="flex h-full items-center justify-center text-sm font-medium italic text-gray-400">
                                                                         No Attachment
                                                                     </div>
                                                                 )}
-                                                                <div className="absolute inset-0 h-14 bg-gradient-to-b from-black/30 to-transparent"></div>
+                                                                <div className="absolute inset-0 h-14 bg-gradient-to-b from-black/30 to-transparent z-10 pointer-events-none"></div>
                                                             </div>
 
                                                             <div className="flex min-h-0 flex-1 flex-col p-5">
                                                                 <h4 className="mb-1 pr-12 break-words text-lg font-bold leading-tight text-gray-900 line-clamp-2">
                                                                     {item.title}
                                                                 </h4>
-
                                                                 <p className="mb-3 text-[11px] font-medium uppercase tracking-tighter text-gray-500">
                                                                     By {item.author} • {formatAppDate(item.created_at, system?.timezone)}
                                                                 </p>
-
                                                                 <p className="flex-1 overflow-hidden whitespace-pre-wrap break-words border-l-2 border-gray-100 pl-3 text-sm leading-relaxed text-gray-600 italic">
                                                                     {getTwoSentencePreview(item.content)}
                                                                 </p>
@@ -388,14 +359,9 @@ export default function Overview({ auth, announcements, contents }) {
                                                         </div>
                                                     );
                                                 })}
-
                                                 {pageItems.length < cardsPerPage &&
                                                     Array.from({ length: cardsPerPage - pageItems.length }).map((_, idx) => (
-                                                        <div
-                                                            key={`placeholder-${pageIndex}-${idx}`}
-                                                            className="hidden h-[430px] rounded-lg border border-transparent bg-transparent lg:block"
-                                                            aria-hidden="true"
-                                                        />
+                                                        <div key={`placeholder-${pageIndex}-${idx}`} className="hidden h-[430px] rounded-lg border border-transparent bg-transparent lg:block" aria-hidden="true" />
                                                     ))}
                                             </div>
                                         </div>
@@ -410,19 +376,8 @@ export default function Overview({ auth, announcements, contents }) {
                                     onMouseLeave={() => setIsAutoplayPaused(false)}
                                     className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-black shadow-sm transition-all hover:scale-105 hover:shadow-md focus:outline-none lg:flex"
                                 >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        strokeWidth={2.5}
-                                        stroke="currentColor"
-                                        className="h-5 w-5"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                                        />
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-5 w-5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                                     </svg>
                                 </button>
                             )}
@@ -438,11 +393,7 @@ export default function Overview({ auth, announcements, contents }) {
                                     <button
                                         key={idx}
                                         onClick={() => goToSlide(idx)}
-                                        className={`h-2.5 rounded-full transition-all duration-300 ${
-                                            activeSlide === idx
-                                                ? 'w-8 bg-indigo-600 shadow-sm'
-                                                : 'w-2.5 bg-gray-300 hover:bg-gray-400'
-                                        }`}
+                                        className={`h-2.5 rounded-full transition-all duration-300 ${activeSlide === idx ? 'w-8 bg-indigo-600 shadow-sm' : 'w-2.5 bg-gray-300 hover:bg-gray-400'}`}
                                         aria-label={`Go to page ${idx + 1}`}
                                     />
                                 ))}
@@ -450,24 +401,32 @@ export default function Overview({ auth, announcements, contents }) {
                         )}
                     </section>
 
+                    {/* ABOUT US SECTION */}
                     <section>
                         <h3 className="mb-6 text-lg font-bold uppercase tracking-wide text-gray-700">
                             About Us
                         </h3>
 
+                        {/* STORY CONTENTS */}
                         {storyContents.length > 0 && (
                             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                                 {storyContents.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm"
-                                    >
+                                    <div key={item.id} className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                                        
+                                        {/* ✅ FIXED: Added Zoom Styles */}
                                         {item.image_path && (
-                                            <div className="h-72 w-full bg-gray-200">
+                                            <div className="relative aspect-[16/9] w-full bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
                                                 <img
                                                     src={`/storage/${item.image_path}`}
                                                     alt={item.title}
-                                                    className="h-full w-full object-cover"
+                                                    className="absolute left-1/2 top-1/2"
+                                                    style={{
+                                                        transform: `translate(calc(-50% + ${item.image_offset_x ?? 0}px), calc(-50% + ${item.image_offset_y ?? 0}px)) scale(${item.image_zoom ?? 1})`,
+                                                        transformOrigin: 'center center',
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'contain',
+                                                    }}
                                                 />
                                             </div>
                                         )}
@@ -488,16 +447,26 @@ export default function Overview({ auth, announcements, contents }) {
                             </div>
                         )}
 
+                        {/* MISSION AND VISION CONTENTS */}
                         {(mission || vision) && (
                             <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2">
                                 {mission && (
                                     <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                                        
+                                        {/* ✅ FIXED: Added Zoom Styles */}
                                         {mission.image_path && (
-                                            <div className="h-52 w-full bg-gray-200">
+                                            <div className="relative aspect-[16/9] w-full bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
                                                 <img
                                                     src={`/storage/${mission.image_path}`}
                                                     alt="Mission"
-                                                    className="h-full w-full object-cover"
+                                                    className="absolute left-1/2 top-1/2"
+                                                    style={{
+                                                        transform: `translate(calc(-50% + ${mission.image_offset_x ?? 0}px), calc(-50% + ${mission.image_offset_y ?? 0}px)) scale(${mission.image_zoom ?? 1})`,
+                                                        transformOrigin: 'center center',
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'contain',
+                                                    }}
                                                 />
                                             </div>
                                         )}
@@ -517,12 +486,21 @@ export default function Overview({ auth, announcements, contents }) {
 
                                 {vision && (
                                     <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                                        
+                                        {/* ✅ FIXED: Added Zoom Styles */}
                                         {vision.image_path && (
-                                            <div className="h-52 w-full bg-gray-200">
+                                            <div className="relative aspect-[16/9] w-full bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
                                                 <img
                                                     src={`/storage/${vision.image_path}`}
                                                     alt="Vision"
-                                                    className="h-full w-full object-cover"
+                                                    className="absolute left-1/2 top-1/2"
+                                                    style={{
+                                                        transform: `translate(calc(-50% + ${vision.image_offset_x ?? 0}px), calc(-50% + ${vision.image_offset_y ?? 0}px)) scale(${vision.image_zoom ?? 1})`,
+                                                        transformOrigin: 'center center',
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'contain',
+                                                    }}
                                                 />
                                             </div>
                                         )}
@@ -542,19 +520,26 @@ export default function Overview({ auth, announcements, contents }) {
                             </div>
                         )}
 
+                        {/* REMAINING CONTENTS */}
                         {remainingContents.length > 0 && (
                             <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
                                 {remainingContents.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm"
-                                    >
+                                    <div key={item.id} className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                                        
+                                        {/* ✅ FIXED: Added Zoom Styles */}
                                         {item.image_path && (
-                                            <div className="h-56 w-full bg-gray-200">
+                                            <div className="relative aspect-[16/9] w-full bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
                                                 <img
                                                     src={`/storage/${item.image_path}`}
                                                     alt={item.title}
-                                                    className="h-full w-full object-cover"
+                                                    className="absolute left-1/2 top-1/2"
+                                                    style={{
+                                                        transform: `translate(calc(-50% + ${item.image_offset_x ?? 0}px), calc(-50% + ${item.image_offset_y ?? 0}px)) scale(${item.image_zoom ?? 1})`,
+                                                        transformOrigin: 'center center',
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'contain',
+                                                    }}
                                                 />
                                             </div>
                                         )}
@@ -588,11 +573,18 @@ export default function Overview({ auth, announcements, contents }) {
                 {selectedAnnouncement && (
                     <div className="flex max-h-[85vh] flex-col overflow-hidden bg-white">
                         {selectedAnnouncement.image_path && (
-                            <div className="relative h-48 w-full shrink-0 border-b border-gray-200 bg-gray-100 sm:h-64">
+                            <div className="relative aspect-[16/9] w-full shrink-0 border-b border-gray-200 bg-gray-100 overflow-hidden flex items-center justify-center">
                                 <img
                                     src={`/storage/${selectedAnnouncement.image_path}`}
                                     alt={selectedAnnouncement.title}
-                                    className="h-full w-full object-cover object-center"
+                                    className="absolute left-1/2 top-1/2"
+                                    style={{
+                                        transform: `translate(calc(-50% + ${selectedAnnouncement.image_offset_x ?? 0}px), calc(-50% + ${selectedAnnouncement.image_offset_y ?? 0}px)) scale(${selectedAnnouncement.image_zoom ?? 1})`,
+                                        transformOrigin: 'center center',
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'contain',
+                                    }}
                                 />
                             </div>
                         )}
@@ -614,13 +606,10 @@ export default function Overview({ auth, announcements, contents }) {
                                     {selectedAnnouncement.priority_level?.name || 'Notice'}
                                 </span>
                             </div>
-
                             <hr className="my-6 border-gray-100" />
-
                             <div className="prose max-w-none whitespace-pre-wrap leading-relaxed text-gray-700 pb-6">
                                 {selectedAnnouncement.content}
                             </div>
-
                             {selectedAnnouncement.attachment_path && (
                                 <div className="mt-2 mb-10 border-t border-gray-100 pt-6">
                                     <h4 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Attached File</h4>
@@ -637,7 +626,6 @@ export default function Overview({ auth, announcements, contents }) {
                                     </a>
                                 </div>
                             )}
-
                             <div className="pointer-events-none sticky bottom-0 -mx-6 -mb-6 flex justify-end bg-gradient-to-t from-white via-white to-transparent px-6 pb-6 pt-10 sm:-mx-8 sm:-mb-8 sm:px-8 sm:pb-8">
                                 <button
                                     onClick={closeModal}

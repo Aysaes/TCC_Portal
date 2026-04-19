@@ -398,18 +398,25 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                                                             </div>
                                                         )}
 
-                                                        {/* UPDATED: Image uses object-contain inside the announcement card */}
-                                                        <div className="h-44 w-full shrink-0 bg-gray-100 relative flex items-center justify-center">
+                                                        {/* ✅ FIXED: Changed to aspect-[16/9] to match the cropper perfectly */}
+                                                        <div className="aspect-[16/9] w-full shrink-0 bg-gray-100 relative overflow-hidden flex items-center justify-center">
                                                             {item.image_path ? (
                                                                 <img 
                                                                     src={`/storage/${item.image_path}`} 
                                                                     alt={item.title} 
-                                                                    className="h-full w-full object-contain" 
+                                                                    className="absolute left-1/2 top-1/2" 
+                                                                    style={{
+                                                                        transform: `translate(calc(-50% + ${item.image_offset_x ?? 0}px), calc(-50% + ${item.image_offset_y ?? 0}px)) scale(${item.image_zoom ?? 1})`,
+                                                                        transformOrigin: 'center center',
+                                                                        width: '100%',
+                                                                        height: '100%',
+                                                                        objectFit: 'contain',
+                                                                    }}
                                                                 />
                                                             ) : (
                                                                 <div className="flex h-full items-center justify-center text-sm text-gray-400 font-medium italic">No Attachment</div>
                                                             )}
-                                                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent h-14"></div>
+                                                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent h-14 z-10 pointer-events-none"></div>
                                                         </div>
                                                         
                                                         <div className="flex flex-1 flex-col p-5">
@@ -465,16 +472,25 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
             <Modal show={isModalOpen} onClose={closeModal} maxWidth="2xl">
                 {selectedAnnouncement && (
                     <div className="flex flex-col bg-white overflow-hidden max-h-[85vh]">
-                        {/* UPDATED: Image uses object-contain inside the modal view */}
+                        
+                        {/* ✅ FIXED: Changed to aspect-[16/9] to keep the frame ratio consistent with the cropper */}
                         {selectedAnnouncement.image_path && (
-                            <div className="relative w-full h-auto max-h-80 shrink-0 bg-gray-50 border-b border-gray-200 flex items-center justify-center py-4">
+                            <div className="relative w-full aspect-[16/9] shrink-0 bg-gray-50 border-b border-gray-200 overflow-hidden flex items-center justify-center">
                                 <img 
                                     src={`/storage/${selectedAnnouncement.image_path}`} 
                                     alt={selectedAnnouncement.title} 
-                                    className="w-full h-full max-h-72 object-contain object-center" 
+                                    className="absolute left-1/2 top-1/2" 
+                                    style={{
+                                        transform: `translate(calc(-50% + ${selectedAnnouncement.image_offset_x ?? 0}px), calc(-50% + ${selectedAnnouncement.image_offset_y ?? 0}px)) scale(${selectedAnnouncement.image_zoom ?? 1})`,
+                                        transformOrigin: 'center center',
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'contain',
+                                    }}
                                 />
                             </div>
                         )}
+                        
                         <div className="p-6 sm:p-8 overflow-y-auto">
                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                                 <div>

@@ -32,7 +32,8 @@ class AnnouncementController extends Controller
         ]);
     }
 
-   public function store(Request $request)
+    // ✅ FIXED: Renamed this back to "store" instead of "update"
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -41,12 +42,13 @@ class AnnouncementController extends Controller
             'priority_level_id' => 'required|exists:priority_levels,id',
             'branch_ids' => 'required|array|min:1',
             'branch_ids.*' => 'exists:branches,id',
-            
-            // 🟢 Validate the Cover Photo (Images only, max 5MB)
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            
-            // 🟢 Validate the Attachment (Documents only, max 10MB)
             'attachment' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:10240',
+
+            // ✅ Added zoom fields to store method
+            'image_zoom' => 'nullable|numeric',
+            'image_offset_x' => 'nullable|numeric',
+            'image_offset_y' => 'nullable|numeric',
         ]);
 
         // Handle Cover Photo Upload
@@ -64,8 +66,7 @@ class AnnouncementController extends Controller
         // Attach the branches via pivot table
         $announcement->branches()->sync($request->branch_ids);
 
-        // 🟢 NEW: SMART NOTIFICATION ROUTING
-        // Find all users whose primary branch OR rotating branch matches the announcement's branches
+        // SMART NOTIFICATION ROUTING
         $targetBranchIds = $request->branch_ids;
 
         $targetUsers = User::whereIn('branch_id', $targetBranchIds)
@@ -76,7 +77,6 @@ class AnnouncementController extends Controller
                       ->whereIn('branch_user.branch_id', $targetBranchIds);
             })->get();
 
-        // Send the alert to those specific users!
         if ($targetUsers->isNotEmpty()) {
            Notification::send($targetUsers, new AnnouncementAlert($announcement->title, $announcement->author));
         }
@@ -95,6 +95,11 @@ class AnnouncementController extends Controller
             'branch_ids.*' => 'exists:branches,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'attachment' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:10240',
+
+            // ✅ FIXED: Added zoom fields to update method as well
+            'image_zoom' => 'nullable|numeric',
+            'image_offset_x' => 'nullable|numeric',
+            'image_offset_y' => 'nullable|numeric',
         ]);
 
         // Handle Cover Photo Update

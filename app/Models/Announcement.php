@@ -13,8 +13,11 @@ class Announcement extends Model
         'author',
         'content',
         'priority_level_id',
-        'attachment_path',
         'image_path',
+        'attachment_path',
+        'image_zoom',       
+        'image_offset_x',  
+        'image_offset_y',
     ];
 
     public function branches()
