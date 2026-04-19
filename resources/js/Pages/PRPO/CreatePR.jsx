@@ -87,11 +87,95 @@ const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
     );
 };
 
+// =====================================================================
+// CUSTOM SEARCHABLE DROPDOWN COMPONENT
+// =====================================================================
+const CCMultiSelect  = ({ options, value, onChange, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const wrapperRef = useRef(null);
+
+    const selectedOption = options.find(opt => String(opt.id) === String(value));
+
+    // 🟢 Bulletproof Sync: Whenever the parent value officially changes, lock the text
+    useEffect(() => {
+        if (selectedOption) {
+            setSearchTerm(selectedOption.name);
+        } else {
+            setSearchTerm('');
+        }
+    }, [value, selectedOption]);
+
+    // Handle clicking outside to close the dropdown
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+                // Revert to the selected option if they clicked away without picking
+                setSearchTerm(selectedOption ? selectedOption.name : ''); 
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [selectedOption]);
+
+    const filteredOptions = options.filter(opt =>
+        opt.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div ref={wrapperRef} className="relative w-full">
+            <input
+                type="text"
+                className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder={placeholder}
+                value={searchTerm} // 🟢 Now strictly controlled by local state
+                onChange={(e) => {
+                    const newVal = e.target.value;
+                    setSearchTerm(newVal);
+                    setIsOpen(true);
+                    
+                    // If the user alters the text, clear the underlying locked value!
+                    if (selectedOption && newVal !== selectedOption.name) {
+                        onChange('');
+                    }
+                }}
+                onFocus={() => {
+                    setIsOpen(true);
+                    setSearchTerm(selectedOption ? selectedOption.name : '');
+                }}
+            />
+            
+            {isOpen && (
+                <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md bg-white py-1 text-xs shadow-lg ring-1 ring-black ring-opacity-5">
+                    {filteredOptions.length === 0 ? (
+                        <li className="px-3 py-2 text-gray-500">No results found</li>
+                    ) : (
+                        filteredOptions.map(opt => (
+                            <li
+                                key={opt.id}
+                                className="cursor-pointer px-3 py-2 hover:bg-indigo-600 hover:text-white transition-colors truncate"
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); 
+                                    setSearchTerm(opt.name); // 🟢 1. Lock text instantly
+                                    onChange(opt.id);        // 🟢 2. Send to Inertia
+                                    setIsOpen(false);        // 🟢 3. Close menu
+                                }}
+                            >
+                                {opt.name}
+                            </li>
+                        ))
+                    )}
+                </ul>
+            )}
+        </div>
+    );
+};
 
 // =====================================================================
 // MAIN PAGE COMPONENT
 // =====================================================================
-export default function CreatePR({ auth, suppliers, products, branches = [], departments = [],  userBranches = []}) {
+export default function CreatePR({ auth, suppliers, products, branches = [], departments = [],  userBranches = [], employees = []}) {
     const today = new Date().toISOString().split('T')[0];
 
     const userRole = auth.user.role?.name?.toLowerCase() || '';
@@ -115,6 +199,7 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
         no_of_quotations: '',
         purpose_of_request: '',
         impact_if_not_procured: '',
+        cc_user_id: '',
         items: [
             { 
                 product_id: '', 
@@ -127,7 +212,13 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                 est_unit_cost: '', 
                 total_cost: 0 
             }
-        ]
+        ],
+    });
+
+    const branchEmployees = employees.filter(emp => {
+        if (!data.branch) return false;
+        // Check if the employee's branch list includes the selected branch
+        return emp.branches?.some(b => b.name === data.branch);
     });
 
     useEffect(() => {
@@ -302,6 +393,22 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                                 <textarea rows={2} value={data.impact_if_not_procured} onChange={e => setData('impact_if_not_procured', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                             </div>
                         </div>
+                    </div>
+
+                    <div className="sm:col-span-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    CC (Carbon Copy)
+                                </label>
+                                <CCMultiSelect 
+                                    options={branchEmployees}
+                                    value={data.cc_user_id}
+                                    onChange={(val) => setData('cc_user_id', val)}
+                                    placeholder={!data.branch ? "Select a branch first..." : "Search employee..."}
+                                />
+                                {errors.cc_user_id && <p className="mt-2 text-sm text-red-600">{errors.cc_user_id}</p>}
+                                <p className="mt-1 text-xs text-gray-500">
+                                    This user will receive notifications when the status of this PR changes.
+                                </p>
                     </div>
 
                     {/* --- 2. DYNAMIC ITEM DETAILS TABLE --- */}

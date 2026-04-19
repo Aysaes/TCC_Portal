@@ -30,6 +30,11 @@ class PurchaseRequestController extends Controller
         $products = Product::select('id', 'name', 'supplier_id', 'details', 'unit', 'price')->get();
         $branches = Branch::select('id', 'name')->get();
         $departments = Department::select('id', 'name')->get();
+        $employees = User::with('branches:id,name')
+                         ->where('id', '!=', Auth::id())
+                         ->select('id', 'name')
+                         ->orderBy('name')
+                         ->get();
 
         return Inertia::render('PRPO/CreatePR', [
             'suppliers' => $suppliers,
@@ -37,6 +42,7 @@ class PurchaseRequestController extends Controller
             'branches' => $branches,
             'departments' => $departments,
             'userBranches' => $userBranches,
+            'employees' => $employees,
         ]);
     }
 
@@ -57,7 +63,8 @@ class PurchaseRequestController extends Controller
             'no_of_quotations' => 'required|integer|min:0',
             'purpose_of_request' => 'nullable|string',
             'impact_if_not_procured' => 'nullable|string',
-            
+            'cc_user_id' => 'nullable|exists:users,id',
+
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.supplier_id' => 'nullable|exists:suppliers,id',
@@ -99,6 +106,7 @@ class PurchaseRequestController extends Controller
                 'purpose_of_request' => $validated['purpose_of_request'],
                 'impact_if_not_procured' => $validated['impact_if_not_procured'],
                 'status' => $initialStatus,
+                'cc_user_id' => $validated['cc_user_id'] ?? null,
             ]);
 
             foreach ($validated['items'] as $item) {
@@ -123,13 +131,13 @@ class PurchaseRequestController extends Controller
         $userBranches = $user->branches()->pluck('name')->toArray(); 
         
         // 🟢 1. Define if they are an assistant to pass to React
-        $isAssistant = str_contains($userRole, 'assistant');
+        $isAssistant = str_contains($userRole, 'assist');
         
         // 🟢 2. Default assistants to 'my_requests', everyone else to 'action_needed'
         $defaultView = $isAssistant ? 'my_requests' : 'action_needed';
         $view = $request->query('view', $defaultView);
 
-        $query = PurchaseRequest::with(['user', 'items.product', 'items.supplier'])->latest();
+        $query = PurchaseRequest::with(['user', 'cc_user', 'items.product', 'items.supplier'])->latest();
         $isAdmin = str_contains($userRole, 'admin');
 
         if ($view === 'action_needed') {
@@ -216,7 +224,7 @@ class PurchaseRequestController extends Controller
 
     public function print(PurchaseRequest $purchaseRequest)
     {
-        $purchaseRequest->load(['user', 'items.product', 'items.supplier']);
+        $purchaseRequest->load(['user','cc_user', 'items.product', 'items.supplier']);
 
         return Inertia::render('PRPO/PrintablePR', [
             'pr' => $purchaseRequest
@@ -225,6 +233,7 @@ class PurchaseRequestController extends Controller
 
     private function notifyNextApprovers(PurchaseRequest $pr)
     {
+        
         // 🟢 1. Always start the list with the original requester!
         $usersToNotify = collect([$pr->user]); 
         $message = '';
@@ -267,6 +276,11 @@ class PurchaseRequestController extends Controller
              
         } elseif ($pr->status === 'cancelled') {
              $message = "PR from {$pr->department} ({$pr->branch}) was cancelled.";
+        }
+
+        if (!empty($pr->cc_users)) {
+            $ccUsers = User::whereIn('id', $pr->cc_users)->get();
+            $usersToNotify = $usersToNotify->merge($ccUsers);
         }
 
         // 🟢 2. Filter out duplicates (Just in case an Inventory TL made their own request!)
