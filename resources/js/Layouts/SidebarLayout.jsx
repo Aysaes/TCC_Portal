@@ -268,7 +268,7 @@ export default function SidebarLayout({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
         ),
-        'PR Form': (
+        'PR Request': (
             <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -320,15 +320,17 @@ export default function SidebarLayout({
         <div className="flex h-screen overflow-hidden bg-gray-100">
             <FlashMessage />
 
+            {/* ✅ FIXED: Overlay raised to z-40 so it covers the header properly */}
             {isMobileSidebarOpen && (
                 <div
-                    className="fixed inset-0 z-20 bg-black/50 sm:hidden"
+                    className="fixed inset-0 z-40 bg-black/50 sm:hidden"
                     onClick={() => setIsMobileSidebarOpen(false)}
                 />
             )}
 
+            {/* ✅ FIXED: Sidebar raised to z-50 to float above everything else on mobile */}
             <aside
-                className={`fixed inset-y-0 left-0 z-30 w-64 transform bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out sm:translate-x-0 sm:static sm:inset-0 ${
+                className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out sm:translate-x-0 sm:static sm:inset-0 ${
                     isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
@@ -406,7 +408,7 @@ export default function SidebarLayout({
                     )}
 
                     <div className="mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        {activeModule === 'Profile' ? 'General' : activeModule} Menu
+                        {activeModule} Menu
                     </div>
 
                     <ul className="space-y-2">
@@ -482,8 +484,8 @@ export default function SidebarLayout({
                     }
                 `}</style>
 
-                {/* 🔽 RESPONSIVE HEADER 🔽 */}
-                <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-3 sm:px-6 z-50">
+                {/* ✅ FIXED: Lowered Header to z-30 so the sidebar and overlay cover it when open */}
+                <header className="relative z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-3 sm:px-6">
                     {/* Mobile Hamburger Menu */}
                     <button
                         onClick={() => setIsMobileSidebarOpen(true)}
