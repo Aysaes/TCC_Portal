@@ -334,10 +334,9 @@ function SideCarousel({ title, children }) {
 
 /*
 |--------------------------------------------------------------------------
-| ORG CHART VIEWER
+| ORG CHART VIEWER (FULLY UPDATED FOR MOBILE AND DESKTOP)
 |--------------------------------------------------------------------------
 */
-// 👇 UPDATE 1: Pass the dynamic SVG path down into the Viewer
 function OrgChartMapViewer({ svgPath }) {
     const containerRef = useRef(null);
     const imageRef = useRef(null);
@@ -347,14 +346,18 @@ function OrgChartMapViewer({ svgPath }) {
     const [isDragging, setIsDragging] = useState(false);
     const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
     const [isImageReady, setIsImageReady] = useState(false);
+    
+    // Notifications for user interaction instructions
+    const [showCtrlMessage, setShowCtrlMessage] = useState(false);
+    const [showTouchMessage, setShowTouchMessage] = useState(false);
+    const ctrlMessageTimeout = useRef(null);
+    const touchMessageTimeout = useRef(null);
+
     const fitViewRef = useRef({ scale: 1, x: 0, y: 0 });
 
-    const dragRef = useRef({
-        startX: 0,
-        startY: 0,
-        originX: 0,
-        originY: 0,
-    });
+    // References for mouse/touch tracking without causing re-renders
+    const dragRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
+    const touchRef = useRef({ lastX: 0, lastY: 0, lastDistance: 0 });
 
     const MIN_SCALE = 0.2;
     const MAX_SCALE = 4;
@@ -390,66 +393,163 @@ function OrgChartMapViewer({ svgPath }) {
         setPosition({ x, y });
     };
 
+    // Safely calculates zoom based on previous state to prevent stale closures
     const zoomAtPoint = (clientX, clientY, deltaScale) => {
         const container = containerRef.current;
         if (!container || !isImageReady) return;
 
         const rect = container.getBoundingClientRect();
-        const nextScale = clamp(scale * deltaScale, MIN_SCALE, MAX_SCALE);
+        
+        setScale(prevScale => {
+            const nextScale = clamp(prevScale * deltaScale, MIN_SCALE, MAX_SCALE);
+            if (nextScale === prevScale) return prevScale;
 
-        if (nextScale === scale) return;
+            setPosition(prevPos => {
+                const offsetX = clientX - rect.left;
+                const offsetY = clientY - rect.top;
 
-        const offsetX = clientX - rect.left;
-        const offsetY = clientY - rect.top;
+                const worldX = (offsetX - prevPos.x) / prevScale;
+                const worldY = (offsetY - prevPos.y) / prevScale;
 
-        const worldX = (offsetX - position.x) / scale;
-        const worldY = (offsetY - position.y) / scale;
+                const nextX = offsetX - worldX * nextScale;
+                const nextY = offsetY - worldY * nextScale;
 
-        const nextX = offsetX - worldX * nextScale;
-        const nextY = offsetY - worldY * nextScale;
-
-        setScale(nextScale);
-        setPosition({ x: nextX, y: nextY });
+                return { x: nextX, y: nextY };
+            });
+            
+            return nextScale;
+        });
     };
 
+    // --- NON-PASSIVE EVENT PREVENTION ---
+    // This strictly stops the browser from scrolling the page ONLY when we want it to.
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleNativeEvents = (e) => {
+            if (e.type === 'wheel') {
+                if (e.ctrlKey || e.metaKey) e.preventDefault(); // Stop page scroll to allow zoom
+            } else if (e.type === 'touchmove') {
+                if (e.touches.length >= 2) e.preventDefault(); // Stop page scroll to allow 2-finger pan/zoom
+            }
+        };
+
+        container.addEventListener('wheel', handleNativeEvents, { passive: false });
+        container.addEventListener('touchmove', handleNativeEvents, { passive: false });
+
+        return () => {
+            container.removeEventListener('wheel', handleNativeEvents);
+            container.removeEventListener('touchmove', handleNativeEvents);
+        };
+    }, []);
+
+    // --- DESKTOP WHEEL HANDLER ---
     const handleWheel = (e) => {
-        e.preventDefault();
-        const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
-        zoomAtPoint(e.clientX, e.clientY, zoomFactor);
+        if (e.ctrlKey || e.metaKey) {
+            const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+            zoomAtPoint(e.clientX, e.clientY, zoomFactor);
+            setShowCtrlMessage(false);
+        } else {
+            // Show helper message if they scroll without Ctrl
+            setShowCtrlMessage(true);
+            if (ctrlMessageTimeout.current) clearTimeout(ctrlMessageTimeout.current);
+            ctrlMessageTimeout.current = setTimeout(() => setShowCtrlMessage(false), 2000);
+        }
     };
 
+    // --- DESKTOP MOUSE PANNING ---
     const handleMouseDown = (e) => {
         if (!isImageReady) return;
         e.preventDefault();
         setIsDragging(true);
-        dragRef.current = {
-            startX: e.clientX,
-            startY: e.clientY,
-            originX: position.x,
-            originY: position.y,
-        };
+        dragRef.current.isDragging = true;
+        dragRef.current.lastX = e.clientX;
+        dragRef.current.lastY = e.clientY;
     };
 
     const handleMouseMove = (e) => {
-        if (!isDragging) return;
-
-        const dx = e.clientX - dragRef.current.startX;
-        const dy = e.clientY - dragRef.current.startY;
-
-        setPosition({
-            x: dragRef.current.originX + dx,
-            y: dragRef.current.originY + dy,
-        });
+        if (!dragRef.current.isDragging) return;
+        
+        const dx = e.clientX - dragRef.current.lastX;
+        const dy = e.clientY - dragRef.current.lastY;
+        
+        setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+        
+        dragRef.current.lastX = e.clientX;
+        dragRef.current.lastY = e.clientY;
     };
 
     const handleMouseUp = () => {
         setIsDragging(false);
+        dragRef.current.isDragging = false;
     };
 
     const handleMouseLeave = () => {
         setIsDragging(false);
+        dragRef.current.isDragging = false;
     };
 
+    // --- MOBILE TOUCH PAN & ZOOM ---
+    const handleTouchStart = (e) => {
+        if (!isImageReady) return;
+        
+        if (e.touches.length === 2) {
+            // Setup 2-finger pan and zoom
+            touchRef.current.lastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            touchRef.current.lastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            touchRef.current.lastDistance = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            setShowTouchMessage(false);
+        } else if (e.touches.length === 1) {
+            // Show helper message if they use 1 finger (1 finger just scrolls the page)
+            setShowTouchMessage(true);
+            if (touchMessageTimeout.current) clearTimeout(touchMessageTimeout.current);
+            touchMessageTimeout.current = setTimeout(() => setShowTouchMessage(false), 2000);
+        }
+    };
+
+    const handleTouchMove = (e) => {
+        if (!isImageReady) return;
+        
+        if (e.touches.length === 2) {
+            const currentX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const currentY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const currentDistance = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+
+            // Handle Panning
+            const dx = currentX - touchRef.current.lastX;
+            const dy = currentY - touchRef.current.lastY;
+            if (dx !== 0 || dy !== 0) {
+                setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+            }
+
+            // Handle Zooming
+            if (touchRef.current.lastDistance > 0) {
+                const deltaScale = currentDistance / touchRef.current.lastDistance;
+                if (Math.abs(deltaScale - 1) > 0.01) {
+                    zoomAtPoint(currentX, currentY, deltaScale);
+                }
+            }
+
+            touchRef.current.lastX = currentX;
+            touchRef.current.lastY = currentY;
+            touchRef.current.lastDistance = currentDistance;
+        }
+    };
+
+    const handleTouchEnd = (e) => {
+        if (e.touches.length < 2) {
+            touchRef.current.lastDistance = 0;
+        }
+    };
+
+    // --- BUTTON CONTROLS ---
     const zoomIn = () => {
         const container = containerRef.current;
         if (!container) return;
@@ -464,8 +564,12 @@ function OrgChartMapViewer({ svgPath }) {
         zoomAtPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, 0.87);
     };
 
+    // --- GLOBAL CLEANUP ---
     useEffect(() => {
-        const handleWindowMouseUp = () => setIsDragging(false);
+        const handleWindowMouseUp = () => {
+            setIsDragging(false);
+            dragRef.current.isDragging = false;
+        };
         window.addEventListener('mouseup', handleWindowMouseUp);
         return () => window.removeEventListener('mouseup', handleWindowMouseUp);
     }, []);
@@ -478,10 +582,7 @@ function OrgChartMapViewer({ svgPath }) {
         const container = containerRef.current;
         if (!container || typeof ResizeObserver === 'undefined') return;
 
-        const observer = new ResizeObserver(() => {
-            applyFitToScreen();
-        });
-
+        const observer = new ResizeObserver(() => applyFitToScreen());
         observer.observe(container);
 
         return () => observer.disconnect();
@@ -504,7 +605,7 @@ function OrgChartMapViewer({ svgPath }) {
                 <div>
                     <h3 className="text-2xl font-bold text-gray-900">Organizational Chart</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                        Scroll to zoom, drag to move, or use the controls.
+                        Hold <kbd className="rounded border border-gray-300 bg-gray-100 px-1 font-sans text-xs font-semibold text-gray-600 shadow-sm">Ctrl</kbd> to zoom on desktop, or pinch with two fingers on mobile.
                     </p>
                 </div>
 
@@ -533,41 +634,53 @@ function OrgChartMapViewer({ svgPath }) {
                 </div>
             </div>
 
-            <div
-                ref={containerRef}
-                className={`relative h-[420px] overflow-hidden bg-gray-50 md:h-[560px] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                onWheel={handleWheel}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseLeave}
-            >
-                {/* 👇 UPDATE 2: Show the image ONLY if we actually received an SVG Path */}
-                {svgPath ? (
-                    <div
-                        className="absolute left-0 top-0 will-change-transform"
-                        style={{
-                            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                            transformOrigin: '0 0',
-                        }}
-                    >
-                        <img
-                            ref={imageRef}
-                            src={svgPath}
-                            alt="Organizational Chart"
-                            draggable={false}
-                            onLoad={handleImageLoad}
-                            className="block max-w-none select-none"
-                        />
-                    </div>
-                ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                        <p className="text-gray-500 font-medium">No organizational chart has been uploaded yet.</p>
+            <div className="relative">
+                {/* Helper messages overlay */}
+                {(showCtrlMessage || showTouchMessage) && (
+                    <div className="pointer-events-none absolute left-1/2 top-4 z-50 -translate-x-1/2 transform rounded-full bg-black/70 px-4 py-2 text-sm font-medium text-white shadow-md transition-opacity duration-300">
+                        {showCtrlMessage ? 'Use Ctrl + Scroll to zoom' : 'Use two fingers to pan or zoom'}
                     </div>
                 )}
 
-                <div className="pointer-events-none absolute bottom-4 right-4 rounded-xl bg-white/90 px-3 py-2 text-xs font-medium text-gray-600 shadow-sm border border-gray-200">
-                    Zoom: {Math.round(scale * 100)}%
+                <div
+                    ref={containerRef}
+                    className={`relative h-[420px] overflow-hidden bg-gray-50 md:h-[560px] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                    onWheel={handleWheel}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchCancel={handleTouchEnd}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseLeave}
+                >
+                    {svgPath ? (
+                        <div
+                            className="absolute left-0 top-0 will-change-transform"
+                            style={{
+                                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                                transformOrigin: '0 0',
+                            }}
+                        >
+                            <img
+                                ref={imageRef}
+                                src={svgPath}
+                                alt="Organizational Chart"
+                                draggable={false}
+                                onLoad={handleImageLoad}
+                                className="block max-w-none select-none"
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                            <p className="text-gray-500 font-medium">No organizational chart has been uploaded yet.</p>
+                        </div>
+                    )}
+
+                    <div className="pointer-events-none absolute bottom-4 right-4 rounded-xl bg-white/90 px-3 py-2 text-xs font-medium text-gray-600 shadow-sm border border-gray-200">
+                        Zoom: {Math.round(scale * 100)}%
+                    </div>
                 </div>
             </div>
         </div>
@@ -580,13 +693,11 @@ function OrgChartMapViewer({ svgPath }) {
 |--------------------------------------------------------------------------
 */
 
-// 👇 UPDATE 3: Ensure we are receiving orgChartSvg as a prop from the backend controller
 export default function OrgChart({ auth, members, orgChartSvg = null }) {
     const dashboardLinks = getDashboardLinks();
     const memberList = members || [];
     const [openSections, setOpenSections] = useState({});
 
-    // 👇 UPDATE 4: Clean up the path exactly like we did in the Admin panel to prevent broken links
     const normalizedOrgChartSvg =
         orgChartSvg && orgChartSvg.startsWith('/')
             ? orgChartSvg
@@ -672,7 +783,6 @@ export default function OrgChart({ auth, members, orgChartSvg = null }) {
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-4 lg:px-8">
-                    {/* 👇 UPDATE 5: Pass the normalized string down into our viewer */}
                     <OrgChartMapViewer svgPath={normalizedOrgChartSvg} />
 
                     {/* PEOPLE SECTIONS */}
