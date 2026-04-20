@@ -309,7 +309,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
                                 <iframe 
                                     src={
                                         window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
-                                            ? `/storage/${viewingDoc.file_path}`
+                                            ? `/storage/${viewingDoc.file_path}#toolbar=0` /* <-- Added #toolbar=0 here */
                                             : getPdfViewerUrl(viewingDoc)
                                     } 
                                     className="absolute inset-0 w-full h-full border-0" 
