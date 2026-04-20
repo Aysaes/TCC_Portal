@@ -22,15 +22,17 @@ export default function Home({ contents }) {
             <div className="py-0 sm:py-12">
                 <div className="mx-auto w-full max-w-[96rem] sm:px-2 lg:px-4 2xl:max-w-[112rem]">
                     
+                    {/* Replaced the single white box with a CSS Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         
+                        {/* Loop through the contents array from the database */}
                         {contents && contents.length > 0 ? (
                             contents.map((content) => (
                                 <div key={content.id} className="overflow-hidden bg-white shadow-sm sm:rounded-lg border border-gray-100 flex flex-col">
                                     
-                                    {/* ✅ FIXED: Image container now uses the 16:9 zooming frame */}
+                                    {/* ✅ FIXED: Applied the same zoom, offset, and crop logic from the admin panel */}
                                     {content.image_path && (
-                                        <div className="relative aspect-[16/9] w-full shrink-0 bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
+                                        <div className="relative w-full aspect-[16/9] bg-gray-50 border-b border-gray-100 overflow-hidden flex items-center justify-center">
                                             <img 
                                                 src={`/storage/${content.image_path}`} 
                                                 alt={content.title || "Company Content"} 
@@ -46,6 +48,7 @@ export default function Home({ contents }) {
                                         </div>
                                     )}
                                     
+                                    {/* Text display */}
                                     <div className="p-6 flex-1">
                                         <span className="block mb-2 text-xs font-bold tracking-wider text-gray-500 uppercase">
                                             {content.type}
@@ -58,6 +61,7 @@ export default function Home({ contents }) {
                                 </div>
                             ))
                         ) : (
+                            // Fallback message if database is empty
                             <div className="col-span-2 p-6 text-center text-gray-500 bg-white shadow-sm sm:rounded-lg">
                                 No Mission or Vision content has been added yet.
                             </div>
