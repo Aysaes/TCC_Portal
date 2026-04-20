@@ -473,9 +473,9 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                 {selectedAnnouncement && (
                     <div className="flex flex-col bg-white overflow-hidden max-h-[85vh]">
                         
-                        {/* ✅ FIXED: Changed to aspect-[16/9] to keep the frame ratio consistent with the cropper */}
+                        {/* ✅ UPDATED: Removed aspect-[16/9] and added explicit heights (h-64 sm:h-80) */}
                         {selectedAnnouncement.image_path && (
-                            <div className="relative w-full aspect-[16/9] shrink-0 bg-gray-50 border-b border-gray-200 overflow-hidden flex items-center justify-center">
+                            <div className="relative w-full h-64 sm:h-80 shrink-0 bg-gray-50 border-b border-gray-200 overflow-hidden flex items-center justify-center">
                                 <img 
                                     src={`/storage/${selectedAnnouncement.image_path}`} 
                                     alt={selectedAnnouncement.title} 
