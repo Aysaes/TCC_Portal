@@ -19,13 +19,21 @@ export default function Documents({ auth, documents = [], categories = [], activ
 
     const [viewingDoc, setViewingDoc] = useState(null);
 
+    // Office Viewer for Word/Excel files
     const getViewerUrl = (doc) => {
         const appUrl = window.location.origin; 
         const fullFileUrl = `${appUrl}/storage/${doc.file_path}`; 
         return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullFileUrl)}`;
     };
 
-    // --- UPDATED: Manage Categories Modal State ---
+    // Google Docs Viewer for PDFs on Mobile/iOS
+    const getPdfViewerUrl = (doc) => {
+        const appUrl = window.location.origin; 
+        const fullFileUrl = `${appUrl}/storage/${doc.file_path}`; 
+        return `https://docs.google.com/gview?url=${encodeURIComponent(fullFileUrl)}&embedded=true`;
+    };
+
+    // --- Manage Categories Modal State ---
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const { data: catData, setData: setCatData, post: postCategory, processing: catProcessing, reset: resetCat, clearErrors: clearCatErrors } = useForm({ name: '' });
 
@@ -37,12 +45,10 @@ export default function Documents({ auth, documents = [], categories = [], activ
             preserveScroll: true, 
             onSuccess: () => {
                 resetCat();
-                // We don't close the modal anymore so they can see it added to the list immediately!
             } 
         });
     };
 
-    // --- NEW: Function to delete a category ---
     const deleteCategory = (categoryId, categoryName) => {
         if (confirm(`Are you sure you want to delete the "${categoryName}" category?`)) {
             router.delete(route('admin.documents.category.destroy', categoryId), {
@@ -51,6 +57,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
         }
     };
 
+    // --- Upload Document Modal State ---
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const { data: uploadData, setData: setUploadData, post: postDocument, processing: uploadProcessing, errors: uploadErrors, reset: resetUpload, clearErrors: clearUploadErrors } = useForm({
         title: '', category: activeCategory !== 'Overview' ? activeCategory : '', description: '', file: null
@@ -66,6 +73,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
         });
     };
 
+    // --- Delete Document Modal State ---
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [documentToDelete, setDocumentToDelete] = useState(null);
 
@@ -172,7 +180,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
                 )}
             </div>
 
-            {/* --- UPDATED: MANAGE CATEGORY MODAL --- */}
+            {/* --- MANAGE CATEGORY MODAL --- */}
             <Modal show={isCategoryModalOpen} onClose={closeCategoryModal} maxWidth="md">
                 <div className="p-6">
                     <div className="flex items-center justify-between mb-4 pb-4 border-b">
@@ -229,6 +237,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
                 </div>
             </Modal>
 
+            {/* --- UPLOAD DOCUMENT MODAL --- */}
             <Modal show={isUploadModalOpen} onClose={closeUploadModal} maxWidth="md">
                 <form onSubmit={submitDocument} className="p-6 space-y-4">
                     <h2 className="text-lg font-medium text-gray-900 mb-4">Upload New Document</h2>
@@ -262,26 +271,66 @@ export default function Documents({ auth, documents = [], categories = [], activ
                 </form>
             </Modal>
 
+            {/* --- DELETE CONFIRMATION MODAL --- */}
             <ConfirmModal show={isConfirmModalOpen} onClose={closeConfirmModal} onConfirm={executeDelete} title="Delete Document" message={`Are you sure you want to delete the document "${documentToDelete?.title}"?\n\nThis will permanently remove the file from the server.`} confirmText="Delete Document" />
 
-            <Modal show={!!viewingDoc} onClose={() => setViewingDoc(null)} maxWidth="4xl">
+            {/* --- VIEWER MODAL --- */}
+            <Modal show={!!viewingDoc} onClose={() => setViewingDoc(null)} maxWidth="7xl">
                 {viewingDoc && (
-                    <div className="flex flex-col bg-white overflow-hidden h-[85vh]">
-                        <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 shrink-0">
-                            <h2 className="text-lg font-bold text-gray-800">{viewingDoc.title}</h2>
-                            <button onClick={() => setViewingDoc(null)} className="text-gray-500 hover:text-red-600 font-bold">✕ Close</button>
+                    <div className="flex flex-col bg-white overflow-hidden h-[95vh] sm:h-[90vh]">
+                        {/* Mobile-friendly Header */}
+                        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-gray-200 bg-gray-50 shrink-0 gap-3 sm:gap-4">
+                            <h2 
+                                className="text-base sm:text-lg font-bold text-gray-800 truncate flex-1" 
+                                title={viewingDoc.title}
+                            >
+                                {viewingDoc.title}
+                            </h2>
+                            
+                            {/* Mobile Fallback Button */}
+                            <a 
+                                href={`/storage/${viewingDoc.file_path}`} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                className="sm:hidden flex items-center gap-1.5 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100 shrink-0"
+                            >
+                                Open Native
+                            </a>
+
+                            <button 
+                                onClick={() => setViewingDoc(null)} 
+                                className="flex items-center gap-1.5 rounded-lg bg-gray-200/80 px-3.5 py-2 text-sm font-bold text-gray-600 transition-colors hover:bg-red-100 hover:text-red-700 shrink-0"
+                            >
+                                ✕ <span className="hidden sm:inline">Close</span>
+                            </button>
                         </div>
-                        {window.location.hostname === '127.0.0.1' && (
-                            <div className="bg-yellow-50 p-3 text-sm text-yellow-800 border-b border-yellow-200 shrink-0 text-center">
-                                <strong>Note:</strong> You are on localhost (127.0.0.1). Microsoft Office Viewer cannot access local files. 
-                                <br/>If the document doesn't load below, it is because your site is not live yet!
+
+                        {/* Localhost Warning */}
+                        {(window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') && (
+                            <div className="bg-yellow-50 p-2 sm:p-3 text-xs sm:text-sm text-yellow-800 border-b border-yellow-200 shrink-0 text-center">
+                                <strong>Note:</strong> You are on localhost. External viewers cannot access local files. 
+                                <br className="hidden sm:block"/>If the document doesn't load below, it is because your site is not live yet!
                             </div>
                         )}
-                        <div className="flex-1 w-full bg-gray-100 relative">
+
+                        {/* Document iFrame */}
+                        <div className="flex-1 w-full bg-[#525659] relative">
                             {viewingDoc.file_path?.endsWith('.pdf') ? (
-                                <iframe src={`/storage/${viewingDoc.file_path}`} className="absolute inset-0 w-full h-full" title="PDF Viewer"></iframe>
+                                <iframe 
+                                    src={
+                                        window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+                                            ? `/storage/${viewingDoc.file_path}`
+                                            : getPdfViewerUrl(viewingDoc)
+                                    } 
+                                    className="absolute inset-0 w-full h-full border-0" 
+                                    title="PDF Viewer"
+                                />
                             ) : (
-                                <iframe src={getViewerUrl(viewingDoc)} className="absolute inset-0 w-full h-full" title="Office Viewer"></iframe>
+                                <iframe 
+                                    src={getViewerUrl(viewingDoc)} 
+                                    className="absolute inset-0 w-full h-full border-0 bg-white" 
+                                    title="Office Viewer"
+                                />
                             )}
                         </div>
                     </div>

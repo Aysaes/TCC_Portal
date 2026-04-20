@@ -1,12 +1,18 @@
-import { Dialog, Transition } from '@headlessui/react';
 import { Fragment, useEffect, useRef } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
 
+// We added 3xl, 4xl, 5xl, 6xl, and 7xl here!
 const maxWidthClasses = {
     sm: 'sm:max-w-sm',
     md: 'sm:max-w-md',
     lg: 'sm:max-w-lg',
     xl: 'sm:max-w-xl',
     '2xl': 'sm:max-w-2xl',
+    '3xl': 'sm:max-w-3xl',
+    '4xl': 'sm:max-w-4xl',
+    '5xl': 'sm:max-w-5xl',
+    '6xl': 'sm:max-w-6xl',
+    '7xl': 'sm:max-w-7xl',
 };
 
 export default function Modal({
@@ -118,7 +124,7 @@ export default function Modal({
                     <div className="fixed inset-0 bg-gray-500/75" />
                 </Transition.Child>
 
-                <div className="fixed inset-0 z-[100] bg-gray-500/75 backdrop-blur-sm transition-opacity" aria-hidden="true">
+                <div className="fixed inset-0 overflow-hidden">
                     <div className="flex h-full items-start justify-center p-4 sm:p-6">
                         <Transition.Child
                             as={Fragment}
