@@ -26,11 +26,11 @@ export default function Documents({ auth, documents = [], categories = [], activ
         return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullFileUrl)}`;
     };
 
-    // Google Docs Viewer for PDFs on Mobile/iOS
+    // Google Docs Viewer for PDFs on Mobile/iOS (Added &rm=minimal to hide toolbar)
     const getPdfViewerUrl = (doc) => {
         const appUrl = window.location.origin; 
         const fullFileUrl = `${appUrl}/storage/${doc.file_path}`; 
-        return `https://docs.google.com/gview?url=${encodeURIComponent(fullFileUrl)}&embedded=true`;
+        return `https://docs.google.com/gview?url=${encodeURIComponent(fullFileUrl)}&embedded=true&rm=minimal`;
     };
 
     // --- Manage Categories Modal State ---
@@ -274,11 +274,10 @@ export default function Documents({ auth, documents = [], categories = [], activ
             {/* --- DELETE CONFIRMATION MODAL --- */}
             <ConfirmModal show={isConfirmModalOpen} onClose={closeConfirmModal} onConfirm={executeDelete} title="Delete Document" message={`Are you sure you want to delete the document "${documentToDelete?.title}"?\n\nThis will permanently remove the file from the server.`} confirmText="Delete Document" />
 
-            {/* --- VIEWER MODAL --- */}
+            {/* --- VIEWER MODAL (WITH ANTI-DOWNLOAD) --- */}
             <Modal show={!!viewingDoc} onClose={() => setViewingDoc(null)} maxWidth="7xl">
                 {viewingDoc && (
                     <div className="flex flex-col bg-white overflow-hidden h-[95vh] sm:h-[90vh]">
-                        {/* Mobile-friendly Header */}
                         <div className="flex justify-between items-center p-3 sm:p-4 border-b border-gray-200 bg-gray-50 shrink-0 gap-3 sm:gap-4">
                             <h2 
                                 className="text-base sm:text-lg font-bold text-gray-800 truncate flex-1" 
@@ -303,22 +302,28 @@ export default function Documents({ auth, documents = [], categories = [], activ
                             </div>
                         )}
 
-                        {/* Document iFrame */}
-                        <div className="flex-1 w-full bg-[#525659] relative">
+                        {/* Document iFrame Area */}
+                        <div 
+                            className="flex-1 w-full bg-[#525659] relative select-none"
+                            onContextMenu={(e) => e.preventDefault()} // Disables right-click
+                        >
+                            {/* INVISIBLE CLICK SHIELD: Blocks clicks on the top right corner where the popout button normally renders */}
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-transparent z-10" title="Pop-out disabled"></div>
+
                             {viewingDoc.file_path?.endsWith('.pdf') ? (
                                 <iframe 
                                     src={
                                         window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
-                                            ? `/storage/${viewingDoc.file_path}#toolbar=0` /* <-- Added #toolbar=0 here */
+                                            ? `/storage/${viewingDoc.file_path}#toolbar=0&navpanes=0&scrollbar=0`
                                             : getPdfViewerUrl(viewingDoc)
                                     } 
-                                    className="absolute inset-0 w-full h-full border-0" 
+                                    className="absolute inset-0 w-full h-full border-0 pointer-events-auto" 
                                     title="PDF Viewer"
                                 />
                             ) : (
                                 <iframe 
                                     src={getViewerUrl(viewingDoc)} 
-                                    className="absolute inset-0 w-full h-full border-0 bg-white" 
+                                    className="absolute inset-0 w-full h-full border-0 bg-white pointer-events-auto" 
                                     title="Office Viewer"
                                 />
                             )}
