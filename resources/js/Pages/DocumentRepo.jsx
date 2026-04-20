@@ -286,16 +286,6 @@ export default function Documents({ auth, documents = [], categories = [], activ
                             >
                                 {viewingDoc.title}
                             </h2>
-                            
-                            {/* Mobile Fallback Button */}
-                            <a 
-                                href={`/storage/${viewingDoc.file_path}`} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className="sm:hidden flex items-center gap-1.5 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100 shrink-0"
-                            >
-                                Open Native
-                            </a>
 
                             <button 
                                 onClick={() => setViewingDoc(null)} 

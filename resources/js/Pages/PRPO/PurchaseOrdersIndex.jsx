@@ -260,7 +260,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView 
 
                 <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
                     <Link href={route('prpo.purchase-orders.index', { view: 'action_needed' })} className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'action_needed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}>
-                        Action Needed {currentView !== 'action_needed' && <span className="h-2 w-2 rounded-full bg-red-500"></span>}
+                        Action Needed
                     </Link>
                     <Link href={route('prpo.purchase-orders.index', { view: 'all' })} className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${currentView === 'all' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}>
                         All Purchase Orders

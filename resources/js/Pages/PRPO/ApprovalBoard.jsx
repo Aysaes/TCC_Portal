@@ -159,8 +159,6 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
 
                 {/* Filter Tabs */}
                 <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
-   
-                    
                     <Link 
                         href={route('prpo.approval-board', { view: 'my_requests' })} 
                         className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${currentView === 'my_requests' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
@@ -174,7 +172,7 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                 href={route('prpo.approval-board', { view: 'action_needed' })} 
                                 className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'action_needed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                             >
-                                Approvals {currentView !== 'action_needed' && <span className="h-2 w-2 rounded-full bg-red-500"></span>}
+                                Approvals
                             </Link>
 
                             <Link 
@@ -208,6 +206,7 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                 <th className="px-6 py-3 font-semibold text-gray-900">Date Needed</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Items Count</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Status</th>
+                                <th className="px-6 py-3 font-semibold text-gray-900"></th> {/* Actions Column */}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
@@ -226,7 +225,6 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                         <td className="px-6 py-4">{pr.user?.name || 'Unknown'}</td>
                                         <td className="px-6 py-4">{pr.branch} <br/><span className="text-xs text-gray-500">{pr.department}</span></td>
                                         
-                                        {/* 🟢 RESTORED PRIORITY COLUMN IN TABLE */}
                                         <td className="px-6 py-4">
                                             {pr.priority ? (
                                                 <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
@@ -245,23 +243,34 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                         <td className="px-6 py-4 font-medium">{pr.items?.length || 0} Items</td>
                                         <td className="px-6 py-4">{formatStatus(pr.status)}</td>
                                         
-                                        <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                                            {canApprove(pr) && currentView === 'action_needed' && (
-                                                <>
-                                                    <button 
-                                                        onClick={() => handleAction(pr.id, 'approve')}
-                                                        className="text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm transition"
-                                                    >
-                                                        Approve
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleAction(pr.id, 'reject')}
-                                                        className="text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm transition"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                </>
-                                            )}
+                                        {/* 🟢 NEW ACTION BUTTONS COLUMN */}
+                                        <td className="whitespace-nowrap px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex items-center justify-end gap-2">
+                                                {canApprove(pr) && currentView === 'action_needed' && (
+                                                    <>
+                                                        <button 
+                                                            onClick={() => handleAction(pr.id, 'approve')}
+                                                            title="Approve Request"
+                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700 transition-colors hover:bg-green-100 hover:text-green-800"
+                                                        >
+                                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                            </svg>
+                                                            Approve
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleAction(pr.id, 'reject')}
+                                                            title="Reject Request"
+                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition-colors hover:bg-red-100 hover:text-red-800"
+                                                        >
+                                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                            Reject
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -317,7 +326,7 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                     )}
                                 </div>
 
-                                {/* 🟢 REJECTION REASON DISPLAY */}
+                                {/* REJECTION REASON DISPLAY */}
                                 {selectedPR.status === 'rejected' && selectedPR.rejection_reason && (
                                     <div className="mb-6 rounded-lg bg-red-50 p-4 border border-red-100">
                                         <span className="block font-bold text-red-800 text-sm mb-1">Reason for Rejection:</span>
@@ -381,7 +390,7 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                 {currentView === 'my_requests' && ['pending_inv_tl', 'pending_ops_manager', 'approved'].includes(selectedPR.status) && (
                                     <button 
                                         onClick={() => handleAction(selectedPR.id, 'cancel')}
-                                        className="rounded-md bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-50 transition-colors"
+                                        className="rounded-md bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 transition-colors"
                                     >
                                         Cancel Request
                                     </button>
@@ -395,14 +404,20 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                     <>
                                         <button 
                                             onClick={() => handleAction(selectedPR.id, 'reject')}
-                                            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 transition-colors"
+                                            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 transition-colors"
                                         >
+                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
                                             Reject Request
                                         </button>
                                         <button 
                                             onClick={() => handleAction(selectedPR.id, 'approve')}
-                                            className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 transition-colors"
+                                            className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 transition-colors"
                                         >
+                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
                                             Approve Request
                                         </button>
                                     </>
@@ -423,7 +438,7 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                 )}
             </div>
 
-            {/* 🟢 NEW REJECTION MODAL */}
+            {/* NEW REJECTION MODAL */}
             {rejectModal.isOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
