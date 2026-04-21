@@ -366,27 +366,67 @@ class ManpowerRequestController extends Controller
 
         $requesterName = $manpowerRequest->requester->name ?? 'An Employee';
         $originalRequester = $manpowerRequest->requester;
-        $currentApproverRole = Auth::user()->role->name ?? 'Management';
+        
+        $currentUserRole = Auth::user()->role->name ?? '';
+        $currentApproverRole = $currentUserRole ?: 'Management';
+        
+        // 🟢 CHECK FOR EXECUTIVE OVERRIDE
+        $isExecutiveOverride = strtolower(trim($currentUserRole)) === 'director of corporate services and operations' 
+                            || strtolower(trim($currentUserRole)) === 'admin';
 
+        // ==========================================
+        // HANDLE REJECTIONS
+        // ==========================================
         if ($request->status === 'Rejected') {
-            // 🟢 2. Save the rejection reason to the database
             $manpowerRequest->update([
                 'status' => 'Rejected',
                 'rejection_reason' => $request->rejection_reason
             ]);
             
             if ($originalRequester) {
-                // 🟢 3. Include the reason in the notification sent to the user
-                $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Rejected by {$currentApproverRole}. Reason: " . $request->rejection_reason));
+                $overrideText = $isExecutiveOverride ? "(Executive Override)" : "";
+                $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Rejected by {$currentApproverRole} {$overrideText}. Reason: " . $request->rejection_reason));
             }
 
             return back()->with('success', "Request has been officially rejected.");
         } 
         
+        // ==========================================
+        // HANDLE APPROVALS
+        // ==========================================
         if ($request->status === 'Approved') {
-            $nextStep = $manpowerRequest->current_step + 1;
             $workflowPath = $manpowerRequest->workflow_path;
             
+            // 🟢 IF EXECUTIVE OVERRIDE: Jump straight to HR
+            if ($isExecutiveOverride) {
+                // Find the index of HR in the path, or default to the end
+                $hrIndex = array_search('HR', $workflowPath);
+                $finalStep = $hrIndex !== false ? $hrIndex : count($workflowPath) - 1;
+
+                $manpowerRequest->update([
+                    'current_step' => $finalStep,
+                    'status' => 'Approved' 
+                ]);
+
+                // Alert HR immediately
+                $hrUsers = User::whereHas('role', function ($q) {
+                    $q->whereIn('name', ['HR', 'Human Resources', 'HRBP', 'Human Resources Business Partner']);
+                })->get();
+
+                if ($hrUsers->isNotEmpty()) {
+                    Notification::send($hrUsers, new ManpowerRequestAlert($manpowerRequest, $requesterName));
+                }
+
+                // Tell the user it reached the finish line
+                if ($originalRequester) {
+                    $originalRequester->notify(new ManpowerStatusAlert($manpowerRequest, "Fully Approved by Executive Override ({$currentApproverRole})! Forwarded to HR."));
+                }
+
+                return back()->with('success', "Executive Override Applied. Request fully approved and forwarded to HR.");
+            }
+
+            // 🟢 STANDARD WORKFLOW PROGRESSION
+            $nextStep = $manpowerRequest->current_step + 1;
             $totalSteps = count($workflowPath);
             $humanReadableStep = $nextStep + 1; 
 
@@ -422,7 +462,7 @@ class ManpowerRequestController extends Controller
 
                 $globalRoles = ['Director of Corporate Services and Operations', 'HR', 'HRBP', 'Operations Manager'];
                 
-                // 🟢 MODIFIED: Skip branch check if it's an "All Branches" (null) request
+                // Skip branch check if it's an "All Branches" (null) request
                 if (!in_array($nextRole, $globalRoles) && $manpowerRequest->branch_id !== null) {
                     $nextApproversQuery->where(function ($query) use ($manpowerRequest) {
                         $query->where('branch_id', $manpowerRequest->branch_id)

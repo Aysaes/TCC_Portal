@@ -18,6 +18,8 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
 
     const isAdmin = roleLower === 'admin';
 
+    const isExecutive = roleLower === 'director of corporate services and operations' || isAdmin;
+
     const isRequesterOnly = roleLower.includes('tl') ||
                             roleLower.includes('team leader') ||
                             roleLower === 'marketing manager';
@@ -141,15 +143,22 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
     };
 
     // --- FILTERING LOGIC ---
-    const getFilteredRequests = () => {
+   const getFilteredRequests = () => {
         return requests.filter(req => {
             if (activeTab === 'completed') return req.status === 'Approved' || req.status === 'Rejected';
 
             const currentApproverNeeded = req.workflow_path ? req.workflow_path[req.current_step] : null;
-            const isMyTurn = currentApproverNeeded === exactUserRole || isAdmin;
+            
+            // 🟢 MODIFIED: isMyTurn is now true if it's actually their turn, OR if they are an Executive
+            const isMyTurn = currentApproverNeeded === exactUserRole || isExecutive;
 
             if (activeTab === 'action-required') return req.status === 'Pending' && isMyTurn;
+            
+            // 🟢 MODIFIED: If they are an Executive, nothing is "In Progress" (waiting on someone else) 
+            // because they can act on everything. So "In Progress" should be empty for them, 
+            // or show requests they submitted themselves (if applicable).
             if (activeTab === 'in-progress') return req.status === 'Pending' && !isMyTurn;
+            
             return true;
         });
     };
@@ -400,8 +409,16 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                                 <button onClick={closeModal} className="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition">Close</button>
                                 {activeTab === 'action-required' && selectedRequest.status === 'Pending' && (
                                     <>
-                                        <button onClick={() => openRejectModal(selectedRequest.id)} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition">Reject Request</button>
-                                        <button onClick={() => confirmAction(selectedRequest.id, 'Approved')} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition">Endorse Request</button>
+                                        <button onClick={() => openRejectModal(selectedRequest.id)} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition">
+                                            {isExecutive && selectedRequest.workflow_path[selectedRequest.current_step] !== exactUserRole ? 'Override & Reject' : 'Reject Request'}
+                                        </button>
+                                        <button onClick={() => confirmAction(selectedRequest.id, 'Approved')} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition">
+                                            {/* 🟢 Dynamically change button text for clarity */}
+                                            {isExecutive && selectedRequest.workflow_path[selectedRequest.current_step] !== exactUserRole 
+                                                ? 'Executive Override (Approve)' 
+                                                : 'Endorse Request'
+                                            }
+                                        </button>
                                     </>
                                 )}
                             </div>
