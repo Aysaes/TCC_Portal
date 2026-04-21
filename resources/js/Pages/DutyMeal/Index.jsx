@@ -341,15 +341,17 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                 </div>
             </div>
 
-            {/* HEADER SECTION WITH EXPORT BUTTON */}
+            {/* HEADER SECTION WITH EXPORT BUTTON AND SYSTEM LOGS TRACKING */}
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h2 className="text-lg font-medium text-gray-900">Duty Meal Rosters</h2>
                 </div>
                 <div>
-                    {/* 🟢 SINGLE GLOBAL EXPORT BUTTON MOVED HERE 🟢 */}
                     <a
-                        href={filteredDutyMeals.length > 0 ? route('admin.duty-meals.export', { ids: filteredDutyMeals.map(m => m.id).join(',') }) : '#'}
+                        href={filteredDutyMeals.length > 0 ? route('admin.duty-meals.export', { 
+                            ids: filteredDutyMeals.map(m => m.id).join(','),
+                            filter: dateFilterType === 'custom' ? `Custom Range (${customStartDate} to ${customEndDate})` : dateFilterType
+                        }) : '#'}
                         onClick={(e) => { if(filteredDutyMeals.length === 0) e.preventDefault(); }}
                         className={`inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150 shadow-sm ${filteredDutyMeals.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title="Export Current List to Excel"

@@ -32,7 +32,6 @@ class DutyMealExport implements FromCollection, WithHeadings, WithMapping, Shoul
 
     public function headings(): array
     {
-        // Updated headings exactly as requested
         return [
             'Duty Date',
             'User',
@@ -71,7 +70,6 @@ class DutyMealExport implements FromCollection, WithHeadings, WithMapping, Shoul
             ? $dutyDateObj->format('D, M j, Y') 
             : 'N/A';
 
-        // Return the array strictly in the order of the headings
         return [
             $specificDate,
             $participant->user ? $participant->user->name : 'N/A',

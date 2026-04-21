@@ -9,6 +9,7 @@ use App\Models\Branch;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Position;
+use App\Models\SystemLog; // Added for tracking
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -368,7 +369,7 @@ class DutyMealController extends Controller
         return back()->with('success', count($request->ids) . ' rosters permanently deleted.');
     }
 
-    // 🟢 NEW GLOBAL EXPORT METHOD 
+    // 🟢 NEW GLOBAL EXPORT METHOD WITH SYSTEM LOGS
     public function export(Request $request)
     {
         // Get the list of IDs sent from the frontend
@@ -377,6 +378,32 @@ class DutyMealController extends Controller
         
         if (empty($ids)) {
             return back()->with('error', 'No duty meals found to export.');
+        }
+
+        // Capture the date filter sent from the frontend
+        $filterType = $request->query('filter', 'unknown');
+
+        // Format the filter text nicely for the log entry
+        $readableFilter = match ($filterType) {
+            'today' => 'Today',
+            'this_week' => 'This Week',
+            'this_month' => 'This Month',
+            'all' => 'All Active',
+            default => ucfirst(str_replace('_', ' ', $filterType)), // Catches the Custom Range
+        };
+
+        // 🟢 RECORD ACTION TO SYSTEM LOGS
+        try {
+            SystemLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'Export',
+                'module' => 'Duty Meal Module',
+                'description' => "Exported Duty Meal rosters using date filter: {$readableFilter}.",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::info("Duty Meals exported by User " . Auth::id() . " with filter: {$readableFilter}");
         }
         
         $fileName = "Duty_Meals_Report_" . now()->format('Y-m-d') . ".xlsx";
