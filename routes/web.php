@@ -23,6 +23,7 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\Auth\SetupAccountController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\PRPOStatusController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -251,6 +252,8 @@ Route::middleware(['auth'])->group(function(){
     // --- HR Feedback Form ---
     Route::get('/hr/feedback', [\App\Http\Controllers\HR\FeedbackController::class, 'create'])->name('hr.feedback.create');
     Route::post('/hr/feedback', [\App\Http\Controllers\HR\FeedbackController::class, 'store'])->name('hr.feedback.store');
+
+    Route::get('/prpo/status', [PRPOStatusController::class, 'index'])->name('prpo.status.index');
 
     Route::prefix('hr')->name('hr.')->group(function(){
     
