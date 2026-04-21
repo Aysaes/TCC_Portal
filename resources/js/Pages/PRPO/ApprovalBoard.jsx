@@ -174,7 +174,7 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                 href={route('prpo.approval-board', { view: 'action_needed' })} 
                                 className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'action_needed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                             >
-                                Approvals {currentView !== 'action_needed' && <span className="h-2 w-2 rounded-full bg-red-500"></span>}
+                                Approvals {currentView !== 'action_needed'}
                             </Link>
 
                             <Link 
