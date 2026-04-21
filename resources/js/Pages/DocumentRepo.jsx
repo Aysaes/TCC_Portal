@@ -26,11 +26,11 @@ export default function Documents({ auth, documents = [], categories = [], activ
         return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullFileUrl)}`;
     };
 
-    // Google Docs Viewer for PDFs on Mobile/iOS
+    // Google Docs Viewer for PDFs (Mobile & Desktop)
     const getPdfViewerUrl = (doc) => {
         const appUrl = window.location.origin; 
         const fullFileUrl = `${appUrl}/storage/${doc.file_path}`; 
-        return `https://docs.google.com/gview?url=${encodeURIComponent(fullFileUrl)}&embedded=true`;
+        return `https://docs.google.com/gview?url=${encodeURIComponent(fullFileUrl)}&embedded=true&rm=minimal`;
     };
 
     // --- Manage Categories Modal State ---
@@ -103,13 +103,13 @@ export default function Documents({ auth, documents = [], categories = [], activ
                 <h1 className="text-2xl font-semibold leading-tight text-gray-900">{activeCategory}</h1>
                 
                 {isAdmin && (
-                    <div className="grid w-full grid-cols-2 gap-3 sm:w-auto sm:min-w-[420px]">
+                    <div className="grid w-full grid-cols-1 gap-4 sm:w-auto sm:grid-cols-2 sm:min-w-[520px]">
                         <button 
                             onClick={() => setIsCategoryModalOpen(true)}
-                            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-transparent px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.12em] text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-transparent hover:text-slate-900 sm:px-5"
+                            className="inline-flex min-h-[64px] w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-center text-base font-bold uppercase tracking-[0.1em] text-slate-700 shadow-md transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:shadow-lg"
                             title="Manage Categories"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4 shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6 shrink-0 text-indigo-600">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5m-16.5 5.25h16.5m-16.5 5.25h10.5" />
                             </svg>
                             Manage Categories
@@ -118,9 +118,9 @@ export default function Documents({ auth, documents = [], categories = [], activ
                         <button
                             type="button"
                             onClick={() => setIsUploadModalOpen(true)}
-                            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-transparent px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.12em] text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-transparent hover:text-slate-900 sm:px-5"
+                            className="inline-flex min-h-[64px] w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-center text-base font-bold uppercase tracking-[0.1em] text-slate-700 shadow-md transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:shadow-lg"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4 shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6 shrink-0 text-indigo-600">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V6.75m0 0L8.25 10.5M12 6.75l3.75 3.75M4.5 17.25v.75A1.5 1.5 0 006 19.5h12a1.5 1.5 0 001.5-1.5v-.75" />
                             </svg>
                             Upload Document
@@ -188,7 +188,6 @@ export default function Documents({ auth, documents = [], categories = [], activ
                         <button onClick={closeCategoryModal} className="text-gray-400 hover:text-gray-600">✕</button>
                     </div>
 
-                    {/* Current Categories List */}
                     <div className="mb-6">
                         <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">Current Categories</h3>
                         {categories.length === 0 ? (
@@ -210,7 +209,6 @@ export default function Documents({ auth, documents = [], categories = [], activ
                         )}
                     </div>
 
-                    {/* Add New Category Form */}
                     <form onSubmit={submitCategory} className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                         <h3 className="text-sm font-semibold text-indigo-900 mb-3">Create New Category</h3>
                         <div className="flex gap-2">
@@ -274,28 +272,17 @@ export default function Documents({ auth, documents = [], categories = [], activ
             {/* --- DELETE CONFIRMATION MODAL --- */}
             <ConfirmModal show={isConfirmModalOpen} onClose={closeConfirmModal} onConfirm={executeDelete} title="Delete Document" message={`Are you sure you want to delete the document "${documentToDelete?.title}"?\n\nThis will permanently remove the file from the server.`} confirmText="Delete Document" />
 
-            {/* --- VIEWER MODAL --- */}
+            {/* --- VIEWER MODAL (WITH ANTI-DOWNLOAD & HIDDEN TOOLBAR) --- */}
             <Modal show={!!viewingDoc} onClose={() => setViewingDoc(null)} maxWidth="7xl">
                 {viewingDoc && (
                     <div className="flex flex-col bg-white overflow-hidden h-[95vh] sm:h-[90vh]">
-                        {/* Mobile-friendly Header */}
-                        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-gray-200 bg-gray-50 shrink-0 gap-3 sm:gap-4">
+                        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-gray-200 bg-gray-50 shrink-0 gap-3 sm:gap-4 relative z-20 shadow-sm">
                             <h2 
                                 className="text-base sm:text-lg font-bold text-gray-800 truncate flex-1" 
                                 title={viewingDoc.title}
                             >
                                 {viewingDoc.title}
                             </h2>
-                            
-                            {/* Mobile Fallback Button */}
-                            <a 
-                                href={`/storage/${viewingDoc.file_path}`} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className="sm:hidden flex items-center gap-1.5 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100 shrink-0"
-                            >
-                                Open Native
-                            </a>
 
                             <button 
                                 onClick={() => setViewingDoc(null)} 
@@ -307,28 +294,35 @@ export default function Documents({ auth, documents = [], categories = [], activ
 
                         {/* Localhost Warning */}
                         {(window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') && (
-                            <div className="bg-yellow-50 p-2 sm:p-3 text-xs sm:text-sm text-yellow-800 border-b border-yellow-200 shrink-0 text-center">
+                            <div className="bg-yellow-50 p-2 sm:p-3 text-xs sm:text-sm text-yellow-800 border-b border-yellow-200 shrink-0 text-center z-20">
                                 <strong>Note:</strong> You are on localhost. External viewers cannot access local files. 
                                 <br className="hidden sm:block"/>If the document doesn't load below, it is because your site is not live yet!
                             </div>
                         )}
 
-                        {/* Document iFrame */}
-                        <div className="flex-1 w-full bg-[#525659] relative">
+                        {/* Document iFrame Area */}
+                        <div 
+                            className="flex-1 w-full bg-[#525659] relative overflow-hidden select-none"
+                            onContextMenu={(e) => e.preventDefault()} // Disables right-click
+                        >
                             {viewingDoc.file_path?.endsWith('.pdf') ? (
                                 <iframe 
                                     src={
                                         window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
-                                            ? `/storage/${viewingDoc.file_path}`
+                                            ? `/storage/${viewingDoc.file_path}#toolbar=0&navpanes=0&scrollbar=0`
                                             : getPdfViewerUrl(viewingDoc)
                                     } 
-                                    className="absolute inset-0 w-full h-full border-0" 
+                                    className={`absolute left-0 w-full border-0 pointer-events-auto ${
+                                        window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+                                            ? 'top-0 h-full' 
+                                            : '-top-14 h-[calc(100%+3.5rem)]' 
+                                    }`}
                                     title="PDF Viewer"
                                 />
                             ) : (
                                 <iframe 
                                     src={getViewerUrl(viewingDoc)} 
-                                    className="absolute inset-0 w-full h-full border-0 bg-white" 
+                                    className="absolute inset-0 w-full h-full border-0 bg-white pointer-events-auto" 
                                     title="Office Viewer"
                                 />
                             )}
