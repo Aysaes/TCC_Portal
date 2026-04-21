@@ -260,12 +260,6 @@ export default function StatusIndex({ auth, requests }) {
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Requested on <span className="font-semibold text-gray-700">{pr.date_prepared}</span>
-                                            {pr.cc_user_id === auth.user.id && (
-                                                <span className="ml-2 text-indigo-500 font-medium">(You were CC'd)</span>
-                                            )}
-                                        </p>
                                     </div>
                                     
                                     {/* 🟢 VIEW DOCUMENT BUTTONS */}
