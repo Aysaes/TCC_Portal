@@ -7,7 +7,7 @@ import { getDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { formatAppDate } from '@/Utils/date';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Fragment, useMemo, useState } from 'react'; // 🟢 Added Fragment here
+import { Fragment, useMemo, useState } from 'react'; 
 
 export default function Index({ auth, dutymeals = [], employees = [], departments = [], positions = [], branches = [] }) {
     
@@ -189,7 +189,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
     }, [dutymeals, overviewBranch, dateFilterType, customStartDate, customEndDate, system?.serverDate]);
 
 
-    // 🟢 NEW: Group the filtered meals by Week!
+    // Group the filtered meals by Week!
     const groupedDutyMeals = useMemo(() => {
         const groups = {};
 
@@ -211,7 +211,6 @@ export default function Index({ auth, dutymeals = [], employees = [], department
             groups[weekLabel].push(meal);
         });
 
-        // Returns an array of [ "Week of...", [meals...] ]
         return Object.entries(groups); 
     }, [filteredDutyMeals]);
 
@@ -245,6 +244,8 @@ export default function Index({ auth, dutymeals = [], employees = [], department
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                     <h2 className="text-lg font-medium text-gray-900">Overview Statistics</h2>
+                    
+                    {/* FILTER ROW */}
                     <div className="flex flex-wrap items-center gap-2">
                         {/* The Date Quick-Filter Dropdown */}
                         <select
@@ -340,10 +341,24 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                 </div>
             </div>
 
-            {/* HEADER SECTION */}
+            {/* HEADER SECTION WITH EXPORT BUTTON */}
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h2 className="text-lg font-medium text-gray-900">Duty Meal Rosters</h2>
+                </div>
+                <div>
+                    {/* 🟢 SINGLE GLOBAL EXPORT BUTTON MOVED HERE 🟢 */}
+                    <a
+                        href={filteredDutyMeals.length > 0 ? route('admin.duty-meals.export', { ids: filteredDutyMeals.map(m => m.id).join(',') }) : '#'}
+                        onClick={(e) => { if(filteredDutyMeals.length === 0) e.preventDefault(); }}
+                        className={`inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150 shadow-sm ${filteredDutyMeals.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        title="Export Current List to Excel"
+                    >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export List
+                    </a>
                 </div>
             </div>
 
@@ -359,7 +374,6 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                     </td>
                                 </tr>
                             ) : (
-                                // 🟢 NEW: Loop over the Week Groups!
                                 groupedDutyMeals.map(([weekLabel, meals]) => (
                                     <Fragment key={weekLabel}>
                                         {/* The Week Header Row */}
@@ -372,7 +386,6 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                         {meals.map((meal) => (
                                             <tr key={meal.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setSelectedRosterId(meal.id)}>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {/* Show the day of the week, e.g., "Monday, Apr 13" */}
                                                     {new Date(meal.duty_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{meal.branch?.name}</td>
@@ -402,7 +415,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                     {selectedRoster.is_locked && (
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1 sm:mt-0">
                                             <svg className="mr-1 h-3 w-3 text-red-800" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                                             </svg>
                                             Locked
                                         </span>
