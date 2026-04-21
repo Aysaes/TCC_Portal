@@ -13,6 +13,20 @@ export default function SidebarLayout({
     headerClassName = '',
 }) {
     const { auth } = usePage().props;
+
+    const userRole = auth.user?.role?.name?.toLowerCase().trim() || '';
+
+    const allowedPRRoles = [
+    'procurement assist', 
+    'procurement tl', 
+    'director of corporate services and operations', 
+    'admin', 
+    'operations manager', 
+    'inventory assist', 
+    'inventory tl'
+    ];
+
+    const canCreatePR = allowedPRRoles.includes(userRole);
     
     // 🟢 Store notifications and count in local state
     const [localNotifications, setLocalNotifications] = useState(auth.notifications || []);
@@ -600,9 +614,11 @@ export default function SidebarLayout({
                                     <Dropdown.Link href={route('admin.dashboard')}>Admin Module</Dropdown.Link>
                                 )}
                                 <Dropdown.Link href={route('hr.index')}>HR Module</Dropdown.Link>
-                                {['admin', 'Inventory Assist', 'Inventory TL', 'Procurement TL', 'Procurement Assist', 'Director of Corporate Services and Operations', 'Operations Manager'].includes(user.role?.name) && (
-                                    <Dropdown.Link href={route('prpo.purchase-requests.create')}>PR/PO Module</Dropdown.Link>
-                                )}
+                                
+                                <Dropdown.Link href={canCreatePR ? route('prpo.purchase-requests.create') : route('prpo.status.index')}>
+                                 PR/PO Module
+                                </Dropdown.Link>
+                                
                                 {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL'].includes(user.role?.name) && (
                                     <Dropdown.Link href={route('admin.duty-meals.index')}>Duty Meal Module</Dropdown.Link>
                                 )}

@@ -38,4 +38,9 @@ class PurchaseRequest extends Model
     {
         return $this->belongsTo(User::class, 'cc_user_id');
     }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
 }

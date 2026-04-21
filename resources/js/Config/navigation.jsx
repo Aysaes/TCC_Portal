@@ -246,8 +246,8 @@ export const getPRPOLinks = (auth) => {
         });
     }
 
-    // 4. PO Generation (ONLY Admin, DCSO, Procurement)
-    if (isAdminOrDCSO || isProcurement) {
+    // 4. PO Generation 
+    if (isAdminOrDCSO || isProcurement || isOM || isInventory) {
         links.push({ 
             label: 'PO Generation', 
             href: route('prpo.purchase-orders.index'), 
@@ -261,6 +261,14 @@ export const getPRPOLinks = (auth) => {
             label: 'Products Masterlist', 
             href: route('prpo.products.index'), 
             active: route().current('prpo.products.*') 
+        });
+    }
+
+    if (!isAdminOrDCSO && !isProcurement && !isInventory && !isOM) {
+        links.push({ 
+            label: 'PR/PO Status', 
+            href: route('prpo.status.index'), 
+            active: route().current('prpo.status.*')
         });
     }
 

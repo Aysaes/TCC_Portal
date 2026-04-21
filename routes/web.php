@@ -20,6 +20,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Auth\LinkExpired;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PRPOStatusController;
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\Auth\SetupAccountController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -288,6 +289,8 @@ Route::middleware(['auth'])->group(function(){
         });
 
     });
+
+    Route::get('/prpo/status', [PRPOStatusController::class, 'index'])->name('prpo.status.index');
 
 });
 

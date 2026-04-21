@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\PendingApprovalNotification;
+use App\Notifications\PRPOCcStatusUpdate;
 
 class PurchaseRequestController extends Controller
 {
@@ -89,6 +90,7 @@ class PurchaseRequestController extends Controller
         elseif (str_contains($userRole, 'director') || str_contains($userRole, 'admin') || str_contains($userRole, 'operations') || str_contains($userRole, 'procurement'))  {
             $initialStatus = 'approved'; 
         }
+        
 
         DB::transaction(function () use ($validated, $initialStatus) {
             
@@ -114,6 +116,14 @@ class PurchaseRequestController extends Controller
             }
 
             $this->notifyNextApprovers($pr);
+
+            if ($pr->cc_user_id) {
+            $ccUser = User::find($pr->cc_user_id);
+            if ($ccUser) {
+                $ccUser->notify(new PRPOCcStatusUpdate($pr, 'PR', "You were CC'd on a new Purchase Request by " . Auth::user()->name));
+            }
+        }
+            
         });
 
         return redirect()->route('prpo.approval-board', ['view' => 'my_requests'])
@@ -218,6 +228,11 @@ class PurchaseRequestController extends Controller
         $purchaseRequest->save();
 
         $this->notifyNextApprovers($purchaseRequest);
+
+        $ccUser = $purchaseRequest->cc_user;
+        if ($ccUser) {
+            $ccUser->notify(new PRPOCcStatusUpdate($purchaseRequest, 'PR', "A Purchase Request you are copied on was " . $request->action));
+        }
 
         return back()->with('success', $message);
     }

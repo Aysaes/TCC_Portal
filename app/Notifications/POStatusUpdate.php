@@ -28,12 +28,19 @@ class POStatusUpdate extends Notification
         // Safely grab the supplier name if it exists
         $supplierName = $this->po->supplier->name ?? 'Supplier';
 
+        // 🟢 Safely check the receiving user's role
+        $userRole = strtolower(trim($notifiable->role->name ?? ''));
+        $allowedRoles = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin', 'operations manager', 'inventory assist', 'inventory tl'];
+
+        // 🟢 Dynamically set the URL
+        $actionUrl = in_array($userRole, $allowedRoles) 
+            ? route('prpo.purchase-orders.index') 
+            : route('prpo.status.index');
+
         return [
             'message' => '📦 PO Update: ' . $this->po->po_number,
             'user_email' => $this->statusMessage . ' (' . $supplierName . ')',
-            
-            // 🟢 Send them to the PO Generation / Masterlist board
-            'action_url' => route('prpo.purchase-orders.index') 
+            'action_url' => $actionUrl 
         ];
     }
 }

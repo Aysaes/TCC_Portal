@@ -278,7 +278,7 @@ class ManpowerRequestController extends Controller
             } elseif ($validated['status'] === 'Approved') {
                 // If it was auto-approved (like a DCSO request), notify HR directly
                 $hrUsers = User::whereHas('role', function ($q) {
-                    $q->where('name', 'HR')->orWhere('name', 'Human Resources');
+                    $q->whereIn('name', ['HR', 'Human Resources', 'HRBP', 'Human Resources Business Partner']);
                 })->get();
 
                 if ($hrUsers->isNotEmpty()) {
@@ -398,7 +398,7 @@ class ManpowerRequestController extends Controller
 
                 // 1. Alert HR
                 $hrUsers = User::whereHas('role', function ($q) {
-                    $q->where('name', 'HR')->orWhere('name', 'Human Resources');
+                    $q->whereIn('name', ['HR', 'Human Resources', 'HRBP', 'Human Resources Business Partner']);
                 })->get();
 
                 if ($hrUsers->isNotEmpty()) {

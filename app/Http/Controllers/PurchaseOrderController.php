@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Notifications\POStatusUpdate;
 use App\Notifications\PRStatusUpdate;
+use App\Notifications\PRPOCcStatusUpdate;
 
 class PurchaseOrderController extends Controller
 {
@@ -23,21 +24,28 @@ class PurchaseOrderController extends Controller
     public function index(Request $request)
     {
         $userRole = strtolower(trim(Auth::user()->role->name ?? ''));
-        $allowedRoles = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin'];
+        $allowedRoles = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin', 'operations manager', 'inventory assist', 'inventory tl'];
         
         if (!in_array($userRole, $allowedRoles)) {
-            abort(403, 'Unauthorized Action. Only Procurement can access the PO Dashboard.');
+            abort(403, 'Unauthorized Action. Only authorized personnel can access the PO Dashboard.');
         }
 
-        // 1. Get the requested view (default to action_needed)
+        // 🟢 1. Define who gets restricted to the "My Request" tab
+        $restrictedRoles = ['operations manager', 'inventory assist', 'inventory tl'];
+        $isRestricted = in_array($userRole, $restrictedRoles);
+
+        // 🟢 2. Get the requested view, but FORCE 'my_request' if they are restricted
         $view = $request->query('view', 'action_needed');
+        if ($isRestricted) {
+            $view = 'my_request';
+        }
 
         $query = PurchaseOrder::with([
             'supplier', 'preparedBy', 'items.product',
             'purchaseRequest.user', 'purchaseRequest.items.product', 'purchaseRequest.items.supplier'
         ])->latest();
 
-        // 2. Filter based on what the specific role needs to take action on
+        // 🟢 3. Filter based on the selected view
         if ($view === 'action_needed') {
             if (in_array($userRole, ['procurement assist', 'procurement tl'])) {
                 $query->where('status', 'drafted'); // Procurement must edit and submit drafts
@@ -46,14 +54,21 @@ class PurchaseOrderController extends Controller
             } elseif ($userRole === 'admin') {
                 $query->whereIn('status', ['drafted', 'pending_approval']);
             }
+            
+        } elseif ($view === 'my_request') {
+            // 🟢 NEW: Filter POs where the linked PR was created by the logged-in user
+            $query->whereHas('purchaseRequest', function ($q) {
+                $q->where('user_id', Auth::id());
+            });
         }
-        // If $view === 'all', it bypasses the above and loads everything.
+        // If $view === 'all', it naturally bypasses the above and loads everything.
 
         $purchaseOrders = $query->paginate(15)->withQueryString();
 
         return Inertia::render('PRPO/PurchaseOrdersIndex', [
             'purchaseOrders' => $purchaseOrders,
-            'currentView' => $view
+            'currentView' => $view,
+            'isRestrictedRole' => $isRestricted // 🟢 4. Pass the restriction flag to React
         ]);
     }
 
@@ -189,6 +204,14 @@ class PurchaseOrderController extends Controller
             $message = 'Purchase Order draft updated successfully.';
         }
 
+        $ccUser = $purchaseOrder->purchaseRequest->cc_user ?? null;
+
+        if ($status === 'approved' && $ccUser) {
+            $ccUser->notify(new PRPOCcStatusUpdate($purchaseOrder, 'PO', "Items on a request you are copied on have been officially ordered."));
+        } elseif ($status === 'cancelled' && $ccUser) {
+            $ccUser->notify(new PRPOCcStatusUpdate($purchaseOrder, 'PO', "Notice: A Purchase Order for a request you are copied on was cancelled."));
+        }
+
         return back()->with('success', $message);
     }
 
@@ -293,6 +316,11 @@ class PurchaseOrderController extends Controller
         $originalRequester = $purchaseRequest->user;
         if ($originalRequester) {
             $originalRequester->notify(new PRStatusUpdate($purchaseRequest, "Your request is currently being processed into Purchase Orders."));
+        }
+
+        $ccUser = $purchaseRequest->cc_user; 
+        if ($ccUser) {
+            $ccUser->notify(new PRPOCcStatusUpdate($purchaseRequest, 'PR', "A request you are copied on is being processed into Purchase Orders."));
         }
 
         return back()->with('success', 'Purchase Orders drafted successfully! You can now review them.');
