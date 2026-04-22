@@ -3,7 +3,7 @@ import TrackingStepper from '@/Components/TrackingStepper';
 import { getPRPOLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function ApprovalBoard({ auth, requests, currentView, userBranches = [] }) {
     const sidebarLinks = getPRPOLinks(auth);
@@ -13,6 +13,42 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
 
     const isInvTL = userRole.includes('inventory tl') || userRole === 'admin';
     const isOpsManager = userRole.includes('operations') || userRole.includes('operations manager') || userRole === 'admin';
+
+    // 🟢 SAFELY EXTRACT DATA
+    const requestList = Array.isArray(requests?.data) ? requests.data : (Array.isArray(requests) ? requests : []);
+
+    // --- FILTER STATES ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterBranch, setFilterBranch] = useState('');
+    const [filterPriority, setFilterPriority] = useState('');
+
+    // --- DYNAMIC DROPDOWN OPTIONS ---
+    const uniqueBranches = useMemo(() => {
+        return [...new Set(requestList.map(req => req.branch).filter(Boolean))].sort();
+    }, [requestList]);
+
+    const uniquePriorities = useMemo(() => {
+        return [...new Set(requestList.map(req => req.priority).filter(Boolean))].sort();
+    }, [requestList]);
+
+    // --- LIVE FILTER LOGIC ---
+    const filteredRequests = useMemo(() => {
+        return requestList.filter(req => {
+            // 1. Search (PR ID or Prepared By)
+            const searchLower = searchQuery.toLowerCase().trim();
+            const prId = (req.pr_number || '').toLowerCase();
+            const preparedBy = (req.user?.name || '').toLowerCase();
+            const matchesSearch = !searchLower || prId.includes(searchLower) || preparedBy.includes(searchLower);
+
+            // 2. Branch Filter
+            const matchesBranch = !filterBranch || req.branch === filterBranch;
+
+            // 3. Priority Filter
+            const matchesPriority = !filterPriority || req.priority === filterPriority;
+
+            return matchesSearch && matchesBranch && matchesPriority;
+        });
+    }, [requestList, searchQuery, filterBranch, filterPriority]);
 
     // Global Confirm Modal State
     const [confirmDialog, setConfirmDialog] = useState({ 
@@ -73,7 +109,6 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
     };
 
     const handleAction = (id, actionType) => {
-        // If action is reject, intercept and open the custom reject modal!
         if (actionType === 'reject') {
             openRejectModal(id);
             return;
@@ -194,6 +229,72 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                     )}
                 </div>
 
+                {/* 🟢 FILTER WIDGET */}
+                <div className="mb-6 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Live Search */}
+                        <div className="relative">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search Request</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="PR ID or Prepared By..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Branch Filter */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Branch</label>
+                            <select
+                                value={filterBranch}
+                                onChange={(e) => setFilterBranch(e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                            >
+                                <option value="">All Branches</option>
+                                {uniqueBranches.map((branch, idx) => (
+                                    <option key={idx} value={branch}>{branch}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Priority Filter */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Priority</label>
+                            <select
+                                value={filterPriority}
+                                onChange={(e) => setFilterPriority(e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                            >
+                                <option value="">All Priorities</option>
+                                {uniquePriorities.map((priority, idx) => (
+                                    <option key={idx} value={priority}>{priority}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Reset Filters Button */}
+                    {(searchQuery || filterBranch || filterPriority) && (
+                        <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
+                            <button
+                                onClick={() => { setSearchQuery(''); setFilterBranch(''); setFilterPriority(''); }}
+                                className="text-sm text-gray-500 hover:text-gray-800 font-semibold bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md transition-colors"
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 {/* --- MAIN TABLE --- */}
                 <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
@@ -210,12 +311,14 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
-                            {requests.data.length === 0 ? (
+                            {filteredRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-8 text-center text-gray-500">No requests found for this view.</td>
+                                    <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                                        {searchQuery || filterBranch || filterPriority ? 'No requests match your current filters.' : 'No requests found for this view.'}
+                                    </td>
                                 </tr>
                             ) : (
-                                requests.data.map((pr) => (
+                                filteredRequests.map((pr) => (
                                     <tr 
                                         key={pr.pr_number} 
                                         onClick={() => openModal(pr)} 
@@ -243,7 +346,6 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                         <td className="px-6 py-4 font-medium">{pr.items?.length || 0} Items</td>
                                         <td className="px-6 py-4">{formatStatus(pr.status)}</td>
                                         
-                                        {/* 🟢 NEW ACTION BUTTONS COLUMN */}
                                         <td className="whitespace-nowrap px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-end gap-2">
                                                 {canApprove(pr) && currentView === 'action_needed' && (
@@ -269,6 +371,16 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                                             Reject
                                                         </button>
                                                     </>
+                                                )}
+
+                                                {pr.status === 'approved' && canManagePO && currentView === 'action_needed' && (
+                                                    <button 
+                                                        onClick={() => handleGeneratePO(pr.id)}
+                                                        className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 transition-all"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                        Generate PO(s)
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>

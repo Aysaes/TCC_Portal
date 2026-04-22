@@ -16,8 +16,11 @@ export default function HRAdminOverview({ auth, requests }) {
     const requestList = requests || [];
     const ITEMS_PER_PAGE = 10;
 
-    // --- TAB STATE ---
+    // --- TAB & FILTER STATES ---
     const [activeTab, setActiveTab] = useState('action-required');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     // --- SORT STATE ---
     const [sortField, setSortField] = useState('date');
@@ -109,15 +112,45 @@ export default function HRAdminOverview({ auth, requests }) {
         }
     };
 
-    // --- TAB FILTERING ---
+    // --- TAB & SEARCH/DATE FILTERING ---
     const filteredRequests = useMemo(() => {
         return requestList.filter((req) => {
-            if (activeTab === 'action-required') return req.status === 'Pending HR';
-            if (activeTab === 'in-progress') return req.status === 'General Accounting';
-            if (activeTab === 'completed') return req.status === 'Released';
-            return true;
+            // 1. Tab Filter
+            if (activeTab === 'action-required' && req.status !== 'Pending HR') return false;
+            if (activeTab === 'in-progress' && req.status !== 'General Accounting') return false;
+            if (activeTab === 'completed' && req.status !== 'Released') return false;
+
+            // 2. Search Filter (by Employee Name)
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase().trim();
+                const employeeName = (req.user?.name || req.name || '').toLowerCase();
+                
+                if (!employeeName.includes(query)) {
+                    return false;
+                }
+            }
+
+            // 3. Date Range Filter
+            let matchesDate = true;
+            if (startDate || endDate) {
+                const reqDate = new Date(req.created_at);
+                reqDate.setHours(0, 0, 0, 0);
+
+                if (startDate) {
+                    const start = new Date(startDate);
+                    start.setHours(0, 0, 0, 0);
+                    if (reqDate < start) matchesDate = false;
+                }
+                if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    if (reqDate > end) matchesDate = false;
+                }
+            }
+
+            return matchesDate;
         });
-    }, [requestList, activeTab]);
+    }, [requestList, activeTab, searchQuery, startDate, endDate]);
 
     // --- SORTING ---
     const sortedRequests = useMemo(() => {
@@ -151,10 +184,10 @@ export default function HRAdminOverview({ auth, requests }) {
         });
     }, [filteredRequests, sortField, sortDirection]);
 
-    // --- RESET PAGE WHEN TAB OR SORT CHANGES ---
+    // --- RESET PAGE WHEN FILTERS CHANGE ---
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeTab, sortField, sortDirection]);
+    }, [activeTab, sortField, sortDirection, searchQuery, startDate, endDate]);
 
     const totalPages = Math.max(1, Math.ceil(sortedRequests.length / ITEMS_PER_PAGE));
 
@@ -182,10 +215,10 @@ export default function HRAdminOverview({ auth, requests }) {
                     </div>
 
                     {/* TABS */}
-                    <div className="border-b border-gray-200 mb-6 flex gap-6">
+                    <div className="border-b border-gray-200 mb-6 flex gap-6 overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('action-required')}
-                            className={`pb-3 font-semibold text-sm border-b-2 transition-colors ${
+                            className={`pb-3 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap ${
                                 activeTab === 'action-required'
                                     ? 'border-indigo-600 text-indigo-600'
                                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -195,7 +228,7 @@ export default function HRAdminOverview({ auth, requests }) {
                         </button>
                         <button
                             onClick={() => setActiveTab('in-progress')}
-                            className={`pb-3 font-semibold text-sm border-b-2 transition-colors ${
+                            className={`pb-3 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap ${
                                 activeTab === 'in-progress'
                                     ? 'border-indigo-600 text-indigo-600'
                                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -205,7 +238,7 @@ export default function HRAdminOverview({ auth, requests }) {
                         </button>
                         <button
                             onClick={() => setActiveTab('completed')}
-                            className={`pb-3 font-semibold text-sm border-b-2 transition-colors ${
+                            className={`pb-3 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap ${
                                 activeTab === 'completed'
                                     ? 'border-indigo-600 text-indigo-600'
                                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -215,11 +248,69 @@ export default function HRAdminOverview({ auth, requests }) {
                         </button>
                     </div>
 
+                    {/* 🟢 FILTER WIDGET (Search + Dates) */}
+                    <div className="mb-6 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Live Search Bar */}
+                            <div className="relative">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search Employee</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Type a name..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Start Date */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Start Date</label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                />
+                            </div>
+
+                            {/* End Date */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">End Date</label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Reset Filters Button */}
+                        {(searchQuery || startDate || endDate) && (
+                            <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
+                                <button
+                                    onClick={() => { setSearchQuery(''); setStartDate(''); setEndDate(''); }}
+                                    className="text-sm text-gray-500 hover:text-gray-800 font-semibold bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md transition-colors"
+                                >
+                                    Clear Filters
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     {/* TABLE CONTAINER */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
                         {sortedRequests.length === 0 ? (
                             <div className="p-12 text-center text-gray-500">
-                                No requests found in this category.
+                                {searchQuery || startDate || endDate ? 'No requests match your current filters.' : 'No requests found in this category.'}
                             </div>
                         ) : (
                             <>

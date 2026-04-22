@@ -4,16 +4,56 @@ import TrackingStepper from '@/Components/TrackingStepper';
 import { getPRPOLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView, isRestrictedRole }) {
     const sidebarLinks = getPRPOLinks(auth);
-    const { data: pos } = purchaseOrders;
+    const pos = purchaseOrders?.data || [];
 
     const userrole = auth.user.role?.name?.toLowerCase().trim() || '';
     const canManagePO = userrole.includes('procurement') || 
                     userrole.includes('director') || 
                     userrole === 'admin';
+
+    // --- FILTER STATES ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterBranch, setFilterBranch] = useState('');
+    const [filterPriority, setFilterPriority] = useState('');
+
+    // --- DYNAMIC DROPDOWN OPTIONS ---
+    const uniqueBranches = useMemo(() => {
+        return [...new Set(pos.map(po => po.purchase_request?.branch).filter(Boolean))].sort();
+    }, [pos]);
+
+    const uniquePriorities = useMemo(() => {
+        return [...new Set(pos.map(po => po.purchase_request?.priority).filter(Boolean))].sort();
+    }, [pos]);
+
+    // --- LIVE FILTER LOGIC ---
+    const filteredPOs = useMemo(() => {
+        return pos.filter(po => {
+            // 1. Search (PO ID, PR ID, Preparer, or Supplier)
+            const searchLower = searchQuery.toLowerCase().trim();
+            const poId = (po.po_number || '').toLowerCase();
+            const prId = (po.purchase_request?.pr_number || '').toLowerCase();
+            const preparedBy = (po.purchase_request?.user?.name || '').toLowerCase();
+            const supplier = (po.supplier?.name || '').toLowerCase();
+
+            const matchesSearch = !searchLower || 
+                poId.includes(searchLower) || 
+                prId.includes(searchLower) || 
+                preparedBy.includes(searchLower) || 
+                supplier.includes(searchLower);
+
+            // 2. Branch Filter (from original PR)
+            const matchesBranch = !filterBranch || po.purchase_request?.branch === filterBranch;
+
+            // 3. Priority Filter (from original PR)
+            const matchesPriority = !filterPriority || po.purchase_request?.priority === filterPriority;
+
+            return matchesSearch && matchesBranch && matchesPriority;
+        });
+    }, [pos, searchQuery, filterBranch, filterPriority]);
 
     const [confirmDialog, setConfirmDialog] = useState({ 
         isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
@@ -276,6 +316,72 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                     )}
                 </div>
 
+                {/* 🟢 FILTER WIDGET */}
+                <div className="mb-6 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Live Search */}
+                        <div className="relative">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search Purchase Order</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="PO/PR ID, Preparer, or Supplier..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Branch Filter */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Branch</label>
+                            <select
+                                value={filterBranch}
+                                onChange={(e) => setFilterBranch(e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                            >
+                                <option value="">All Branches</option>
+                                {uniqueBranches.map((branch, idx) => (
+                                    <option key={idx} value={branch}>{branch}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Priority Filter */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Priority</label>
+                            <select
+                                value={filterPriority}
+                                onChange={(e) => setFilterPriority(e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                            >
+                                <option value="">All Priorities</option>
+                                {uniquePriorities.map((priority, idx) => (
+                                    <option key={idx} value={priority}>{priority}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Reset Filters Button */}
+                    {(searchQuery || filterBranch || filterPriority) && (
+                        <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
+                            <button
+                                onClick={() => { setSearchQuery(''); setFilterBranch(''); setFilterPriority(''); }}
+                                className="text-sm text-gray-500 hover:text-gray-800 font-semibold bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md transition-colors"
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
                         <thead className="bg-gray-50">
@@ -289,10 +395,14 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
-                            {pos.length === 0 ? (
-                                <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-500">No Purchase Orders found.</td></tr>
+                            {filteredPOs.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                                        {searchQuery || filterBranch || filterPriority ? 'No Purchase Orders match your filters.' : 'No Purchase Orders found.'}
+                                    </td>
+                                </tr>
                             ) : (
-                                pos.map((po) => (
+                                filteredPOs.map((po) => (
                                     <tr key={po.id} onClick={() => openModal(po)} className="hover:bg-gray-50 transition cursor-pointer">
                                         <td className="px-6 py-4 font-bold text-indigo-600">{po.po_number}</td>
                                         <td className="px-6 py-4 font-medium text-gray-900">{po.supplier?.name || 'Unknown Supplier'}</td>

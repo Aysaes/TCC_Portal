@@ -17,7 +17,6 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
     const roleLower = String(userRole).toLowerCase().trim();
 
     const isAdmin = roleLower === 'admin';
-
     const isExecutive = roleLower === 'director of corporate services and operations' || isAdmin;
 
     const isRequesterOnly = roleLower.includes('tl') ||
@@ -27,6 +26,9 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
     const hrLinks = getHRLinks(auth.user.role?.name || 'Employee', auth);
 
     const [activeTab, setActiveTab] = useState((isRequesterOnly && !isAdmin) ? 'in-progress' : 'action-required');
+    
+    // 🟢 NEW: Search Bar State
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Modal State
     const [selectedRequest, setSelectedRequest] = useState(null);
@@ -46,7 +48,7 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
             preserveScroll: true,
             onSuccess: () => {
                 closeRejectModal();
-                closeModal(); // Close the details modal if it was open
+                closeModal(); 
             }
         });
     };
@@ -69,10 +71,8 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
     const renderHeaderSortButton = (field) => {
         const isActive = sortField === field;
 
-        const upClass =
-            isActive && sortDirection === 'asc' ? 'text-gray-900' : 'text-gray-300';
-        const downClass =
-            isActive && sortDirection === 'desc' ? 'text-gray-900' : 'text-gray-300';
+        const upClass = isActive && sortDirection === 'asc' ? 'text-gray-900' : 'text-gray-300';
+        const downClass = isActive && sortDirection === 'desc' ? 'text-gray-900' : 'text-gray-300';
 
         return (
             <button
@@ -143,22 +143,28 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
     };
 
     // --- FILTERING LOGIC ---
-   const getFilteredRequests = () => {
+    const getFilteredRequests = () => {
         return requests.filter(req => {
-            if (activeTab === 'completed') return req.status === 'Approved' || req.status === 'Rejected';
+            // 1. Tab Filtering
+            if (activeTab === 'completed' && req.status !== 'Approved' && req.status !== 'Rejected') return false;
 
             const currentApproverNeeded = req.workflow_path ? req.workflow_path[req.current_step] : null;
-            
-            // 🟢 MODIFIED: isMyTurn is now true if it's actually their turn, OR if they are an Executive
             const isMyTurn = currentApproverNeeded === exactUserRole || isExecutive;
 
-            if (activeTab === 'action-required') return req.status === 'Pending' && isMyTurn;
-            
-            // 🟢 MODIFIED: If they are an Executive, nothing is "In Progress" (waiting on someone else) 
-            // because they can act on everything. So "In Progress" should be empty for them, 
-            // or show requests they submitted themselves (if applicable).
-            if (activeTab === 'in-progress') return req.status === 'Pending' && !isMyTurn;
-            
+            if (activeTab === 'action-required' && (req.status !== 'Pending' || !isMyTurn)) return false;
+            if (activeTab === 'in-progress' && (req.status !== 'Pending' || isMyTurn)) return false;
+
+            // 🟢 2. NEW: Search Filtering (by Requester Name or Position)
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase().trim();
+                const requesterName = (req.requester?.name || '').toLowerCase();
+                const positionName = (req.position?.name || '').toLowerCase();
+                
+                if (!requesterName.includes(query) && !positionName.includes(query)) {
+                    return false;
+                }
+            }
+
             return true;
         });
     };
@@ -171,9 +177,10 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
             const comparison = aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' });
             return sortDirection === 'asc' ? comparison : -comparison;
         });
-    }, [requests, activeTab, sortField, sortDirection, exactUserRole, isAdmin]);
+    }, [requests, activeTab, sortField, sortDirection, exactUserRole, isAdmin, searchQuery]);
 
-    useEffect(() => { setCurrentPage(1); }, [activeTab, sortField, sortDirection]);
+    // 🟢 NEW: Reset to page 1 if tab, sort, or search changes
+    useEffect(() => { setCurrentPage(1); }, [activeTab, sortField, sortDirection, searchQuery]);
 
     const totalPages = Math.max(1, Math.ceil(displayedRequests.length / ITEMS_PER_PAGE));
 
@@ -210,19 +217,37 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                     </Link>
                 </div>
 
-                {/* TABS */}
-                <div className="border-b border-gray-200 mb-6 flex gap-6">
-                    {(!isRequesterOnly || isAdmin) && (
-                        <button onClick={() => setActiveTab('action-required')} className={`pb-3 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'action-required' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                            Action Required
+                {/* TABS & SEARCH */}
+                <div className="border-b border-gray-200 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                    <div className="flex gap-6 overflow-x-auto">
+                        {(!isRequesterOnly || isAdmin) && (
+                            <button onClick={() => setActiveTab('action-required')} className={`pb-3 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'action-required' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                                Action Required
+                            </button>
+                        )}
+                        <button onClick={() => setActiveTab('in-progress')} className={`pb-3 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'in-progress' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                            In Progress
                         </button>
-                    )}
-                    <button onClick={() => setActiveTab('in-progress')} className={`pb-3 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'in-progress' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                        In Progress
-                    </button>
-                    <button onClick={() => setActiveTab('completed')} className={`pb-3 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'completed' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                        Completed / History
-                    </button>
+                        <button onClick={() => setActiveTab('completed')} className={`pb-3 font-semibold text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'completed' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                            Completed / History
+                        </button>
+                    </div>
+                    
+                    {/* 🟢 NEW: Search Bar aligned to the right of the tabs */}
+                    <div className="relative w-full sm:w-64 mb-3 sm:mb-2">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search by requester or position..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="block w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                        />
+                    </div>
                 </div>
 
                 {/* DATA TABLE */}
@@ -256,7 +281,7 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                                 {paginatedRequests.length === 0 ? (
                                     <tr>
                                         <td colSpan="4" className="px-6 py-12 text-center text-gray-500 font-medium">
-                                            No requests found in this category.
+                                            {searchQuery ? 'No requests match your search.' : 'No requests found in this category.'}
                                         </td>
                                     </tr>
                                 ) : (
@@ -279,8 +304,15 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
 
                                                 {activeTab === 'action-required' && req.status !== 'Rejected' && (
                                                     <>
-                                                        <button onClick={() => openRejectModal(req.id)} className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md font-bold transition">Reject</button>
-                                                        <button onClick={() => confirmAction(req.id, 'Approved')} className="text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md font-bold transition">Endorse</button>
+                                                        <button onClick={() => openRejectModal(req.id)} className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md font-bold transition">
+                                                            {isExecutive && selectedRequest?.workflow_path && selectedRequest.workflow_path[selectedRequest.current_step] !== exactUserRole ? 'Override & Reject' : 'Reject Request'}
+                                                        </button>
+                                                        <button onClick={() => confirmAction(req.id, 'Approved')} className="text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md font-bold transition">
+                                                            {isExecutive && selectedRequest?.workflow_path && selectedRequest.workflow_path[selectedRequest.current_step] !== exactUserRole 
+                                                                ? 'Executive Override (Approve)' 
+                                                                : 'Endorse Request'
+                                                            }
+                                                        </button>
                                                     </>
                                                 )}
                                             </td>
@@ -409,16 +441,8 @@ export default function ApprovalRequest({ auth, requests = [], userRole = '', br
                                 <button onClick={closeModal} className="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition">Close</button>
                                 {activeTab === 'action-required' && selectedRequest.status === 'Pending' && (
                                     <>
-                                        <button onClick={() => openRejectModal(selectedRequest.id)} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition">
-                                            {isExecutive && selectedRequest.workflow_path[selectedRequest.current_step] !== exactUserRole ? 'Override & Reject' : 'Reject Request'}
-                                        </button>
-                                        <button onClick={() => confirmAction(selectedRequest.id, 'Approved')} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition">
-                                            {/* 🟢 Dynamically change button text for clarity */}
-                                            {isExecutive && selectedRequest.workflow_path[selectedRequest.current_step] !== exactUserRole 
-                                                ? 'Executive Override (Approve)' 
-                                                : 'Endorse Request'
-                                            }
-                                        </button>
+                                        <button onClick={() => openRejectModal(selectedRequest.id)} className="px-4 py-2 text-sm font-bold text-red-600 bg-red-100 hover:bg-red-200 rounded-md transition">Reject Request</button>
+                                        <button onClick={() => confirmAction(selectedRequest.id, 'Approved')} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition">Endorse Request</button>
                                     </>
                                 )}
                             </div>

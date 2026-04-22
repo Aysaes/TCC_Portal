@@ -2,13 +2,47 @@ import Modal from '@/Components/Modal';
 import { getHRLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react'; // 🟢 ADDED useMemo
 
 export default function AccountingApprovals({ auth, requests }) {
     const currentRole = auth.user?.role?.name || 'Guest';
     const HRLinks = getHRLinks(currentRole, auth);
     
     const requestList = requests || [];
+
+    // --- FILTER STATES ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    // --- LIVE FILTER LOGIC ---
+    const filteredRequests = useMemo(() => {
+        return requestList.filter(req => {
+            // 1. Search Filter (by Employee Name)
+            const employeeName = (req.user?.name || req.name || '').toLowerCase();
+            const matchesSearch = !searchQuery || employeeName.includes(searchQuery.toLowerCase().trim());
+
+            // 2. Date Range Filter (by Date Requested)
+            let matchesDate = true;
+            if (startDate || endDate) {
+                const reqDate = new Date(req.created_at);
+                reqDate.setHours(0, 0, 0, 0);
+
+                if (startDate) {
+                    const start = new Date(startDate);
+                    start.setHours(0, 0, 0, 0);
+                    if (reqDate < start) matchesDate = false;
+                }
+                if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    if (reqDate > end) matchesDate = false;
+                }
+            }
+
+            return matchesSearch && matchesDate;
+        });
+    }, [requestList, searchQuery, startDate, endDate]);
 
     // --- VIEW DETAILS MODAL STATE ---
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -63,10 +97,69 @@ export default function AccountingApprovals({ auth, requests }) {
                         </div>
                     </div>
 
+                    {/* 🟢 FILTER WIDGET */}
+                    <div className="mb-6 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Live Search Bar */}
+                            <div className="relative">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search Employee</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Type a name..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Start Date */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Start Date</label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                />
+                            </div>
+
+                            {/* End Date */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">End Date</label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Reset Filters Button */}
+                        {(searchQuery || startDate || endDate) && (
+                            <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
+                                <button
+                                    onClick={() => { setSearchQuery(''); setStartDate(''); setEndDate(''); }}
+                                    className="text-sm text-gray-500 hover:text-gray-800 font-semibold bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md transition-colors"
+                                >
+                                    Clear Filters
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-                        {requestList.length === 0 ? (
+                        {/* 🟢 USE filteredRequests.length HERE */}
+                        {filteredRequests.length === 0 ? (
                             <div className="p-12 text-center text-gray-500">
-                                No requests found.
+                                {searchQuery || startDate || endDate ? 'No requests match your current filters.' : 'No requests found.'}
                             </div>
                         ) : (
                             <div className="overflow-x-auto overflow-y-auto max-h-[400px] relative w-full custom-scrollbar">
@@ -81,7 +174,8 @@ export default function AccountingApprovals({ auth, requests }) {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-100">
-                                        {requestList.map((req) => (
+                                        {/* 🟢 MAP filteredRequests HERE */}
+                                        {filteredRequests.map((req) => (
                                             <tr 
                                                 key={req.id} 
                                                 onClick={() => openViewModal(req)}
@@ -91,7 +185,7 @@ export default function AccountingApprovals({ auth, requests }) {
                                                     {new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                 </td>
                                                 <td className="px-6 py-4 font-semibold text-gray-900">
-                                                    {req.name || 'Unknown Employee'}
+                                                    {req.user?.name || req.name || 'Unknown Employee'}
                                                 </td>
                                                 <td className="px-6 py-4 font-bold text-indigo-900">
                                                     Form 2316
