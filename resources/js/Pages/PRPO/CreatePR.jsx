@@ -472,13 +472,13 @@ export default function CreatePR({ auth, suppliers, products, branches = [], dep
                                                     <input type="text" value={item.unit} readOnly placeholder="Auto"className="block w-full rounded-md border-gray-200 bg-gray-100 text-gray-500 text-xs shadow-sm cursor-not-allowed focus:ring-0"/>
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2">
-                                                    <input type="number" min="0" value={item.qty_requested} onChange={(e) => handleItemChange(index, 'qty_requested', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                                    <input type="number" min="0" value={item.qty_requested} onChange={(e) => handleItemChange(index, 'qty_requested', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required/>
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2">
-                                                    <input type="number" min="0" value={item.qty_on_hand} onChange={(e) => handleItemChange(index, 'qty_on_hand', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                                    <input type="number" min="0" value={item.qty_on_hand} onChange={(e) => handleItemChange(index, 'qty_on_hand', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required />
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2">
-                                                    <input type="number" min="0" value={item.reorder_level} onChange={(e) => handleItemChange(index, 'reorder_level', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                                    <input type="number" min="0" value={item.reorder_level} onChange={(e) => handleItemChange(index, 'reorder_level', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required />
                                                 </td>
                                                 
                                                 <td className="whitespace-nowrap px-2 py-2">
