@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\DutyMealParticipant;
+use App\Models\DutyMeal;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -12,11 +13,16 @@ use Carbon\Carbon;
 class DutyMealExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
 {
     protected $dutyMealIds;
+    protected $includesMakati = false;
 
     public function __construct($dutyMealIds)
     {
-        // Accept an array of IDs from the frontend
         $this->dutyMealIds = is_array($dutyMealIds) ? $dutyMealIds : [$dutyMealIds];
+        
+        $this->includesMakati = DutyMeal::whereIn('id', $this->dutyMealIds)
+            ->whereHas('branch', function($q) {
+                $q->where('name', 'like', '%Makati%');
+            })->exists();
     }
 
     public function collection()
@@ -25,14 +31,13 @@ class DutyMealExport implements FromCollection, WithHeadings, WithMapping, Shoul
             ->whereIn('duty_meal_id', $this->dutyMealIds)
             ->get()
             ->sortBy(function($participant) {
-                // Sort the exported list chronologically by date
                 return $participant->dutyMeal->duty_date ?? '';
             });
     }
 
     public function headings(): array
     {
-        return [
+        $headings = [
             'Duty Date',
             'User',
             'Branch',
@@ -40,37 +45,30 @@ class DutyMealExport implements FromCollection, WithHeadings, WithMapping, Shoul
             'Menu',
             'Note'
         ];
+
+        // Site successfully placed as the 7th column
+        if ($this->includesMakati) {
+            $headings[] = 'Site';
+        }
+
+        return $headings;
     }
 
     public function map($participant): array
     {
-        // Handle Menu Choice string
         $menu = 'Pending';
-        if ($participant->choice === 'main') {
-            $menu = 'Main';
-        } elseif ($participant->choice === 'alt') {
-            $menu = 'Alt';
-        }
+        if ($participant->choice === 'main') $menu = 'Main';
+        elseif ($participant->choice === 'alt') $menu = 'Alt';
 
-        // Handle Shift string for cleaner Excel formatting
         $shift = 'Unassigned';
-        if ($participant->shift_type === 'day') {
-            $shift = 'Day Shift';
-        } elseif ($participant->shift_type === 'graveyard') {
-            $shift = 'Graveyard';
-        } elseif ($participant->shift_type === 'straight') {
-            $shift = 'Straight';
-        }
+        if ($participant->shift_type === 'day') $shift = 'Day Shift';
+        elseif ($participant->shift_type === 'graveyard') $shift = 'Graveyard';
+        elseif ($participant->shift_type === 'straight') $shift = 'Straight';
 
-        // Format the dates using Laravel's Carbon tool
         $dutyDateObj = $participant->dutyMeal ? Carbon::parse($participant->dutyMeal->duty_date) : null;
-            
-        // Shows the exact day (e.g., "Mon, Apr 13, 2026")
-        $specificDate = $dutyDateObj 
-            ? $dutyDateObj->format('D, M j, Y') 
-            : 'N/A';
+        $specificDate = $dutyDateObj ? $dutyDateObj->format('D, M j, Y') : 'N/A';
 
-        return [
+        $row = [
             $specificDate,
             $participant->user ? $participant->user->name : 'N/A',
             $participant->dutyMeal && $participant->dutyMeal->branch ? $participant->dutyMeal->branch->name : 'N/A',
@@ -78,5 +76,12 @@ class DutyMealExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $menu,
             $participant->custom_request ?? ''
         ];
+
+        if ($this->includesMakati) {
+            $isThisMakati = stripos($participant->dutyMeal->branch->name ?? '', 'Makati') !== false;
+            $row[] = $isThisMakati ? ($participant->site ?? 'Unassigned') : 'N/A';
+        }
+
+        return $row;
     }
 }

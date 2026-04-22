@@ -8,87 +8,166 @@ import { useEffect, useMemo, useState } from 'react';
 const MealCard = ({ meal, selection, onSelectionChange }) => {
     const { system } = usePage().props;
     
+    const isMakati = meal.branch_name?.toLowerCase().includes('makati');
+    
     const isStrictlyLocked = meal.is_locked || meal.choice !== 'none';
     const currentChoice = isStrictlyLocked ? meal.choice : (selection?.choice || '');
+    const currentSite = isStrictlyLocked ? (meal.site || '') : (selection?.site || '');
     const currentNote = isStrictlyLocked ? (meal.custom_request || '') : (selection?.custom_request || '');
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col relative">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200/80 overflow-hidden flex flex-col relative group">
+            {/* HEADER */}
+            <div className="bg-gradient-to-b from-gray-50/80 to-white px-5 py-4 border-b border-gray-100 flex justify-between items-start">
                 <div>
-                    <h3 className="font-bold text-gray-900">
+                    <h3 className="font-bold text-gray-900 text-lg tracking-tight">
                         {formatAppDate(meal.duty_date, system?.timezone, { weekday: 'long', month: 'short', day: 'numeric' })}
                     </h3>
-                    <span className="text-xs font-medium text-indigo-600 uppercase tracking-wider">{meal.branch_name}</span>
+                    <div className="flex items-center mt-0.5 space-x-2">
+                        <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">{meal.branch_name}</span>
+                    </div>
                 </div>
                 
+                {/* STATUS BADGE */}
                 {meal.is_locked ? (
-                    <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">System Locked</span>
+                    <span className="px-2.5 py-1 bg-red-50 text-red-700 text-[10px] font-bold rounded-md ring-1 ring-inset ring-red-600/10 uppercase tracking-wide">Locked</span>
                 ) : meal.choice !== 'none' ? (
-                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full flex items-center">
-                        <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                        Locked In
+                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-md ring-1 ring-inset ring-emerald-600/10 uppercase tracking-wide flex items-center">
+                        <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                        Saved
                     </span>
                 ) : (
-                    <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full animate-pulse">Needs Action</span>
+                    <span className="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-md ring-1 ring-inset ring-amber-600/20 uppercase tracking-wide animate-pulse">Needs Action</span>
                 )}
             </div>
 
-            <div className="p-6 flex-grow flex flex-col gap-4">
-                <label className={`w-full text-left p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                    currentChoice === 'main' 
-                    ? 'border-indigo-600 bg-indigo-50 shadow-sm' 
-                    : 'border-gray-100 hover:border-indigo-300 hover:bg-gray-50'
-                } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
-                    <div className="flex items-center">
-                        <input
-                            type="radio"
-                            name={`choice-${meal.participant_id}`}
-                            value="main"
-                            className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 disabled:opacity-50"
-                            checked={currentChoice === 'main'}
-                            onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)}
-                            disabled={isStrictlyLocked}
-                        />
-                        <div className="ml-3 flex-grow">
-                            <span className="block font-bold text-gray-900">Main Meal</span>
-                            <span className="block text-sm text-gray-600 mt-0.5">{meal.main_meal}</span>
-                        </div>
-                    </div>
-                </label>
-
-                {meal.alt_meal && (
-                    <label className={`w-full text-left p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                        currentChoice === 'alt' 
-                        ? 'border-indigo-600 bg-indigo-50 shadow-sm' 
-                        : 'border-gray-100 hover:border-indigo-300 hover:bg-gray-50'
-                    } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
-                        <div className="flex items-center">
-                            <input
-                                type="radio"
-                                name={`choice-${meal.participant_id}`}
-                                value="alt"
-                                className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 disabled:opacity-50"
-                                checked={currentChoice === 'alt'}
-                                onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)}
-                                disabled={isStrictlyLocked}
-                            />
-                            <div className="ml-3 flex-grow">
-                                <span className="block font-bold text-gray-900">Alternative Meal</span>
-                                <span className="block text-sm text-gray-600 mt-0.5">{meal.alt_meal}</span>
+            {/* BODY */}
+            <div className="p-5 flex-grow flex flex-col gap-5">
+                
+                {/* MEAL SELECTIONS */}
+                <div className="space-y-2.5">
+                    <label className={`block w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden ${
+                        currentChoice === 'main' 
+                        ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' 
+                        : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                    } ${isStrictlyLocked ? 'opacity-75 cursor-not-allowed' : ''}`}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center flex-grow">
+                                {/* Custom Radio Button */}
+                                <div className={`flex items-center justify-center w-5 h-5 rounded-full border flex-shrink-0 transition-colors ${currentChoice === 'main' ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 bg-white'}`}>
+                                    {currentChoice === 'main' && <div className="w-2 h-2 bg-white rounded-full" />}
+                                </div>
+                                <input
+                                    type="radio"
+                                    name={`choice-${meal.participant_id}`}
+                                    value="main"
+                                    className="hidden"
+                                    checked={currentChoice === 'main'}
+                                    onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)}
+                                    disabled={isStrictlyLocked}
+                                />
+                                <div className="ml-3">
+                                    <span className={`block text-xs font-bold uppercase tracking-wider mb-0.5 ${currentChoice === 'main' ? 'text-indigo-600' : 'text-gray-500'}`}>Main Meal</span>
+                                    <span className="block text-sm font-medium text-gray-900">{meal.main_meal}</span>
+                                </div>
                             </div>
                         </div>
                     </label>
+
+                    {meal.alt_meal && (
+                        <label className={`block w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden ${
+                            currentChoice === 'alt' 
+                            ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' 
+                            : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                        } ${isStrictlyLocked ? 'opacity-75 cursor-not-allowed' : ''}`}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center flex-grow">
+                                    {/* Custom Radio Button */}
+                                    <div className={`flex items-center justify-center w-5 h-5 rounded-full border flex-shrink-0 transition-colors ${currentChoice === 'alt' ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 bg-white'}`}>
+                                        {currentChoice === 'alt' && <div className="w-2 h-2 bg-white rounded-full" />}
+                                    </div>
+                                    <input
+                                        type="radio"
+                                        name={`choice-${meal.participant_id}`}
+                                        value="alt"
+                                        className="hidden"
+                                        checked={currentChoice === 'alt'}
+                                        onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)}
+                                        disabled={isStrictlyLocked}
+                                    />
+                                    <div className="ml-3">
+                                        <span className={`block text-xs font-bold uppercase tracking-wider mb-0.5 ${currentChoice === 'alt' ? 'text-indigo-600' : 'text-gray-500'}`}>Alternative Meal</span>
+                                        <span className="block text-sm font-medium text-gray-900">{meal.alt_meal}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    )}
+                </div>
+
+                {/* MAKATI SITE SELECTION (Segmented Control Style) */}
+                {isMakati && (
+                    <div>
+                        <label className="flex items-center text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                            <svg className="w-3.5 h-3.5 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            Location Site <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <div className="flex p-1 bg-gray-100/80 rounded-lg border border-gray-200">
+                            <label className={`flex-1 text-center py-2 px-3 rounded-md transition-all cursor-pointer text-sm font-semibold ${
+                                currentSite === 'Back Office' 
+                                ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-black/5' 
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                            } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                                <input
+                                    type="radio"
+                                    name={`site-${meal.participant_id}`}
+                                    value="Back Office"
+                                    className="hidden"
+                                    checked={currentSite === 'Back Office'}
+                                    onChange={(e) => onSelectionChange(meal.participant_id, 'site', e.target.value)}
+                                    disabled={isStrictlyLocked}
+                                />
+                                Back Office
+                            </label>
+
+                            <label className={`flex-1 text-center py-2 px-3 rounded-md transition-all cursor-pointer text-sm font-semibold ${
+                                currentSite === 'Clinic' 
+                                ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-black/5' 
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                            } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                                <input
+                                    type="radio"
+                                    name={`site-${meal.participant_id}`}
+                                    value="Clinic"
+                                    className="hidden"
+                                    checked={currentSite === 'Clinic'}
+                                    onChange={(e) => onSelectionChange(meal.participant_id, 'site', e.target.value)}
+                                    disabled={isStrictlyLocked}
+                                />
+                                Clinic
+                            </label>
+                        </div>
+                    </div>
                 )}
 
-                <div className="mb-2 mt-auto">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                {/* OPTIONAL REQUEST */}
+                <div className="mt-auto pt-2 border-t border-gray-100">
+                    <label className="flex items-center text-xs font-semibold text-gray-500 mb-2">
+                        <svg className="w-3.5 h-3.5 mr-1.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                         Optional Request / Add-ons
                     </label>
                     <input 
                         type="text" 
-                        placeholder={isStrictlyLocked && !currentNote ? "No special requests made." : "e.g., 2 bananas, no onions..."}
-                        className="w-full text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                        placeholder={isStrictlyLocked && !currentNote ? "No special requests made." : "e.g., 2 bananas, 2 eggs"}
+                        className="w-full text-sm border-gray-200 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:border-gray-200 transition-colors placeholder-gray-400"
                         value={currentNote}
                         onChange={(e) => onSelectionChange(meal.participant_id, 'custom_request', e.target.value)}
                         disabled={isStrictlyLocked}
@@ -102,15 +181,13 @@ const MealCard = ({ meal, selection, onSelectionChange }) => {
 export default function Index({ auth, myDutyMeals = [] }) {
     const DutyMealLinks = getStaffDutyMealLinks();
 
-    // 🟢 1. FILTER STATES
+    // 1. FILTER STATES
     const [statusFilter, setStatusFilter] = useState('Pending');
     const [monthFilter, setMonthFilter] = useState('');
 
-    // Dynamically generate the Month Dropdown options based on the data we have
     const availableMonths = useMemo(() => {
         const months = new Map();
         myDutyMeals.forEach(meal => {
-            // Find the Monday of this meal's week to group it properly
             const mealDate = new Date(meal.duty_date);
             const day = mealDate.getDay();
             const monday = new Date(mealDate);
@@ -120,11 +197,9 @@ export default function Index({ auth, myDutyMeals = [] }) {
             const label = monday.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             if (!months.has(val)) months.set(val, label);
         });
-        // Sort newest months first
         return Array.from(months.entries()).sort((a, b) => b[0].localeCompare(a[0])); 
     }, [myDutyMeals]);
 
-    // Auto-select the most relevant month on initial load
     useEffect(() => {
         if (!monthFilter && availableMonths.length > 0) {
             const current = new Date();
@@ -133,16 +208,15 @@ export default function Index({ auth, myDutyMeals = [] }) {
             if (availableMonths.some(([val]) => val === currentVal)) {
                 setMonthFilter(currentVal);
             } else {
-                setMonthFilter(availableMonths[0][0]); // Default to newest available
+                setMonthFilter(availableMonths[0][0]);
             }
         }
     }, [availableMonths, monthFilter]);
 
-    // 🟢 2. GROUP AND FILTER LOGIC
+    // 2. GROUP AND FILTER LOGIC
     const activeGroupedMeals = useMemo(() => {
         const groups = {};
 
-        // Step A: Group all meals by their Week's Monday
         myDutyMeals.forEach(meal => {
             const mealDate = new Date(meal.duty_date);
             const day = mealDate.getDay();
@@ -157,10 +231,8 @@ export default function Index({ auth, myDutyMeals = [] }) {
             groups[weekLabel].meals.push(meal);
         });
 
-        // Convert to array format: [ [weekLabel, mealsArray, mondayDate], ... ]
         let entries = Object.entries(groups).map(([label, data]) => [label, data.meals, data.monday]);
 
-        // Step B: Filter by Month
         if (monthFilter && monthFilter !== 'All') {
             entries = entries.filter(([_, __, monday]) => {
                 const groupMonthVal = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}`;
@@ -168,7 +240,6 @@ export default function Index({ auth, myDutyMeals = [] }) {
             });
         }
 
-        // Step C: Filter by Status
         if (statusFilter !== 'All') {
             entries = entries.filter(([_, meals]) => {
                 const pendingCount = meals.filter(m => !m.is_locked && m.choice === 'none').length;
@@ -178,23 +249,20 @@ export default function Index({ auth, myDutyMeals = [] }) {
             });
         }
 
-        // Sort chronologically (FIFO Flow)
         return entries.sort((a, b) => a[2] - b[2]);
     }, [myDutyMeals, monthFilter, statusFilter]);
 
-    // 🟢 3. PAGINATION & MASTER STATE
+    // 3. PAGINATION & MASTER STATE
     const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
     const [selections, setSelections] = useState({});
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Reset pagination when filters change or lists shrink
     useEffect(() => {
         if (currentWeekIndex >= activeGroupedMeals.length) {
             setCurrentWeekIndex(Math.max(0, activeGroupedMeals.length - 1));
         }
     }, [activeGroupedMeals.length, currentWeekIndex, monthFilter, statusFilter]);
 
-    // Track pending selections in the state
     useEffect(() => {
         const initialSelections = {};
         myDutyMeals.forEach(meal => {
@@ -202,6 +270,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
                 initialSelections[meal.participant_id] = {
                     participant_id: meal.participant_id,
                     choice: '',
+                    site: '', // Added site initialization
                     custom_request: ''
                 };
             }
@@ -216,7 +285,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
         }));
     };
 
-    // 🟢 4. SUBMIT HANDLER
+    // 4. SUBMIT HANDLER
     const [confirmDialog, setConfirmDialog] = useState({ 
         isOpen: false, title: '', message: '', confirmText: '', confirmColor: '', onConfirm: () => {} 
     });
@@ -257,7 +326,6 @@ export default function Index({ auth, myDutyMeals = [] }) {
 
             <div className="py-12 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                 
-                {/* 🟢 NEW: Filter Header Layout */}
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">My Duty Meals</h2>
@@ -265,7 +333,6 @@ export default function Index({ auth, myDutyMeals = [] }) {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                        {/* Month Filter */}
                         <select
                             value={monthFilter}
                             onChange={(e) => setMonthFilter(e.target.value)}
@@ -277,7 +344,6 @@ export default function Index({ auth, myDutyMeals = [] }) {
                             ))}
                         </select>
                         
-                        {/* Status Filter */}
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
@@ -290,7 +356,6 @@ export default function Index({ auth, myDutyMeals = [] }) {
                     </div>
                 </div>
 
-                {/* Empty State / Caught Up State */}
                 {activeGroupedMeals.length === 0 ? (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center flex flex-col items-center">
                         <div className={`rounded-full p-4 mb-4 ${statusFilter === 'Pending' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
@@ -316,7 +381,6 @@ export default function Index({ auth, myDutyMeals = [] }) {
                 ) : (
                     <div className="mb-12">
                         
-                        {/* The Navigation Bar */}
                         {activeGroupedMeals.length > 1 && (
                             <div className="flex items-center justify-between mb-6 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
                                 <button
@@ -349,9 +413,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
                             </div>
                         )}
 
-                        {/* The Rendered Current Week */}
                         {(() => {
-                            // Safely extract the data, avoiding crashes if filters change rapidly
                             const currentGroup = activeGroupedMeals[currentWeekIndex];
                             if (!currentGroup) return null;
                             
@@ -360,9 +422,18 @@ export default function Index({ auth, myDutyMeals = [] }) {
                             const pendingMealsInWeek = mealsInWeek.filter(m => !m.is_locked && m.choice === 'none');
                             const totalRequired = pendingMealsInWeek.length;
                             
+                            // VALIDATION BEFORE SUBMIT (Ensuring Makati has Site selected)
                             const readyToSubmit = pendingMealsInWeek
-                                .map(m => selections[m.participant_id])
-                                .filter(s => s && s.choice !== '');
+                                .filter(m => {
+                                    const s = selections[m.participant_id];
+                                    if (!s || s.choice === '') return false;
+                                    
+                                    const isMakati = m.branch_name?.toLowerCase().includes('makati');
+                                    if (isMakati && (!s.site || s.site === '')) return false; // Block if Makati and no site
+                                    
+                                    return true;
+                                })
+                                .map(m => selections[m.participant_id]);
                                 
                             const currentSelected = readyToSubmit.length;
                             const isFullySelected = totalRequired > 0 && currentSelected === totalRequired;
@@ -372,7 +443,6 @@ export default function Index({ auth, myDutyMeals = [] }) {
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-gray-200 pb-4">
                                         <h3 className="text-xl font-bold text-gray-800">{weekLabel}</h3>
                                         
-                                        {/* Only show lock-in button if there are meals that NEED locking */}
                                         {totalRequired > 0 && (
                                             <button
                                                 onClick={() => handleBulkLockIn(readyToSubmit, weekLabel)}

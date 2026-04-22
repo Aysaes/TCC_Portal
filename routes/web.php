@@ -263,7 +263,7 @@ Route::middleware(['auth'])->group(function(){
             Route::post('/manpower-requests', [ManpowerRequestController::class, 'store'])->name('manpower-requests.store');
         });
 
-        Route::middleware(['role:admin,HR'])->group(function () {
+        Route::middleware(['role:admin,HR,HRBP'])->group(function () {
             Route::get('/feedback-submissions', [\App\Http\Controllers\HR\FeedbackController::class, 'index'])->name('feedback.index');
         });
         

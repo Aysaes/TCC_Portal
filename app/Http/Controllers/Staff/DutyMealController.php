@@ -53,6 +53,7 @@ class DutyMealController extends Controller
                 return [
                     'participant_id' => $participant->id,
                     'choice' => $participant->choice,
+                    'site' => $participant->site, // Added Site mapping
                     'custom_request' => $participant->custom_request,
                     'duty_date' => $participant->dutyMeal->duty_date,
                     'main_meal' => $participant->dutyMeal->main_meal,
@@ -76,6 +77,7 @@ class DutyMealController extends Controller
             'selections' => 'required|array',
             'selections.*.participant_id' => 'required|exists:duty_meal_participants,id',
             'selections.*.choice' => 'required|in:main,alt',
+            'selections.*.site' => 'nullable|string|in:Back Office,Clinic', // Validating Site
             'selections.*.custom_request' => 'nullable|string|max:255',
         ]);
 
@@ -100,6 +102,7 @@ class DutyMealController extends Controller
                 if ($participant && !$participant->dutyMeal->is_locked && $participant->choice === 'none') {
                     $participant->update([
                         'choice' => $selection['choice'],
+                        'site' => $selection['site'] ?? null, // Save Site
                         'custom_request' => $selection['custom_request'],
                     ]);
                     $updatedCount++;

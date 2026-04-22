@@ -581,7 +581,11 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                             {p.choice === 'none' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-medium bg-gray-100 text-gray-500 italic border border-gray-200">Pending</span>}
                                                             {p.choice === 'main' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wider">Main</span>}
                                                             {p.choice === 'alt' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">Alt</span>}
-                                                            
+                                                            {p.site && (
+                                                                <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wider">
+                                                                    {p.site}
+                                                                </span>
+                                                            )}
                                                             {p.custom_request && (
                                                                 <div className="text-[9px] sm:text-[10px] text-gray-500 italic mt-1 leading-tight max-w-[80px] sm:max-w-[120px] truncate" title={p.custom_request}>
                                                                     Note: {p.custom_request}

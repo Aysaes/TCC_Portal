@@ -15,6 +15,7 @@ class DutyMealParticipant extends Model
         'is_graveyard', 
         'is_delivered', // <-- Added this to allow saving
         'shift_type',   // <-- Added this to allow saving your new React shift selections!
+        'site',          // <-- Added this to allow saving the site informationz
     ];
 
     protected $casts = [
