@@ -311,7 +311,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                 </div>
 
                 {isModalOpen && selectedPO && (
-                    <div onClick={closeModal} className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900 bg-opacity-60 backdrop-blur-sm p-4 sm:p-0">
+                    <div onClick={closeModal} className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900 bg-opacity-60 backdrop-blur-sm p-4 sm:p-0">
                         <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-6xl rounded-2xl bg-white shadow-2xl transition-all flex flex-col max-h-[95vh]">
                             
                             {/* Modal Header */}
