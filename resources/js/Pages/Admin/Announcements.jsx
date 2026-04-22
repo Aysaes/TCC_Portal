@@ -25,6 +25,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
     const [selectedPriorityId, setSelectedPriorityId] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [selectedFilterBranch, setSelectedFilterBranch] = useState('');
 
     const startDatePickerRef = useRef(null);
     const endDatePickerRef = useRef(null);
@@ -266,6 +267,8 @@ export default function Announcements({ auth, announcements = [], branches = [],
                 !selectedPriorityId ||
                 String(item.priority_level_id) === String(selectedPriorityId);
 
+            const matchesBranch = !selectedFilterBranch || (item.branches && item.branches.some(b => String(b.id) === String(selectedFilterBranch)));
+
             let matchesDate = true;
 
             if (startDate || endDate) {
@@ -289,7 +292,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                 }
             }
 
-            return matchesTitle && matchesPriority && matchesDate;
+            return matchesTitle && matchesPriority && matchesDate && matchesBranch;
         });
     }, [announcements, titleSearch, selectedPriorityId, startDate, endDate]);
 
@@ -758,7 +761,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                     </div>
 
                     <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                             <div>
                                 <InputLabel htmlFor="filter_title" value="Search Title" />
                                 <TextInput
@@ -783,6 +786,21 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                         <option key={priority.id} value={priority.id}>
                                             {priority.name}
                                         </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="filter_branch" value="Target Branch" />
+                                <select
+                                    id="filter_branch"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    value={selectedFilterBranch}
+                                    onChange={(e) => setSelectedFilterBranch(e.target.value)}
+                                >
+                                    <option value="">All Branches</option>
+                                    {branches.map((b) => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -861,6 +879,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                 onClick={() => {
                                     setTitleSearch('');
                                     setSelectedPriorityId('');
+                                    setSelectedFilterBranch('');
                                     setStartDate('');
                                     setEndDate('');
                                     goToSlide(0);

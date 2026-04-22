@@ -28,6 +28,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -51,28 +52,63 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/hr-module/accounting-approvals', [HrRequestController::class, 'accountingApprovals'])->name('hr.accounting.index');
     Route::patch('/hr-module/accounting-approvals/{hrRequest}/status', [HrRequestController::class, 'updateAccountingStatus'])->name('hr.accounting.update');
 
-    // --- OVERVIEW: Now the main landing page! ---
+    // --- OVERVIEW DASHBOARD ---
     Route::get('/dashboard', function () {
-        $announcements = Announcement::with(['priorityLevel', 'branches'])
-                            ->latest()
-                            ->get();
+        $user = Auth::user();
+        $userRole = strtolower(trim($user->role->name ?? ''));
+        $isGlobalViewer = $userRole === 'admin' || str_contains($userRole, 'director');
 
-        $contents = CompanyContent::all();
+        $query = Announcement::with(['priorityLevel', 'branches'])->latest();
+
+        if (!$isGlobalViewer) {
+            $allowedBranchIds = array_values(array_filter(array_unique(array_merge(
+                (array) $user->branch_id,
+                DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray()
+            ))));
+
+            if (empty($allowedBranchIds)) {
+                $query->whereNull('announcements.id'); 
+            } else {
+                $query->whereHas('branches', function ($q) use ($allowedBranchIds) {
+                    // ✅ FIXED: Explicitly declared the table name to prevent SQL ambiguity
+                    $q->whereIn('branches.id', $allowedBranchIds); 
+                });
+            }
+        }
 
         return Inertia::render('Overview', [
-            'announcements' => $announcements,
-            'contents' => $contents
+            'announcements' => $query->get(),
+            'contents' => \App\Models\CompanyContent::all()
         ]);
     })->name('dashboard'); 
 
-    // --- ANNOUNCEMENTS ---
+
+    // --- ANNOUNCEMENTS BOARD ---
     Route::get('/dashboard/announcements', function () {
-        $announcements = Announcement::with(['priorityLevel', 'branches'])
-                            ->latest()
-                            ->get();
+        $user = Auth::user();
+        $userRole = strtolower(trim($user->role->name ?? ''));
+        $isGlobalViewer = $userRole === 'admin' || str_contains($userRole, 'director');
+
+        $query = Announcement::with(['priorityLevel', 'branches'])->latest();
+
+        if (!$isGlobalViewer) {
+            $allowedBranchIds = array_values(array_filter(array_unique(array_merge(
+                (array) $user->branch_id,
+                DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray()
+            ))));
+
+            if (empty($allowedBranchIds)) {
+                $query->whereNull('announcements.id'); 
+            } else {
+                $query->whereHas('branches', function ($q) use ($allowedBranchIds) {
+                    // ✅ FIXED: Explicitly declared the table name here too
+                    $q->whereIn('branches.id', $allowedBranchIds); 
+                });
+            }
+        }
 
         return Inertia::render('Dashboard', [
-            'announcements' => $announcements
+            'announcements' => $query->get()
         ]);
     })->name('dashboard.announcements');
 

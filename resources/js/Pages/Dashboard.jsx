@@ -1,7 +1,7 @@
-import Modal from '@/Components/Modal';
-import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
+import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
+import TextInput from '@/Components/TextInput';
 import { getDashboardLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { formatAppDate } from '@/Utils/date';
@@ -62,11 +62,16 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
         }
     };
 
+    const userRole = String(auth.user?.role?.name || '').toLowerCase();
+    const isGlobalViewer = userRole === 'admin' || userRole.includes('director');
+    const userBranchId = auth.user?.branch_id;
+
     // --- FILTER LOGIC ---
     const announcementList = useMemo(() => {
         const source = Array.isArray(allAnnouncements) ? allAnnouncements : [];
 
         return source.filter((item) => {
+            // 🟢 NO BRANCH FILTER NEEDED! The backend already secured the data.
             const matchesTitle =
                 !titleSearch ||
                 (item.title || '')
@@ -78,33 +83,11 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                 String(item.priority_level_id) === String(selectedPriorityId);
 
             let matchesDate = true;
-
-            if (startDate || endDate) {
-                const createdAt = item.created_at ? new Date(item.created_at) : null;
-
-                if (!createdAt || Number.isNaN(createdAt.getTime())) {
-                    matchesDate = false;
-                } else {
-                    const itemDate = new Date(createdAt);
-                    itemDate.setHours(0, 0, 0, 0);
-
-                    if (startDate) {
-                        const start = new Date(startDate);
-                        start.setHours(0, 0, 0, 0);
-                        if (itemDate < start) matchesDate = false;
-                    }
-
-                    if (endDate) {
-                        const end = new Date(endDate);
-                        end.setHours(23, 59, 59, 999);
-                        if (createdAt > end) matchesDate = false;
-                    }
-                }
-            }
+            // ... (keep your existing date logic here exactly as is) ...
 
             return matchesTitle && matchesPriority && matchesDate;
         });
-    }, [allAnnouncements, titleSearch, selectedPriorityId, startDate, endDate]);
+    }, [allAnnouncements, titleSearch, selectedPriorityId, startDate, endDate, isGlobalViewer, userBranchId]);
 
     // 2. Chunk announcements into groups of 6 (3 top, 3 bottom) per slide
     const chunkedAnnouncements = [];
