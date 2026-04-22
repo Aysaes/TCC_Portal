@@ -29,7 +29,7 @@ export default function ConfirmModal({
                         className="px-4 py-2 text-sm font-medium rounded-md"
                         onClick={onClose}
                     >
-                        Cancel
+                        Close
                     </SecondaryButton>
 
                     {/* Confirm Button (FIXED SIZE) */}

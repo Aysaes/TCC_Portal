@@ -127,11 +127,14 @@ const TrackerLine = ({ pr }) => {
 export default function StatusIndex({ auth, requests }) {
     const sidebarLinks = getPRPOLinks(auth);
 
-    // Filter States
+    // 🟢 FILTER STATES
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterBranch, setFilterBranch] = useState('');
+    const [filterPriority, setFilterPriority] = useState('');
     const [filterType, setFilterType] = useState('all'); 
     const [filterDate, setFilterDate] = useState(''); 
 
-    // 🟢 Modal States
+    // Modal States
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalView, setModalView] = useState('PR'); // 'PR' or 'PO'
     const [selectedDoc, setSelectedDoc] = useState(null);
@@ -170,9 +173,36 @@ export default function StatusIndex({ auth, requests }) {
         }, 200);
     };
 
-    // Memoized Filtering Logic
+    // 🟢 DYNAMIC DROPDOWN OPTIONS
+    const uniqueBranches = useMemo(() => {
+        return [...new Set(requests.data.map(pr => pr.branch).filter(Boolean))].sort();
+    }, [requests.data]);
+
+    const uniquePriorities = useMemo(() => {
+        return [...new Set(requests.data.map(pr => pr.priority).filter(Boolean))].sort();
+    }, [requests.data]);
+
+    // 🟢 MEMOIZED FILTERING LOGIC
     const filteredRequests = useMemo(() => {
         return requests.data.filter(pr => {
+            // 1. Search Logic (PR ID, PR Preparer, PO ID, or PO Supplier)
+            const searchLower = searchQuery.toLowerCase().trim();
+            const prId = (pr.pr_number || '').toLowerCase();
+            const preparedBy = (pr.user?.name || '').toLowerCase();
+            
+            const matchesPOs = pr.purchase_orders?.some(po => {
+                const poId = (po.po_number || '').toLowerCase();
+                const supplier = (po.supplier?.name || '').toLowerCase();
+                return poId.includes(searchLower) || supplier.includes(searchLower);
+            });
+
+            const matchesSearch = !searchLower || prId.includes(searchLower) || preparedBy.includes(searchLower) || matchesPOs;
+
+            // 2. Branch & Priority Logic
+            const matchesBranch = !filterBranch || pr.branch === filterBranch;
+            const matchesPriority = !filterPriority || pr.priority === filterPriority;
+
+            // 3. Status Category Logic
             let matchesType = true;
             const hasPOs = pr.purchase_orders && pr.purchase_orders.length > 0;
             
@@ -184,14 +214,15 @@ export default function StatusIndex({ auth, requests }) {
                 matchesType = ['rejected', 'cancelled'].includes(pr.status);
             }
 
+            // 4. Date Logic
             let matchesDate = true;
             if (filterDate) {
                 matchesDate = pr.date_prepared.startsWith(filterDate);
             }
 
-            return matchesType && matchesDate;
+            return matchesSearch && matchesBranch && matchesPriority && matchesType && matchesDate;
         });
-    }, [requests.data, filterType, filterDate]);
+    }, [requests.data, searchQuery, filterBranch, filterPriority, filterType, filterDate]);
 
     return (
         <SidebarLayout activeModule="PR/PO Module" sidebarLinks={sidebarLinks}>
@@ -205,31 +236,99 @@ export default function StatusIndex({ auth, requests }) {
                             Track the progress of requests you have submitted or are copied on.
                         </p>
                     </div>
+                </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
+                {/* 🟢 FILTER WIDGET */}
+                <div className="mb-6 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        
+                        {/* Live Search */}
+                        <div className="relative lg:col-span-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="PR/PO ID, User, or Supplier..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="block w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Branch Filter */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Status Category</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Branch</label>
+                            <select
+                                value={filterBranch}
+                                onChange={(e) => setFilterBranch(e.target.value)}
+                                className="block w-full px-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                            >
+                                <option value="">All Branches</option>
+                                {uniqueBranches.map((branch, idx) => (
+                                    <option key={idx} value={branch}>{branch}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Priority Filter */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Priority</label>
+                            <select
+                                value={filterPriority}
+                                onChange={(e) => setFilterPriority(e.target.value)}
+                                className="block w-full px-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                            >
+                                <option value="">All Priorities</option>
+                                {uniquePriorities.map((priority, idx) => (
+                                    <option key={idx} value={priority}>{priority}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Status Category */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Category</label>
                             <select 
                                 value={filterType} 
                                 onChange={(e) => setFilterType(e.target.value)}
-                                className="block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                className="block w-full px-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
                             >
                                 <option value="all">All Requests</option>
                                 <option value="pr_processing">Processing (PR)</option>
-                                <option value="po_generated">Ordered (PO Generated)</option>
+                                <option value="po_generated">Ordered (PO)</option>
                                 <option value="halted">Rejected / Cancelled</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Month Requested</label>
+                        
+                        {/* Month Requested (Optional, pushed to next row if screen is small) */}
+                        <div className="lg:col-span-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Month Requested</label>
                             <input 
                                 type="month" 
                                 value={filterDate}
                                 onChange={(e) => setFilterDate(e.target.value)}
-                                className="block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                className="block w-full px-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
                             />
                         </div>
                     </div>
+
+                    {/* Reset Filters Button */}
+                    {(searchQuery || filterBranch || filterPriority || filterType !== 'all' || filterDate) && (
+                        <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
+                            <button
+                                onClick={() => { setSearchQuery(''); setFilterBranch(''); setFilterPriority(''); setFilterType('all'); setFilterDate(''); }}
+                                className="text-sm text-gray-500 hover:text-gray-800 font-semibold bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md transition-colors"
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* TRACKING CARDS */}
@@ -237,14 +336,6 @@ export default function StatusIndex({ auth, requests }) {
                     {filteredRequests.length === 0 ? (
                         <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
                             <p className="text-gray-500">No requests found matching your filters.</p>
-                            {(filterType !== 'all' || filterDate !== '') && (
-                                <button 
-                                    onClick={() => { setFilterType('all'); setFilterDate(''); }}
-                                    className="mt-2 text-sm text-indigo-600 font-semibold hover:text-indigo-800"
-                                >
-                                    Clear Filters
-                                </button>
-                            )}
                         </div>
                     ) : (
                         filteredRequests.map(pr => (
@@ -262,7 +353,7 @@ export default function StatusIndex({ auth, requests }) {
                                         </div>
                                     </div>
                                     
-                                    {/* 🟢 VIEW DOCUMENT BUTTONS */}
+                                    {/* VIEW DOCUMENT BUTTONS */}
                                     <div className="flex flex-col items-end gap-2">
                                         <div className="text-right">
                                             <p className="text-xs text-gray-500">Target Delivery</p>
@@ -276,7 +367,6 @@ export default function StatusIndex({ auth, requests }) {
                                                 View Original PR
                                             </button>
                                             
-                                            {/* If there's only 1 PO, open it directly. If multiple, open the first one (or you could build a PO selector, but this keeps it simple!) */}
                                             {pr.purchase_orders && pr.purchase_orders.length > 0 && (
                                                 <button 
                                                     onClick={() => openModal(pr.purchase_orders[0], 'PO')}
@@ -331,7 +421,7 @@ export default function StatusIndex({ auth, requests }) {
                         {/* Body */}
                         <div className="overflow-y-auto px-6 py-6 flex-grow">
                             
-                            {/* 🟢 RESTORED: The original Tracking Stepper */}
+                            {/* Tracking Stepper */}
                             <div className="mb-8 px-4 sm:px-16">
                                 <TrackingStepper 
                                     currentStatus={selectedDoc.status} 
@@ -393,7 +483,6 @@ export default function StatusIndex({ auth, requests }) {
                                         <div><span className="block font-semibold text-gray-900">Priority</span> {selectedDoc.priority || 'N/A'}</div>
                                         <div><span className="block font-semibold text-gray-900">Date Needed</span> <span className="text-red-600 font-bold">{selectedDoc.date_needed}</span></div>
                                         
-                                        {/* 🟢 RESTORED: Added Budget Status and PR Status back to grid */}
                                         <div><span className="block font-semibold text-gray-900">Budget Status</span> {selectedDoc.budget_status || 'N/A'}</div>
                                         <div><span className="block font-semibold text-gray-900">Status</span> {formatStatus(selectedDoc.status)}</div>
 
@@ -442,11 +531,11 @@ export default function StatusIndex({ auth, requests }) {
                                         <div className="col-span-2 sm:col-span-4"><span className="block font-semibold text-gray-900">Ship To</span> {selectedDoc.ship_to || '-'}</div>
                                     </div>
 
-                                    {/* 🟢 FULL DUAL-COLUMN PO LAYOUT */}
+                                    {/* FULL DUAL-COLUMN PO LAYOUT */}
                                     <div className="flex flex-col lg:flex-row gap-8 mb-4">
                                         <div className="flex-1">
                                             
-                                            {/* 🟢 ATTACHMENTS LIST */}
+                                            {/* ATTACHMENTS LIST */}
                                             {selectedDoc.attachments && selectedDoc.attachments.length > 0 && (
                                                 <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
                                                     <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
@@ -494,7 +583,7 @@ export default function StatusIndex({ auth, requests }) {
                                             </div>
                                         </div>
 
-                                        {/* 🟢 AMOUNT SUMMARY WIDGET */}
+                                        {/* AMOUNT SUMMARY WIDGET */}
                                         <div className="w-full lg:w-80 shrink-0 bg-gray-50 rounded-lg p-5 border border-gray-200 h-fit mt-6 lg:mt-0">
                                             <h4 className="font-bold text-gray-900 mb-4 border-b pb-2">Amount Summary</h4>
                                             <div className="space-y-3 text-sm">

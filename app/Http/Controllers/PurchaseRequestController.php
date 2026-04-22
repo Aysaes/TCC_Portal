@@ -61,7 +61,6 @@ class PurchaseRequestController extends Controller
             'date_needed' => 'nullable|date|after_or_equal:today', 
             'budget_status' => 'nullable|string|max:255',
             'budget_ref' => 'nullable|string|max:255',
-            'no_of_quotations' => 'required|integer|min:0',
             'purpose_of_request' => 'nullable|string',
             'impact_if_not_procured' => 'nullable|string',
             'cc_user_id' => 'nullable|exists:users,id',
@@ -104,7 +103,6 @@ class PurchaseRequestController extends Controller
                 'date_needed' => $validated['date_needed'],
                 'budget_status' => $validated['budget_status'],
                 'budget_ref' => $validated['budget_ref'],
-                'no_of_quotations' => $validated['no_of_quotations'],
                 'purpose_of_request' => $validated['purpose_of_request'],
                 'impact_if_not_procured' => $validated['impact_if_not_procured'],
                 'status' => $initialStatus,
@@ -117,12 +115,34 @@ class PurchaseRequestController extends Controller
 
             $this->notifyNextApprovers($pr);
 
+           // 🟢 1. Initialize a collection for all CC recipients
+            $ccRecipients = collect();
+
+            // Add the manual CC user if one was selected
             if ($pr->cc_user_id) {
-            $ccUser = User::find($pr->cc_user_id);
-            if ($ccUser) {
-                $ccUser->notify(new PRPOCcStatusUpdate($pr, 'PR', "You were CC'd on a new Purchase Request by " . Auth::user()->name));
+                $manualCc = \App\Models\User::find($pr->cc_user_id);
+                if ($manualCc) {
+                    $ccRecipients->push($manualCc);
+                }
             }
-        }
+
+            // 🟢 2. Automatically fetch all Auditors
+            $auditors = User::whereHas('role', function ($query) {
+                $query->whereIn('name', ['Auditor TL', 'Audit Assistant']);
+            })->get();
+
+            // 🟢 3. Merge them together and remove duplicates 
+            // (prevents double-emailing if someone manually CC'd an auditor)
+            $allCcUsers = $ccRecipients->merge($auditors)->unique('id');
+
+            // 🟢 4. Send the notification to everyone in the list
+            foreach ($allCcUsers as $recipient) {
+                $reason = $recipient->id == $pr->cc_user_id 
+                    ? "You were CC'd on a new Purchase Request by " . Auth::user()->name
+                    : "A new Purchase Request was submitted for Audit review by " . Auth::user()->name;
+
+                $recipient->notify(new PRPOCcStatusUpdate($pr, 'PR', $reason));
+            }
             
         });
 
