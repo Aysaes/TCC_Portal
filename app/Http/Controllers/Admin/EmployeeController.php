@@ -253,13 +253,14 @@ class EmployeeController extends Controller
                 $device_limit = 2;
             }
 
-            $user->update([
+           $user->update([
                 'name' => trim($request->name),
                 'email' => trim($request->email),
                 'role_id' => $request->role_id,
                 'department_id' => $request->department_id,
                 'position_id' => $request->position_id,
                 'device_limit'=> $device_limit, 
+                'branch_id' => $request->branch_ids[0], 
                 'is_rotating'=> count($request->branch_ids) > 1,
             ]);
 
