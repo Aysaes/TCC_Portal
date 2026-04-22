@@ -2,15 +2,18 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import { getHRLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
-import { getHRLinks } from '@/Config/navigation';
 
 export default function ManpowerRequest({ auth, branches = [], departments = [], positions = [], managers = [] }) {
     const { system } = usePage().props;
     
     const hrLinks = getHRLinks(auth.user.role?.name || 'Employee', auth);
+
+    const userRole = auth.user.role?.name?.toLowerCase().trim() || '';
+    const canSelectAllBranches = userRole === 'admin' || userRole === 'director of corporate services and operations';
 
     // Auto-calculate the minimum date (30 calendar days notice)
     const thirtyDaysFromNow = new Date(`${system?.serverDate || '1970-01-01'}T00:00:00`);
@@ -118,7 +121,9 @@ export default function ManpowerRequest({ auth, branches = [], departments = [],
                                     <option value="">Select Branch...</option>
                                     
                                     {/* 🟢 2. ADDED "ALL BRANCH" OPTION HERE */}
-                                    <option value="all">All Branch</option> 
+                                    {canSelectAllBranches && (
+                                        <option value="all">All Branches</option> 
+                                    )} 
 
                                     {branches && branches.length > 0 ? (
                                         branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)

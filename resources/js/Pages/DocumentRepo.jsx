@@ -7,8 +7,8 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import { getDocumentSidebarLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { formatAppDate } from '@/Utils/date';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Documents({ auth, documents = [], categories = [], activeCategory }) {
@@ -18,6 +18,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
     const { system } = usePage().props;
 
     const [viewingDoc, setViewingDoc] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Office Viewer for Word/Excel files
     const getViewerUrl = (doc) => {
@@ -95,12 +96,34 @@ export default function Documents({ auth, documents = [], categories = [], activ
         });
     };
 
+    const filteredDocuments = documents.filter(doc => {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = doc.title?.toLowerCase().includes(query);
+        const matchesDesc = doc.description?.toLowerCase().includes(query);
+        return matchesTitle || matchesDesc;
+    });
+
     return (
         <SidebarLayout activeModule="Document Repository" sidebarLinks={sidebarLinks}>
             <Head title={`Documents - ${activeCategory}`} />
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <h1 className="text-2xl font-semibold leading-tight text-gray-900">{activeCategory}</h1>
+
+                <div className="w-full sm:max-w-xs relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search documents..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                    />
+                </div>
                 
                 {isAdmin && (
                     <div className="grid w-full grid-cols-1 gap-4 sm:w-auto sm:grid-cols-2 sm:min-w-[520px]">
@@ -130,15 +153,15 @@ export default function Documents({ auth, documents = [], categories = [], activ
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {documents.length === 0 ? (
+                {filteredDocuments.length === 0 ? (
                     <div className="col-span-full rounded-lg bg-white p-12 text-center text-gray-500 shadow-sm border border-gray-100">
                         <svg className="mx-auto mb-3 h-12 w-12 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        No documents found in this category.
+                        {searchQuery ? 'No documents match your search.' : 'No documents found in this category.'}
                     </div>
                 ) : (
-                    documents.map((doc) => (
+                    filteredDocuments.map((doc) => (
                         <div key={doc.id} className="flex flex-col rounded-lg bg-white p-5 shadow-sm border border-gray-100 transition hover:shadow-md">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">
