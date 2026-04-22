@@ -58,19 +58,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $userRole = strtolower(trim($user->role->name ?? ''));
         $isGlobalViewer = $userRole === 'admin' || str_contains($userRole, 'director');
 
-        $query = Announcement::with(['priorityLevel', 'branches'])->latest();
+        $query = App\Models\Announcement::with(['priorityLevel', 'branches'])->latest();
 
         if (!$isGlobalViewer) {
-            $allowedBranchIds = array_values(array_filter(array_unique(array_merge(
-                (array) $user->branch_id,
-                DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray()
-            ))));
+            // 1. Grab primary branch
+            $branchIds = [$user->branch_id];
+            
+            // 2. Grab rotating branches
+            $rotating = Illuminate\Support\Facades\DB::table('branch_user')
+                ->where('user_id', $user->id)
+                ->pluck('branch_id')
+                ->toArray();
+            
+            // 3. Merge and clean the array
+            $allowedBranchIds = array_values(array_unique(array_filter(array_merge($branchIds, $rotating))));
+
+            // 🟢 DEBUG LOG: Check your storage/logs/laravel.log to see this print out!
+            \Illuminate\Support\Facades\Log::info('OVERVIEW RENDERED - Security Check:', [
+                'user' => $user->name,
+                'role' => $userRole,
+                'allowed_branches' => $allowedBranchIds
+            ]);
 
             if (empty($allowedBranchIds)) {
-                $query->whereNull('announcements.id'); 
+                $query->where('id', 0); // Safest way to return absolutely nothing
             } else {
                 $query->whereHas('branches', function ($q) use ($allowedBranchIds) {
-                    // ✅ FIXED: Explicitly declared the table name to prevent SQL ambiguity
                     $q->whereIn('branches.id', $allowedBranchIds); 
                 });
             }
@@ -78,7 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return Inertia::render('Overview', [
             'announcements' => $query->get(),
-            'contents' => \App\Models\CompanyContent::all()
+            'contents' => CompanyContent::all()
         ]);
     })->name('dashboard'); 
 
@@ -89,19 +102,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $userRole = strtolower(trim($user->role->name ?? ''));
         $isGlobalViewer = $userRole === 'admin' || str_contains($userRole, 'director');
 
-        $query = Announcement::with(['priorityLevel', 'branches'])->latest();
+        $query = App\Models\Announcement::with(['priorityLevel', 'branches'])->latest();
 
         if (!$isGlobalViewer) {
-            $allowedBranchIds = array_values(array_filter(array_unique(array_merge(
-                (array) $user->branch_id,
-                DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray()
-            ))));
+            $branchIds = [$user->branch_id];
+            $rotating = Illuminate\Support\Facades\DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray();
+            $allowedBranchIds = array_values(array_unique(array_filter(array_merge($branchIds, $rotating))));
+
+            // 🟢 DEBUG LOG
+            \Illuminate\Support\Facades\Log::info('DASHBOARD RENDERED - Security Check:', [
+                'user' => $user->name,
+                'role' => $userRole,
+                'allowed_branches' => $allowedBranchIds
+            ]);
 
             if (empty($allowedBranchIds)) {
-                $query->whereNull('announcements.id'); 
+                $query->where('id', 0); 
             } else {
                 $query->whereHas('branches', function ($q) use ($allowedBranchIds) {
-                    // ✅ FIXED: Explicitly declared the table name here too
                     $q->whereIn('branches.id', $allowedBranchIds); 
                 });
             }
