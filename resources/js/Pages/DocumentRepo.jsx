@@ -13,7 +13,7 @@ import { useState } from 'react';
 
 export default function Documents({ auth, documents = [], categories = [], activeCategory }) {
 
-    const isAdmin = auth.user?.role?.name === 'admin';
+    const isAdmin = auth.user?.role?.name === 'admin' || auth.user?.permissions?.includes('director of corporate services and operations');
     const sidebarLinks = getDocumentSidebarLinks(categories, activeCategory);
     const { system } = usePage().props;
 
@@ -126,13 +126,13 @@ export default function Documents({ auth, documents = [], categories = [], activ
                 </div>
                 
                 {isAdmin && (
-                    <div className="grid w-full grid-cols-1 gap-4 sm:w-auto sm:grid-cols-2 sm:min-w-[520px]">
+                   <div className="flex w-full flex-col sm:w-auto sm:flex-row gap-3">
                         <button 
                             onClick={() => setIsCategoryModalOpen(true)}
-                            className="inline-flex min-h-[64px] w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-center text-base font-bold uppercase tracking-[0.1em] text-slate-700 shadow-md transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:shadow-lg"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900 hover:shadow"
                             title="Manage Categories"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6 shrink-0 text-indigo-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-4 w-4 shrink-0 text-indigo-600">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5m-16.5 5.25h16.5m-16.5 5.25h10.5" />
                             </svg>
                             Manage Categories
@@ -141,9 +141,9 @@ export default function Documents({ auth, documents = [], categories = [], activ
                         <button
                             type="button"
                             onClick={() => setIsUploadModalOpen(true)}
-                            className="inline-flex min-h-[64px] w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-center text-base font-bold uppercase tracking-[0.1em] text-slate-700 shadow-md transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:shadow-lg"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900 hover:shadow"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6 shrink-0 text-indigo-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-4 w-4 shrink-0 text-indigo-600">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V6.75m0 0L8.25 10.5M12 6.75l3.75 3.75M4.5 17.25v.75A1.5 1.5 0 006 19.5h12a1.5 1.5 0 001.5-1.5v-.75" />
                             </svg>
                             Upload Document
