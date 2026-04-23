@@ -2,12 +2,12 @@ import ConfirmModal from '@/Components/ConfirmModal';
 import DangerButton from '@/Components/DangerButton';
 import { getDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
+import { formatAppDate } from '@/Utils/date';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { formatAppDate } from '@/Utils/date';
 
 export default function Archive({ auth, archivedMealsByWeek, availableDates, currentFilter }) {
-    const dutyMealsLinks = getDutyMealLinks();
+    const dutyMealsLinks = getDutyMealLinks(auth);
     const { system } = usePage().props;
     
     // Global Confirm Modal State

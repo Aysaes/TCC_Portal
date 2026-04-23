@@ -23,7 +23,9 @@ class CheckDutyMealAccess
         'admin', 
         'duty meal custodian', 
         'director of corporate services and operations',
-        'housekeeping tl'
+        'housekeeping tl',
+        'auditor tl',
+        'audit assistant'
          ];
 
         if (!in_array($userRole, $allowedRoles)) {

@@ -7,11 +7,11 @@ import { getDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { formatAppDate } from '@/Utils/date';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Fragment, useMemo, useState } from 'react'; 
+import { Fragment, useMemo, useState } from 'react';
 
 export default function Index({ auth, dutymeals = [], employees = [], departments = [], positions = [], branches = [] }) {
     
-    const dutyMealsLinks = getDutyMealLinks();
+    const dutyMealsLinks = getDutyMealLinks(auth);
     const { system } = usePage().props;
 
     const [isPoolModalOpen, setIsPoolModalOpen] = useState(false);

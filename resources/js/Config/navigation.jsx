@@ -86,25 +86,40 @@ export const getDocumentSidebarLinks = (categories = [], activeCategory = 'Overv
 
 // Duty Meal Module Links
 
-export const getDutyMealLinks = () => [
-     {
-        label: 'Duty Meal Overview',
-        href: route('admin.duty-meals.index'),
-        active: route().current('admin.duty-meals.index'),
-    },
+// navigation.jsx
+
+// navigation.jsx
+
+export const getDutyMealLinks = (auth) => {
+    // 🟢 Extract the role safely from the auth object
+    const userRole = auth?.user?.role?.name?.toLowerCase().trim() || '';
+    const isAuditor = userRole.includes('audit');
+
+    const links = [
+         {
+            label: 'Duty Meal Overview',
+            href: route('admin.duty-meals.index'),
+            active: route().current('admin.duty-meals.index'),
+        }
+    ];
     
-    {
-        label: 'Set Up Roster',
-        href: route('admin.duty-meals.create'),
-        active: route().current('admin.duty-meals.create'),
-    },
+    // 🟢 Only inject the "Set Up Roster" link if they are NOT an auditor
+    if (!isAuditor) {
+        links.push({
+            label: 'Set Up Roster',
+            href: route('admin.duty-meals.create'),
+            active: route().current('admin.duty-meals.create'),
+        });
+    }
    
-    {
+    links.push({
         label: 'Duty Meal Archive',
         href: route('admin.duty-meals.archive'),
         active:  route().current('admin.duty-meals.archive'),
-    },
-];
+    });
+
+    return links;
+};
 
 export const getStaffDutyMealLinks = () => [
     {

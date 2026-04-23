@@ -99,8 +99,15 @@ class DutyMealController extends Controller
     public function create()
     {
         $user = Auth::user();
-        $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
+        $userRole = strtolower(trim($user->role->name ?? ''));
+        
 
+        // 🟢 HARD BLOCK FOR AUDITORS
+        if (str_contains($userRole, 'audit')) {
+            abort(403, 'Auditors are not permitted to set up duty meal rosters.');
+        }
+
+        $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
         
         $branches = Branch::select('id', 'name')
             ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
@@ -142,6 +149,14 @@ class DutyMealController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+        $userRole = strtolower(trim($user->role->name ?? ''));
+
+        // 🟢 HARD BLOCK FOR AUDITORS
+        if (str_contains($userRole, 'audit')) {
+            abort(403, 'Auditors are not permitted to create duty meal rosters.');
+        }
+
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
             'week_start' => 'required|date',
