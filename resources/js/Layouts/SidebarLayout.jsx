@@ -625,7 +625,7 @@ export default function SidebarLayout({
                                  PR/PO Module
                                 </Dropdown.Link>
                                 
-                                {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL'].includes(user.role?.name) && (
+                                {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL', 'Auditory TL', 'Audit Assist'].includes(user.role?.name) && (
                                     <Dropdown.Link href={route('admin.duty-meals.index')}>Duty Meal Module</Dropdown.Link>
                                 )}
                             </Dropdown.Content>

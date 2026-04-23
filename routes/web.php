@@ -342,6 +342,8 @@ Route::prefix('prpo')->name('prpo.')->middleware(['auth'])->group(function () {
     Route::put('/suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
     Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
     Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
+    Route::get('/suppliers/template', [SupplierController::class, 'downloadTemplate'])->name('suppliers.template');
+Route::post('/suppliers/import', [SupplierController::class, 'import'])->name('suppliers.import');
 
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
@@ -351,6 +353,8 @@ Route::prefix('prpo')->name('prpo.')->middleware(['auth'])->group(function () {
 
     Route::get('/purchase-request/create', [PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
     Route::post('/purchase-request', [PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
+    Route::put('/purchase-requests/{id}', [PurchaseRequestController::class, 'update'])
+    ->name('purchase-requests.update');
     
     
     Route::get('/approval-board', [PurchaseRequestController::class, 'approvalBoard'])->name('approval-board');

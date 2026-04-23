@@ -120,7 +120,7 @@ class PurchaseRequestController extends Controller
 
             // Add the manual CC user if one was selected
             if ($pr->cc_user_id) {
-                $manualCc = \App\Models\User::find($pr->cc_user_id);
+                $manualCc = User::find($pr->cc_user_id);
                 if ($manualCc) {
                     $ccRecipients->push($manualCc);
                 }
@@ -160,10 +160,7 @@ class PurchaseRequestController extends Controller
         $userRole = strtolower($user->role->name ?? '');
         $userBranches = $user->branches()->pluck('name')->toArray(); 
         
-        // 🟢 1. Define if they are an assistant to pass to React
         $isAssistant = str_contains($userRole, 'assist');
-        
-        // 🟢 2. Default assistants to 'my_requests', everyone else to 'action_needed'
         $defaultView = $isAssistant ? 'my_requests' : 'action_needed';
         $view = $request->query('view', $defaultView);
 
@@ -193,11 +190,9 @@ class PurchaseRequestController extends Controller
                 $query->whereRaw('1 = 0'); 
             }
         } 
-        // 🟢 3. Add explicit logic for the 'my_requests' tab
         elseif ($view === 'my_requests') {
             $query->where('user_id', $user->id);
         } 
-        // Logic for 'all' or 'finished'
         else {
             if (!$isAdmin && !empty($userBranches)) {
                 $query->whereIn('branch', $userBranches);
@@ -206,12 +201,26 @@ class PurchaseRequestController extends Controller
 
         $requests = $query->paginate(15)->withQueryString();
 
+        // 🟢 NEW: Fetch lookup data so the Edit Modal can add new items/departments
+        $suppliers = Supplier::select('id', 'name')->get();
+        $products = Product::select('id', 'name', 'supplier_id', 'details', 'unit', 'price')->get();
+        $branches = Branch::select('id', 'name')->get();
+        $departments = Department::select('id', 'name')->get();
+        $employees =   User::with('branches:id,name')->where('id', '!=', Auth::id())->select('id', 'name')->orderBy('name')->get();
+
         return Inertia::render('PRPO/ApprovalBoard', [
             'requests' => $requests,
             'currentView' => $view,
             'userBranches' => $userBranches, 
-            'isAssistant' => $isAssistant, // 🟢 4. Pass to React so it hides the Action Needed tab!
-            'canSeeAll' => $isAdmin || str_contains($userRole, 'director'), // Optional: Pass your all-access flag
+            'isAssistant' => $isAssistant, 
+            'canSeeAll' => $isAdmin || str_contains($userRole, 'director'),
+            
+            // 🟢 Pass data to React
+            'suppliers' => $suppliers,
+            'products' => $products,
+            'branches' => $branches,
+            'departments' => $departments,
+            'employees' => $employees,
         ]);
     }
 
@@ -220,26 +229,68 @@ class PurchaseRequestController extends Controller
     // =====================================================================
     public function updateStatus(Request $request, PurchaseRequest $purchaseRequest)
     {
-        // 🟢 1. Added cancel to the allowed actions, and validate the reason
         $validated = $request->validate([
-            'action' => 'required|in:approve,reject,cancel',
-            'rejection_reason' => 'required_if:action,reject|nullable|string'
+            'action' => 'required|in:approve,reject,cancel,return_to_inv_tl',
+            'rejection_reason' => 'required_if:action,reject|required_if:action,return_to_inv_tl|nullable|string'
         ]);
 
+        // 🟢 1. Handle Return to Inv TL
+        if ($validated['action'] === 'return_to_inv_tl') {
+            $purchaseRequest->status = 'pending_inv_tl';
+            $purchaseRequest->rejection_reason = $validated['rejection_reason']; 
+            $message = 'Purchase request returned to Inventory TL for corrections.';
+            $purchaseRequest->save();
+            
+            // --- RETURN NOTIFICATION LOGIC ---
+            $notifyList = collect();
+
+            // Fetch Inventory TLs and Assistants for this specific branch
+            $invTeam = User::whereHas('role', function ($q) {
+                $q->where('name', 'like', '%Inventory TL%')
+                  ->orWhere('name', 'like', '%Inventory Assist%');
+            })->whereHas('branches', function ($q) use ($purchaseRequest) {
+                $q->where('name', $purchaseRequest->branch);
+            })->get();
+
+            $notifyList = $notifyList->merge($invTeam);
+
+            // Fetch the CC'd user
+            if ($purchaseRequest->cc_user_id) {
+                $ccUser = User::find($purchaseRequest->cc_user_id);
+                if ($ccUser) {
+                    $notifyList->push($ccUser);
+                }
+            }
+
+            // Remove duplicates (e.g., if the Inv TL was manually CC'd)
+            $notifyList = $notifyList->unique('id');
+
+            // Send the alert
+            if ($notifyList->isNotEmpty()) {
+                $alertMessage = "PR from {$purchaseRequest->department} ({$purchaseRequest->branch}) was returned to Inventory for corrections.";
+                \Illuminate\Support\Facades\Notification::send($notifyList, new PendingApprovalNotification($purchaseRequest, $alertMessage));
+            }
+
+            return back()->with('success', $message);
+        }
+
+        // 🟢 2. Handle Approve
         if ($validated['action'] === 'approve') {
             if ($purchaseRequest->status === 'pending_inv_tl') {
                 $purchaseRequest->status = 'pending_ops_manager';
+                $purchaseRequest->rejection_reason = null; // Clear any old return notes
             } elseif ($purchaseRequest->status === 'pending_ops_manager') {
                 $purchaseRequest->status = 'approved'; 
             }
             $message = 'Purchase request moved to the next approval stage.';
         
+        // 🟢 3. Handle Cancel
         } elseif ($validated['action'] === 'cancel') {
             $purchaseRequest->status = 'cancelled';
             $message = 'Purchase request has been cancelled.';
             
+        // 🟢 4. Handle Complete Rejection
         } else {
-            // 🟢 2. Handle Rejection & Save Reason
             $purchaseRequest->status = 'rejected';
             $purchaseRequest->rejection_reason = $validated['rejection_reason'];
             $message = 'Purchase request has been rejected.';
@@ -247,6 +298,7 @@ class PurchaseRequestController extends Controller
 
         $purchaseRequest->save();
 
+        // 🟢 5. Trigger standard workflow notifications for Approve/Reject/Cancel
         $this->notifyNextApprovers($purchaseRequest);
 
         $ccUser = $purchaseRequest->cc_user;
@@ -255,6 +307,65 @@ class PurchaseRequestController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $pr = PurchaseRequest::findOrFail($id);
+
+        $validated = $request->validate([
+            'branch' => 'required|string|max:255',
+            'department' => 'required|string|max:255',
+            'request_type' => 'nullable|string|max:255',
+            'priority' => 'nullable|string|max:255',
+            'date_needed' => 'nullable|date',
+            'budget_status' => 'nullable|string|max:255',
+            'budget_ref' => 'nullable|string|max:255',
+            'purpose_of_request' => 'nullable|string',
+            'impact_if_not_procured' => 'nullable|string',
+            'cc_user_id' => 'nullable|exists:users,id',
+
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'nullable|exists:purchase_request_items,id', // Allow null for brand new items
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.supplier_id' => 'nullable|exists:suppliers,id',
+            'items.*.specifications' => 'nullable|string|max:255',
+            'items.*.unit' => 'nullable|string|max:50',
+            'items.*.qty_requested' => 'required|numeric|min:0',
+            'items.*.qty_on_hand' => 'nullable|numeric|min:0',
+            'items.*.reorder_level' => 'nullable|numeric|min:0',
+            'items.*.est_unit_cost' => 'nullable|numeric|min:0',
+            'items.*.total_cost' => 'nullable|numeric|min:0',
+        ]);
+
+        // 1. Update the PR header fields
+        $pr->update([
+            'branch' => $validated['branch'],
+            'department' => $validated['department'],
+            'request_type' => $validated['request_type'],
+            'priority' => $validated['priority'],
+            'date_needed' => $validated['date_needed'],
+            'budget_status' => $validated['budget_status'],
+            'budget_ref' => $validated['budget_ref'],
+            'purpose_of_request' => $validated['purpose_of_request'],
+            'impact_if_not_procured' => $validated['impact_if_not_procured'],
+            'cc_user_id' => $validated['cc_user_id'] ?? null,
+        ]);
+
+        // 2. Sync items: Delete items that the user removed in the frontend
+        $existingItemIds = collect($validated['items'])->pluck('id')->filter()->all();
+        $pr->items()->whereNotIn('id', $existingItemIds)->delete();
+
+        // 3. Update existing items or Create new ones
+        foreach ($validated['items'] as $itemData) {
+            if (isset($itemData['id'])) {
+                $pr->items()->where('id', $itemData['id'])->update($itemData);
+            } else {
+                $pr->items()->create($itemData);
+            }
+        }
+
+        return redirect()->back()->with('success', 'Purchase Request updated successfully.');
     }
 
     public function print(PurchaseRequest $purchaseRequest)

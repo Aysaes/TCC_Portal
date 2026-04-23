@@ -75,4 +75,67 @@ class SupplierController extends Controller
             return back()->with('error', 'Failed to update supplier status: ' . $e->getMessage());
         }
     }
+
+    public function downloadTemplate()
+    {
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=suppliers_template.csv",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $columns = ['name', 'contact_person', 'contact_number', 'address', 'tin'];
+
+        $callback = function() use($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:2048',
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getPathname(), "r");
+        $header = fgetcsv($handle); 
+
+        $importedCount = 0;
+        $skippedCount = 0;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            // Check if the required 'name' field is empty
+            if (empty(trim($row[0]))) {
+                $skippedCount++;
+                continue;
+            }
+
+            // Check if the supplier already exists to prevent duplicates
+            $exists = Supplier::where('name', trim($row[0]))->exists();
+            if ($exists) {
+                $skippedCount++;
+                continue;
+            }
+
+            Supplier::create([
+                'name' => trim($row[0]),
+                'contact_person' => trim($row[1] ?? ''),
+                'contact_number' => trim($row[2] ?? ''),
+                'address' => trim($row[3] ?? ''),
+                'tin' => trim($row[4] ?? ''),
+            ]);
+            $importedCount++;
+        }
+        
+        fclose($handle);
+
+        return back()->with('success', "Import complete: $importedCount added, $skippedCount skipped (duplicates or missing names).");
+    }
 }
