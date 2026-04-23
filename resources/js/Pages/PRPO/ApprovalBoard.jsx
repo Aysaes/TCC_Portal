@@ -3,7 +3,156 @@ import TrackingStepper from '@/Components/TrackingStepper';
 import { getPRPOLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+// =====================================================================
+// CUSTOM SEARCHABLE DROPDOWN COMPONENT (For Edit Modal)
+// =====================================================================
+const SearchableDropdown = ({ options, value, onChange, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const wrapperRef = useRef(null);
+
+    const selectedOption = options.find(opt => String(opt.id) === String(value));
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSearchTerm(selectedOption ? selectedOption.name : '');
+        }
+    }, [isOpen, selectedOption]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+                setSearchTerm(selectedOption ? selectedOption.name : ''); 
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [selectedOption]);
+
+    const filteredOptions = options.filter(opt =>
+        opt.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div ref={wrapperRef} className="relative w-full">
+            <input
+                type="text"
+                className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder={placeholder}
+                value={isOpen ? searchTerm : (selectedOption ? selectedOption.name : '')}
+                onChange={(e) => {
+                    const newVal = e.target.value;
+                    setSearchTerm(newVal);
+                    setIsOpen(true);
+                    
+                    if (selectedOption && newVal !== selectedOption.name) {
+                        onChange('');
+                    }
+                }}
+                onFocus={() => {
+                    setIsOpen(true);
+                    setSearchTerm(selectedOption ? selectedOption.name : '');
+                }}
+            />
+            
+            {isOpen && (
+                <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md bg-white py-1 text-xs shadow-lg ring-1 ring-black ring-opacity-5">
+                    {filteredOptions.length === 0 ? (
+                        <li className="px-3 py-2 text-gray-500">No results found</li>
+                    ) : (
+                        filteredOptions.map(opt => (
+                            <li
+                                key={opt.id}
+                                className="cursor-pointer px-3 py-2 hover:bg-indigo-600 hover:text-white transition-colors truncate"
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); 
+                                    onChange(opt.id);
+                                    setIsOpen(false);
+                                    setSearchTerm(opt.name);
+                                }}
+                            >
+                                {opt.name}
+                            </li>
+                        ))
+                    )}
+                </ul>
+            )}
+        </div>
+    );
+};
+
+const CCMultiSelect  = ({ options, value, onChange, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const wrapperRef = useRef(null);
+
+    const selectedOption = options.find(opt => String(opt.id) === String(value));
+
+    useEffect(() => {
+        if (selectedOption) {
+            setSearchTerm(selectedOption.name);
+        } else {
+            setSearchTerm('');
+        }
+    }, [value, selectedOption]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+                setSearchTerm(selectedOption ? selectedOption.name : ''); 
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [selectedOption]);
+
+    const filteredOptions = options.filter(opt => opt.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return (
+        <div ref={wrapperRef} className="relative w-full">
+            <input
+                type="text"
+                className="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder={placeholder}
+                value={searchTerm} 
+                onChange={(e) => {
+                    const newVal = e.target.value;
+                    setSearchTerm(newVal);
+                    setIsOpen(true);
+                    if (selectedOption && newVal !== selectedOption.name) onChange('');
+                }}
+                onFocus={() => {
+                    setIsOpen(true);
+                    setSearchTerm(selectedOption ? selectedOption.name : '');
+                }}
+            />
+            {isOpen && (
+                <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black ring-opacity-5">
+                    {filteredOptions.length === 0 ? (
+                        <li className="px-3 py-2 text-gray-500">No results found</li>
+                    ) : (
+                        filteredOptions.map(opt => (
+                            <li key={opt.id} className="cursor-pointer px-3 py-2 hover:bg-indigo-600 hover:text-white transition-colors truncate"
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); 
+                                    setSearchTerm(opt.name); 
+                                    onChange(opt.id);        
+                                    setIsOpen(false);        
+                                }}
+                            >
+                                {opt.name}
+                            </li>
+                        ))
+                    )}
+                </ul>
+            )}
+        </div>
+    );
+};
 
 // =====================================================================
 // MINI TRACKING STEPPER (Delivery Style)
@@ -108,13 +257,15 @@ const TrackerLine = ({ pr }) => {
 // =====================================================================
 // MAIN PAGE COMPONENT
 // =====================================================================
-export default function ApprovalBoard({ auth, requests, currentView, userBranches = [] }) {
+// 🟢 NOTE: Make sure your controller passes suppliers, products, branches, departments, and employees to this view!
+export default function ApprovalBoard({ auth, requests, currentView, userBranches = [], suppliers = [], products = [], branches = [], departments = [], employees = [] }) {
     const sidebarLinks = getPRPOLinks(auth);
 
     const userRole = auth.user.role?.name?.toLowerCase().trim() || '';
     const canManagePO = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin'].includes(userRole);
     const isInvTL = userRole.includes('inventory tl') || userRole === 'admin';
     const isOpsManager = userRole.includes('operations') || userRole.includes('operations manager') || userRole === 'admin';
+    const isUnrestricted = userRole === 'admin' || userRole.includes('director') || userRole.includes('procurement');
 
     const requestList = Array.isArray(requests?.data) ? requests.data : (Array.isArray(requests) ? requests : []);
 
@@ -144,11 +295,19 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
     const [selectedPR, setSelectedPR] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     
-    // 🟢 EDIT PR MODAL STATE (For Inv TL)
+    // 🟢 FULL EDIT PR MODAL STATE (For Inv TL)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const { data: editData, setData: setEditData, put: submitEditPR, processing: isEditing } = useForm({
+    const { data: editData, setData: setEditData, put: submitEditPR, processing: isEditing, errors: editErrors } = useForm({
+        branch: '',
+        department: '',
+        request_type: '',
+        priority: '',
+        date_needed: '',
+        budget_status: '',
+        budget_ref: '',
         purpose_of_request: '',
         impact_if_not_procured: '',
+        cc_user_id: '',
         items: []
     });
 
@@ -197,7 +356,6 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
     };
 
     const handleAction = (id, actionType) => {
-        // Intercept reject and return to open the Action Modal
         if (actionType === 'reject' || actionType === 'return_to_inv_tl') {
             openActionModal(id, actionType);
             return;
@@ -246,24 +404,67 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
         setTimeout(() => setSelectedPR(null), 200); 
     };
 
-    // 🟢 OPEN EDIT MODAL
+    // 🟢 FULL EDIT LOGIC Helpers
+    const availableBranches = isUnrestricted ? branches : branches.filter(b => userBranches.includes(b.name));
+    
+    const branchEmployees = employees.filter(emp => {
+        if (!editData.branch) return false;
+        return emp.branches?.some(b => b.name === editData.branch);
+    });
+
     const openEditModal = () => {
         setEditData({
+            branch: selectedPR.branch || '',
+            department: selectedPR.department || '',
+            request_type: selectedPR.request_type || '',
+            priority: selectedPR.priority || '',
+            date_needed: selectedPR.date_needed || '',
+            budget_status: selectedPR.budget_status || '',
+            budget_ref: selectedPR.budget_ref || '',
             purpose_of_request: selectedPR.purpose_of_request || '',
             impact_if_not_procured: selectedPR.impact_if_not_procured || '',
+            cc_user_id: selectedPR.cc_user_id || '',
             items: selectedPR.items.map(item => ({ ...item })) // Deep copy items
         });
         setIsModalOpen(false);
         setTimeout(() => setIsEditModalOpen(true), 200);
     };
 
-    // 🟢 HANDLE EDITING ITEMS IN MODAL
+    const addEditItemRow = () => {
+        setEditData('items', [...editData.items, { 
+            product_id: '', specifications: '', unit: '', qty_requested: '', qty_on_hand: '', reorder_level: '', supplier_id: '', est_unit_cost: '', total_cost: 0 
+        }]);
+    };
+
+    const removeEditItemRow = (index) => {
+        const newItems = [...editData.items];
+        newItems.splice(index, 1);
+        setEditData('items', newItems);
+    };
+
     const handleEditItemChange = (index, field, value) => {
         const newItems = [...editData.items];
         newItems[index][field] = value;
 
-        if (field === 'qty_requested' || field === 'est_unit_cost') {
-            const qty = parseFloat(newItems[index].qty_requested) || 0;
+        if (field === 'product_id') {
+            const selectedProduct = products.find(p => String(p.id) === String(value));
+            if (selectedProduct) {
+                newItems[index].supplier_id = selectedProduct.supplier_id || '';
+                newItems[index].unit = selectedProduct.unit || '';
+                newItems[index].est_unit_cost = selectedProduct.price || 0; 
+                
+                const qty = parseFloat(newItems[index].qty_requested) || 0;
+                newItems[index].total_cost = qty * parseFloat(newItems[index].est_unit_cost);
+            } else {
+                newItems[index].supplier_id = '';
+                newItems[index].unit = '';
+                newItems[index].est_unit_cost = 0;
+                newItems[index].total_cost = 0;
+            }
+        }
+
+        if (field === 'qty_requested') {
+            const qty = parseFloat(value) || 0;
             const cost = parseFloat(newItems[index].est_unit_cost) || 0;
             newItems[index].total_cost = qty * cost;
         }
@@ -407,6 +608,7 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                                                             Approve
                                                         </button>
                                                         
+                                                        {/* 🟢 RESTORED: All three options for Ops Manager */}
                                                         {pr.status === 'pending_ops_manager' && (
                                                             <button onClick={() => openActionModal(pr.id, 'return_to_inv_tl')} title="Return to Inv TL" className="inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-700 transition-colors hover:bg-orange-100 hover:text-orange-800">
                                                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
@@ -520,7 +722,6 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
                             <div className="flex items-center justify-end gap-3 rounded-b-xl border-t bg-gray-50 px-6 py-4 shrink-0">
                                 <button onClick={closeModal} className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-100">Close Window</button>
                                 
-                                {/* 🟢 NEW: Edit Button for Inv TL */}
                                 {isInvTL && selectedPR.status === 'pending_inv_tl' && currentView === 'action_needed' && (
                                     <button onClick={openEditModal} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
@@ -570,53 +771,180 @@ export default function ApprovalBoard({ auth, requests, currentView, userBranche
 
                             <form onSubmit={handleSaveEdit} className="overflow-y-auto flex-grow flex flex-col">
                                 <div className="px-6 py-6 flex-grow">
-                                    <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    
+                                    {/* 🟢 FULL HEADER EDIT GRID */}
+                                    <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3 mb-6">
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Purpose of Request</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                                            <select value={editData.branch} onChange={e => setEditData('branch', e.target.value)} className={`block w-full rounded-md shadow-sm sm:text-sm ${editErrors.branch ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'}`} required>
+                                                <option value="" disabled>Select Branch...</option>
+                                                {branches.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                                            <select value={editData.department} onChange={e => setEditData('department', e.target.value)} className={`block w-full rounded-md shadow-sm sm:text-sm ${editErrors.department ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'}`} required>
+                                                <option value="" disabled>Select Department...</option>
+                                                {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Request Type</label>
+                                            <select value={editData.request_type} onChange={e => setEditData('request_type', e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                                <option value="">Select Type...</option>
+                                                <option value="Capex">Capex</option>
+                                                <option value="Opex">Opex</option>
+                                                <option value="Inventory">Inventory</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                                            <select value={editData.priority} onChange={e => setEditData('priority', e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                                <option value="">Select Priority...</option>
+                                                <option value="Low">Low</option>
+                                                <option value="Normal">Normal</option>
+                                                <option value="High">High</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Date Needed</label>
+                                            <input type="date" value={editData.date_needed} onChange={e => setEditData('date_needed', e.target.value)} className={`block w-full rounded-md shadow-sm sm:text-sm ${editErrors.date_needed ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'}`} />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Budget Status</label>
+                                            <select value={editData.budget_status} onChange={e => setEditData('budget_status', e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                                <option value="">Select Status...</option>
+                                                <option value="Budgeted">Budgeted</option>
+                                                <option value="Unbudgeted">Unbudgeted</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Budget Ref.</label>
+                                            <input type="text" value={editData.budget_ref} onChange={e => setEditData('budget_ref', e.target.value)} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Enter Ref..." />
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">CC (Carbon Copy)</label>
+                                            <CCMultiSelect 
+                                                options={branchEmployees}
+                                                value={editData.cc_user_id}
+                                                onChange={(val) => setEditData('cc_user_id', val)}
+                                                placeholder={!editData.branch ? "Select a branch first..." : "Search employee..."}
+                                            />
+                                        </div>
+
+                                        <div className="sm:col-span-3 mt-2 border-t border-gray-100 pt-4">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Purpose of Request</label>
                                             <textarea value={editData.purpose_of_request} onChange={(e) => setEditData('purpose_of_request', e.target.value)} rows={2} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Impact if not Procured</label>
+
+                                        <div className="sm:col-span-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Impact if not Procured</label>
                                             <textarea value={editData.impact_if_not_procured} onChange={(e) => setEditData('impact_if_not_procured', e.target.value)} rows={2} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                                         </div>
                                     </div>
 
-                                    <h4 className="mb-2 font-bold text-gray-900 border-b pb-1">Editable Items</h4>
-                                    <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                    {/* 🟢 FULL ITEMS EDIT TABLE */}
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h4 className="font-bold text-gray-900 border-b pb-1 flex-1">Editable Items</h4>
+                                        <button type="button" onClick={addEditItemRow} className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 px-3 py-1.5 rounded transition">
+                                            + Add Item
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="overflow-x-auto rounded-lg border border-gray-200 pb-32">
                                         <table className="min-w-full divide-y divide-gray-200 text-sm text-left table-fixed">
-                                            <thead className="bg-gray-100">
+                                            <thead className="bg-gray-100 text-gray-700">
                                                 <tr>
-                                                    <th className="px-4 py-2 font-semibold w-1/4">Product</th>
-                                                    <th className="px-4 py-2 font-semibold w-1/3">Specifications / Notes</th>
-                                                    <th className="px-4 py-2 font-semibold text-center w-24">Qty Req.</th>
-                                                    <th className="px-4 py-2 font-semibold text-right w-28">Est Unit Cost</th>
-                                                    <th className="px-4 py-2 font-semibold text-right w-32">Total Cost</th>
+                                                    <th className="px-2 py-2 font-semibold w-10 text-center">#</th>
+                                                    <th className="px-2 py-2 font-semibold min-w-[200px]">Product / Item Code</th>
+                                                    <th className="px-2 py-2 font-semibold min-w-[150px]">Specifications / Notes</th>
+                                                    <th className="px-2 py-2 font-semibold w-16">Unit</th>
+                                                    <th className="px-2 py-2 font-semibold w-20">Qty Req.</th>
+                                                    <th className="px-2 py-2 font-semibold w-20">Qty Hand</th>
+                                                    <th className="px-2 py-2 font-semibold w-20">Reorder</th>
+                                                    <th className="px-2 py-2 font-semibold min-w-[180px]">Supplier</th>
+                                                    <th className="px-2 py-2 font-semibold text-right w-24">Unit Cost</th>
+                                                    <th className="px-2 py-2 font-semibold text-right w-28">Total Cost</th>
+                                                    <th className="px-2 py-2 font-semibold w-10"></th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200 bg-white">
-                                                {editData.items.map((item, idx) => (
-                                                    <tr key={item.id || idx}>
-                                                        <td className="px-4 py-3 font-medium text-gray-900 bg-gray-50">{item.product?.name || `ID: ${item.product_id}`}</td>
-                                                        <td className="px-4 py-3">
-                                                            <input type="text" value={item.specifications || ''} onChange={(e) => handleEditItemChange(idx, 'specifications', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-1">
-                                                                <input type="number" min="0" step="any" value={item.qty_requested} onChange={(e) => handleEditItemChange(idx, 'qty_requested', e.target.value)} className="block w-16 text-center rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-bold" required />
-                                                                <span className="text-xs text-gray-500">{item.unit}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <div className="relative rounded-md shadow-sm">
-                                                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2"><span className="text-gray-400 text-xs">₱</span></div>
-                                                                <input type="number" min="0" step="any" value={item.est_unit_cost} onChange={(e) => handleEditItemChange(idx, 'est_unit_cost', e.target.value)} className="block w-full pl-6 rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-right" />
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right font-bold text-indigo-700 bg-indigo-50/30">
-                                                            ₱{Number(item.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                {editData.items.map((item, idx) => {
+                                                    const availableProducts = item.supplier_id ? products.filter(p => String(p.supplier_id) === String(item.supplier_id)) : products;
+                                                    const availableSuppliers = item.product_id ? suppliers.filter(s => {
+                                                        const linkedProduct = products.find(p => String(p.id) === String(item.product_id));
+                                                        return linkedProduct && String(linkedProduct.supplier_id) === String(s.id);
+                                                    }) : suppliers;
+
+                                                    return (
+                                                        <tr key={idx} className="hover:bg-gray-50/50">
+                                                            <td className="whitespace-nowrap px-2 py-2 text-center text-gray-500 font-medium">{idx + 1}</td>
+                                                            
+                                                            <td className="whitespace-nowrap px-2 py-2">
+                                                                <SearchableDropdown 
+                                                                    options={availableProducts}
+                                                                    value={item.product_id}
+                                                                    onChange={(val) => handleEditItemChange(idx, 'product_id', val)}
+                                                                    placeholder="Search Product..."
+                                                                />
+                                                            </td>
+
+                                                            <td className="whitespace-nowrap px-2 py-2">
+                                                                <input type="text" value={item.specifications || ''} onChange={(e) => handleEditItemChange(idx, 'specifications', e.target.value)} className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                                            </td>
+                                                            
+                                                            <td className="whitespace-nowrap px-2 py-2">
+                                                                <input type="text" value={item.unit || ''} readOnly placeholder="Auto" className="block w-full rounded-md border-gray-200 bg-gray-100 text-gray-500 text-xs shadow-sm cursor-not-allowed focus:ring-0"/>
+                                                            </td>
+
+                                                            <td className="whitespace-nowrap px-2 py-2">
+                                                                <input type="number" min="0" step="any" value={item.qty_requested} onChange={(e) => handleEditItemChange(idx, 'qty_requested', e.target.value)} className="block w-full text-center rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-bold" required />
+                                                            </td>
+
+                                                            <td className="whitespace-nowrap px-2 py-2">
+                                                                <input type="number" min="0" step="any" value={item.qty_on_hand || ''} onChange={(e) => handleEditItemChange(idx, 'qty_on_hand', e.target.value)} className="block w-full text-center rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                                            </td>
+
+                                                            <td className="whitespace-nowrap px-2 py-2">
+                                                                <input type="number" min="0" step="any" value={item.reorder_level || ''} onChange={(e) => handleEditItemChange(idx, 'reorder_level', e.target.value)} className="block w-full text-center rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                                            </td>
+
+                                                            <td className="whitespace-nowrap px-2 py-2">
+                                                                <SearchableDropdown 
+                                                                    options={availableSuppliers}
+                                                                    value={item.supplier_id}
+                                                                    onChange={(val) => handleEditItemChange(idx, 'supplier_id', val)}
+                                                                    placeholder="Search Supplier..."
+                                                                />
+                                                            </td>
+
+                                                            {/* 🟢 READ-ONLY PRICE FIELDS */}
+                                                            <td className="whitespace-nowrap px-2 py-2">
+                                                                <div className="relative rounded-md shadow-sm">
+                                                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2"><span className="text-gray-400 text-xs">₱</span></div>
+                                                                    <input type="number" value={item.est_unit_cost || ''} readOnly className="block w-full pl-6 rounded-md border-gray-200 bg-gray-100 text-gray-500 text-xs shadow-sm cursor-not-allowed text-right focus:ring-0" />
+                                                                </div>
+                                                            </td>
+                                                            <td className="whitespace-nowrap px-2 py-2 text-right font-bold text-indigo-700 bg-indigo-50/30">
+                                                                ₱{Number(item.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                                            </td>
+                                                            <td className="whitespace-nowrap px-2 py-2 text-right">
+                                                                {editData.items.length > 1 && (
+                                                                    <button type="button" onClick={() => removeEditItemRow(idx)} className="text-red-400 hover:text-red-600 bg-white hover:bg-red-50 border border-transparent hover:border-red-100 rounded p-1 transition-colors">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>
