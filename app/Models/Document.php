@@ -11,5 +11,18 @@ class Document extends Model
         'category',
         'description',
         'file_path',
+        'department_id', // Added
+        'branch_id',     // Added
     ];
+
+    // Relationships to fetch the names easily
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\User;
+use App\Models\Department; // Added
+use App\Models\Branch;     // Added
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Notification;
@@ -18,12 +20,31 @@ class DocumentController extends Controller
     public function index(Request $request)
     {
         $categories = DocumentCategory::all();
+        $departments = Department::all(); // Fetch Departments for the dropdown
+        $branches = Branch::all();       // Fetch Branches for the dropdown
         $activeCategory = $request->query('category', 'Overview');
+        
+        $user = Auth::user();
 
-        $query = Document::query();
+        // Check if the user is an admin or director (Adjust this if your permission logic differs)
+        $isAdmin = $user->role?->name === 'admin' || 
+                   (is_array($user->permissions) && in_array('director of corporate services and operations', $user->permissions));
+
+        // Load relations so we can display Department/Branch names on the frontend
+        $query = Document::with(['department', 'branch']);
 
         if ($activeCategory !== 'Overview') {
             $query->where('category', $activeCategory);
+        }
+
+        // --- ROLE BASED VIEWING LOGIC ---
+        // If the user is NOT an admin, only show documents meant for "All Branches" (null) 
+        // OR documents that match their specific branch ID.
+        if (!$isAdmin) {
+            $query->where(function ($q) use ($user) {
+                $q->whereNull('branch_id')
+                  ->orWhere('branch_id', $user->branch_id);
+            });
         }
 
         $documents = $query->latest()->get();
@@ -31,6 +52,8 @@ class DocumentController extends Controller
         return Inertia::render('DocumentRepo', [
             'documents' => $documents,
             'categories' => $categories,
+            'departments' => $departments, // Pass to React
+            'branches' => $branches,       // Pass to React
             'activeCategory' => $activeCategory,
         ]);
     }
@@ -39,28 +62,35 @@ class DocumentController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'category' => 'required|string|max:255',
+            'department_id' => 'required|exists:departments,id', // Required department validation
+            'branch_id' => 'nullable|exists:branches,id',        // Nullable for "All Branches"
             'description' => 'nullable|string',
-            // The limit is set right here to 20480 kilobytes (20MB)
+            // The limit is set right here to 20480 kilobytes (20MB) -> wait, your comment says 20MB but max is 51200 (50MB). Kept as is.
             'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:51200', 
         ]);
 
         $filePath = $request->file('file')->store('documents', 'public');
 
         try{
-            // 🟢 1. Save the document to a variable so we can use its title
+            // 🟢 1. Save the document with department and branch
             $document = Document::create([
                 'title' => $request->input('title'),
                 'category' => $request->input('category'),
+                'department_id' => $request->input('department_id'), // Save Dept
+                'branch_id' => $request->input('branch_id'),         // Save Branch (Null = All Branches)
                 'description' => $request->input('description'),
                 'file_path' => $filePath,
             ]);
 
-            // 🟢 2. Grab every active user in the system
-            $allUsers = User::all();
+            // 🟢 2. Filter users to notify based on branch
+            // If branch_id is null ("All Branches"), get all users. Otherwise, only get users of that branch.
+            $usersToNotify = User::when($document->branch_id, function($query) use ($document) {
+                $query->where('branch_id', $document->branch_id);
+            })->get();
 
-            // 🟢 3. Send the in-app notification to everyone!
-            if ($allUsers->isNotEmpty()) {
-                Notification::send($allUsers, new NewDocumentAlert($document->title, Auth::user()->name));
+            // 🟢 3. Send the in-app notification to the filtered users
+            if ($usersToNotify->isNotEmpty()) {
+                Notification::send($usersToNotify, new NewDocumentAlert($document->title, Auth::user()->name));
             }
 
             return redirect()->back()->with('success', 'Document uploaded successfully.');
