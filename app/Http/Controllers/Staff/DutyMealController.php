@@ -76,7 +76,8 @@ class DutyMealController extends Controller
         $request->validate([
             'selections' => 'required|array',
             'selections.*.participant_id' => 'required|exists:duty_meal_participants,id',
-            'selections.*.choice' => 'required|in:main,alt',
+            // ADDED 'special' to the allowed choices below!
+            'selections.*.choice' => 'required|in:main,alt,special',
             'selections.*.site' => 'nullable|string|in:Back Office,Clinic', // Validating Site
             'selections.*.custom_request' => 'nullable|string|max:255',
         ]);

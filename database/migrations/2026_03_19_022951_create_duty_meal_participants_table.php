@@ -15,9 +15,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('duty_meal_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('choice', ['main', 'alt', 'none'])->default('none');
+            
+            // ADDED 'special' to the enum array!
+            $table->enum('choice', ['main', 'alt', 'special', 'none'])->default('none');
 
             $table->boolean('is_graveyard')->default(false);
+            
+            // NOTE: I kept the other columns you added in later migrations 
+            // intact here just in case, but Laravel will apply those automatically
             
             $table->timestamps();
 

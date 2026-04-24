@@ -6,25 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
-        Schema::table('duty_meal_participants', function (Blueprint $table) {
-            // Adding the 'site' column right after 'choice'
-            $table->string('site')->nullable()->after('choice');
-        });
+        // Check if the column already exists before trying to add it
+        if (!Schema::hasColumn('duty_meal_participants', 'site')) {
+            Schema::table('duty_meal_participants', function (Blueprint $table) {
+                $table->string('site')->nullable()->after('choice');
+            });
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
-        Schema::table('duty_meal_participants', function (Blueprint $table) {
-            // This allows you to roll back if needed
-            $table->dropColumn('site');
-        });
+        if (Schema::hasColumn('duty_meal_participants', 'site')) {
+            Schema::table('duty_meal_participants', function (Blueprint $table) {
+                $table->dropColumn('site');
+            });
+        }
     }
 };

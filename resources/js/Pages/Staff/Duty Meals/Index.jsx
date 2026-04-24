@@ -8,169 +8,201 @@ import { useEffect, useMemo, useState } from 'react';
 const MealCard = ({ meal, selection, onSelectionChange }) => {
     const { system } = usePage().props;
     
-    const isMakati = meal.branch_name?.toLowerCase().includes('makati');
+    // BUG FIX: Added a fallback `|| ''` to prevent crashes when branch_name is null in the database
+    const isMakati = (meal.branch_name || '').toLowerCase().includes('makati');
     
     const isStrictlyLocked = meal.is_locked || meal.choice !== 'none';
     const currentChoice = isStrictlyLocked ? meal.choice : (selection?.choice || '');
     const currentSite = isStrictlyLocked ? (meal.site || '') : (selection?.site || '');
     const currentNote = isStrictlyLocked ? (meal.custom_request || '') : (selection?.custom_request || '');
 
+    // Dynamically change label and placeholder based on current selection
+    let noteLabel = "Optional Request / Add-ons";
+    let inputPlaceholder = "e.g., Extra Rice or 2 Bananas";
+
+    if (currentChoice === 'main' || currentChoice === 'alt') {
+        noteLabel = "Add-ons";
+        inputPlaceholder = "e.g., Extra Rice";
+    } else if (currentChoice === 'special') {
+        noteLabel = "Request";
+        inputPlaceholder = "e.g., 2 Bananas, 2 Eggs";
+    }
+
+    if (isStrictlyLocked && !currentNote) {
+        inputPlaceholder = "No special requests made.";
+    }
+
     return (
-        <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200/80 overflow-hidden flex flex-col relative group">
-            {/* HEADER */}
-            <div className="bg-gradient-to-b from-gray-50/80 to-white px-5 py-4 border-b border-gray-100 flex justify-between items-start">
-                <div>
-                    <h3 className="font-bold text-gray-900 text-lg tracking-tight">
-                        {formatAppDate(meal.duty_date, system?.timezone, { weekday: 'long', month: 'short', day: 'numeric' })}
-                    </h3>
-                    <div className="flex items-center mt-0.5 space-x-2">
-                        <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">{meal.branch_name}</span>
+        <div className="bg-white rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 flex flex-col relative group overflow-hidden">
+            
+            {/* STYLISH HEADER */}
+            <div className="px-5 pt-5 pb-4 flex justify-between items-start border-b border-slate-50/50">
+                <div className="flex items-center gap-4">
+                    {/* Modern Date Block */}
+                    <div className="flex flex-col items-center justify-center bg-indigo-50 text-indigo-600 rounded-2xl min-w-[64px] p-2 shadow-sm border border-indigo-100/50">
+                        <span className="text-sm font-black text-center leading-none">
+                            {formatAppDate(meal.duty_date, system?.timezone, { month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest mt-1">
+                            {formatAppDate(meal.duty_date, system?.timezone, { weekday: 'short' })}
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <div className="flex items-center space-x-1.5 mb-1">
+                            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{meal.branch_name || 'N/A'}</span>
+                        </div>
+                        
+                        {/* Status Badges */}
+                        {meal.is_locked ? (
+                            <span className="inline-flex items-center px-2.5 py-1 bg-rose-50 text-rose-600 text-[10px] font-bold rounded-full uppercase tracking-wide border border-rose-100">
+                                <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                Locked
+                            </span>
+                        ) : meal.choice !== 'none' ? (
+                            <span className="inline-flex items-center px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-full uppercase tracking-wide border border-emerald-100">
+                                <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                                Saved Choice
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold rounded-full uppercase tracking-wide border border-amber-100 animate-pulse">
+                                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5"></div>
+                                Action Needed
+                            </span>
+                        )}
                     </div>
                 </div>
-                
-                {/* STATUS BADGE */}
-                {meal.is_locked ? (
-                    <span className="px-2.5 py-1 bg-red-50 text-red-700 text-[10px] font-bold rounded-md ring-1 ring-inset ring-red-600/10 uppercase tracking-wide">Locked</span>
-                ) : meal.choice !== 'none' ? (
-                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-md ring-1 ring-inset ring-emerald-600/10 uppercase tracking-wide flex items-center">
-                        <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
-                        Saved
-                    </span>
-                ) : (
-                    <span className="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-md ring-1 ring-inset ring-amber-600/20 uppercase tracking-wide animate-pulse">Needs Action</span>
-                )}
             </div>
 
-            {/* BODY */}
-            <div className="p-5 flex-grow flex flex-col gap-5">
+            {/* BODY - PLUSH TILES */}
+            <div className="px-5 pb-5 flex-grow flex flex-col gap-5">
                 
-                {/* MEAL SELECTIONS */}
-                <div className="space-y-2.5">
-                    <label className={`block w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden ${
+                <div className="space-y-3 mt-2">
+                    {/* 1. MAIN MEAL */}
+                    <label className={`relative flex cursor-pointer rounded-2xl border p-4 focus:outline-none transition-all duration-200 ${
                         currentChoice === 'main' 
-                        ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' 
-                        : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
-                    } ${isStrictlyLocked ? 'opacity-75 cursor-not-allowed' : ''}`}>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center flex-grow">
-                                {/* Custom Radio Button */}
-                                <div className={`flex items-center justify-center w-5 h-5 rounded-full border flex-shrink-0 transition-colors ${currentChoice === 'main' ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 bg-white'}`}>
-                                    {currentChoice === 'main' && <div className="w-2 h-2 bg-white rounded-full" />}
-                                </div>
-                                <input
-                                    type="radio"
-                                    name={`choice-${meal.participant_id}`}
-                                    value="main"
-                                    className="hidden"
-                                    checked={currentChoice === 'main'}
-                                    onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)}
-                                    disabled={isStrictlyLocked}
-                                />
-                                <div className="ml-3">
-                                    <span className={`block text-xs font-bold uppercase tracking-wider mb-0.5 ${currentChoice === 'main' ? 'text-indigo-600' : 'text-gray-500'}`}>Main Meal</span>
-                                    <span className="block text-sm font-medium text-gray-900">{meal.main_meal}</span>
+                        ? 'bg-indigo-50/50 border-indigo-400 shadow-sm ring-1 ring-indigo-400' 
+                        : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                    } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                        <input type="radio" name={`choice-${meal.participant_id}`} value="main" className="hidden" checked={currentChoice === 'main'} onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)} disabled={isStrictlyLocked}/>
+                        <div className="flex w-full items-center justify-between">
+                            <div className="flex items-center">
+                                <div className="flex flex-col">
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${currentChoice === 'main' ? 'text-indigo-600' : 'text-slate-400'}`}>Main Meal</span>
+                                    <span className={`text-sm font-semibold ${currentChoice === 'main' ? 'text-indigo-900' : 'text-slate-700'}`}>{meal.main_meal}</span>
                                 </div>
                             </div>
+                            {currentChoice === 'main' && (
+                                <svg className="h-6 w-6 text-indigo-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                            )}
                         </div>
                     </label>
 
+                    {/* 2. ALTERNATIVE MEAL */}
                     {meal.alt_meal && (
-                        <label className={`block w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden ${
+                        <label className={`relative flex cursor-pointer rounded-2xl border p-4 focus:outline-none transition-all duration-200 ${
                             currentChoice === 'alt' 
-                            ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' 
-                            : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
-                        } ${isStrictlyLocked ? 'opacity-75 cursor-not-allowed' : ''}`}>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center flex-grow">
-                                    {/* Custom Radio Button */}
-                                    <div className={`flex items-center justify-center w-5 h-5 rounded-full border flex-shrink-0 transition-colors ${currentChoice === 'alt' ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 bg-white'}`}>
-                                        {currentChoice === 'alt' && <div className="w-2 h-2 bg-white rounded-full" />}
-                                    </div>
-                                    <input
-                                        type="radio"
-                                        name={`choice-${meal.participant_id}`}
-                                        value="alt"
-                                        className="hidden"
-                                        checked={currentChoice === 'alt'}
-                                        onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)}
-                                        disabled={isStrictlyLocked}
-                                    />
-                                    <div className="ml-3">
-                                        <span className={`block text-xs font-bold uppercase tracking-wider mb-0.5 ${currentChoice === 'alt' ? 'text-indigo-600' : 'text-gray-500'}`}>Alternative Meal</span>
-                                        <span className="block text-sm font-medium text-gray-900">{meal.alt_meal}</span>
+                            ? 'bg-indigo-50/50 border-indigo-400 shadow-sm ring-1 ring-indigo-400' 
+                            : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                        } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                            <input type="radio" name={`choice-${meal.participant_id}`} value="alt" className="hidden" checked={currentChoice === 'alt'} onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)} disabled={isStrictlyLocked}/>
+                            <div className="flex w-full items-center justify-between">
+                                <div className="flex items-center">
+                                    <div className="flex flex-col">
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${currentChoice === 'alt' ? 'text-indigo-600' : 'text-slate-400'}`}>Alternative Meal</span>
+                                        <span className={`text-sm font-semibold ${currentChoice === 'alt' ? 'text-indigo-900' : 'text-slate-700'}`}>{meal.alt_meal}</span>
                                     </div>
                                 </div>
+                                {currentChoice === 'alt' && (
+                                    <svg className="h-6 w-6 text-indigo-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                )}
                             </div>
                         </label>
                     )}
+
+                    {/* 3. SPECIAL REQUEST */}
+                    <label className={`relative flex cursor-pointer rounded-2xl border p-4 focus:outline-none transition-all duration-200 ${
+                        currentChoice === 'special' 
+                        ? 'bg-indigo-50/50 border-indigo-400 shadow-sm ring-1 ring-indigo-400' 
+                        : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                    } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                        <input type="radio" name={`choice-${meal.participant_id}`} value="special" className="hidden" checked={currentChoice === 'special'} onChange={(e) => onSelectionChange(meal.participant_id, 'choice', e.target.value)} disabled={isStrictlyLocked}/>
+                        <div className="flex w-full items-center justify-between">
+                            <div className="flex items-center">
+                                <div className="flex flex-col">
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${currentChoice === 'special' ? 'text-indigo-600' : 'text-slate-400'}`}>Special Request</span>
+                                    <span className={`text-sm font-semibold ${currentChoice === 'special' ? 'text-indigo-900' : 'text-slate-700'}`}>Build Your Own / Custom</span>
+                                </div>
+                            </div>
+                            {currentChoice === 'special' && (
+                                <svg className="h-6 w-6 text-indigo-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                            )}
+                        </div>
+                    </label>
                 </div>
 
-                {/* MAKATI SITE SELECTION (Segmented Control Style) */}
+                {/* MAKATI SITE SELECTION (Pill Style) */}
                 {isMakati && (
-                    <div>
-                        <label className="flex items-center text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
-                            <svg className="w-3.5 h-3.5 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            Location Site <span className="text-red-500 ml-1">*</span>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <label className="flex items-center text-[10px] font-bold text-slate-500 mb-2.5 uppercase tracking-widest">
+                            Location Site <span className="text-rose-500 ml-1 text-sm leading-none">*</span>
                         </label>
-                        <div className="flex p-1 bg-gray-100/80 rounded-lg border border-gray-200">
-                            <label className={`flex-1 text-center py-2 px-3 rounded-md transition-all cursor-pointer text-sm font-semibold ${
+                        <div className="flex p-1 bg-slate-200/60 rounded-xl shadow-inner">
+                            <label className={`flex-1 text-center py-2 px-3 rounded-lg transition-all duration-200 cursor-pointer text-sm font-bold ${
                                 currentSite === 'Back Office' 
-                                ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-black/5' 
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                                ? 'bg-white text-indigo-700 shadow shadow-black/5' 
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                             } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
-                                <input
-                                    type="radio"
-                                    name={`site-${meal.participant_id}`}
-                                    value="Back Office"
-                                    className="hidden"
-                                    checked={currentSite === 'Back Office'}
-                                    onChange={(e) => onSelectionChange(meal.participant_id, 'site', e.target.value)}
-                                    disabled={isStrictlyLocked}
-                                />
+                                <input type="radio" name={`site-${meal.participant_id}`} value="Back Office" className="hidden" checked={currentSite === 'Back Office'} onChange={(e) => onSelectionChange(meal.participant_id, 'site', e.target.value)} disabled={isStrictlyLocked}/>
                                 Back Office
                             </label>
 
-                            <label className={`flex-1 text-center py-2 px-3 rounded-md transition-all cursor-pointer text-sm font-semibold ${
+                            <label className={`flex-1 text-center py-2 px-3 rounded-lg transition-all duration-200 cursor-pointer text-sm font-bold ${
                                 currentSite === 'Clinic' 
-                                ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-black/5' 
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                                ? 'bg-white text-indigo-700 shadow shadow-black/5' 
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                             } ${isStrictlyLocked ? 'opacity-70 cursor-not-allowed' : ''}`}>
-                                <input
-                                    type="radio"
-                                    name={`site-${meal.participant_id}`}
-                                    value="Clinic"
-                                    className="hidden"
-                                    checked={currentSite === 'Clinic'}
-                                    onChange={(e) => onSelectionChange(meal.participant_id, 'site', e.target.value)}
-                                    disabled={isStrictlyLocked}
-                                />
+                                <input type="radio" name={`site-${meal.participant_id}`} value="Clinic" className="hidden" checked={currentSite === 'Clinic'} onChange={(e) => onSelectionChange(meal.participant_id, 'site', e.target.value)} disabled={isStrictlyLocked}/>
                                 Clinic
                             </label>
                         </div>
                     </div>
                 )}
 
-                {/* OPTIONAL REQUEST */}
-                <div className="mt-auto pt-2 border-t border-gray-100">
-                    <label className="flex items-center text-xs font-semibold text-gray-500 mb-2">
-                        <svg className="w-3.5 h-3.5 mr-1.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {/* REQUEST INPUT BOX */}
+                <div className="mt-auto">
+                    <label className="flex items-center text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">
+                        <svg className="w-3.5 h-3.5 mr-1.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
-                        Optional Request / Add-ons
+                        {noteLabel}
+                        {/* Show red asterisk if the field is currently required */}
+                        {currentChoice === 'special' && (
+                            <span className="text-rose-500 ml-1 text-sm leading-none">*</span>
+                        )}
                     </label>
                     <input 
                         type="text" 
-                        placeholder={isStrictlyLocked && !currentNote ? "No special requests made." : "e.g., 2 bananas, 2 eggs"}
-                        className="w-full text-sm border-gray-200 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:border-gray-200 transition-colors placeholder-gray-400"
+                        placeholder={inputPlaceholder}
+                        className={`w-full text-sm py-3 px-4 bg-slate-50 border rounded-xl shadow-sm focus:bg-white focus:ring-4 transition-all font-medium placeholder-slate-400 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 ${
+                            currentChoice === 'special' && !currentNote.trim()
+                            ? 'border-amber-300 focus:border-amber-400 focus:ring-amber-500/10' 
+                            : 'border-slate-200 focus:border-indigo-400 focus:ring-indigo-500/10'
+                        }`}
                         value={currentNote}
                         onChange={(e) => onSelectionChange(meal.participant_id, 'custom_request', e.target.value)}
                         disabled={isStrictlyLocked}
+                        required={currentChoice === 'special'}
                     />
                 </div>
             </div>
@@ -270,7 +302,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
                 initialSelections[meal.participant_id] = {
                     participant_id: meal.participant_id,
                     choice: '',
-                    site: '', // Added site initialization
+                    site: '', 
                     custom_request: ''
                 };
             }
@@ -320,23 +352,23 @@ export default function Index({ auth, myDutyMeals = [] }) {
             user={auth.user}
             activeModule='Duty Meals'
             sidebarLinks={DutyMealLinks}
-            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Duty Meal Panel</h2>}
+            header={<h2 className="text-xl font-semibold leading-tight text-slate-800">Duty Meal Panel</h2>}
         >
             <Head title="My Duty Meals" />
 
-            <div className="py-12 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 
-                <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900">My Duty Meals</h2>
-                        <p className="text-gray-500 mt-1">Select your meal preferences for your upcoming shifts.</p>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">My Duty Meals</h2>
+                        <p className="text-slate-500 mt-2 font-medium">Select your meal preferences for your upcoming shifts.</p>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
                         <select
                             value={monthFilter}
                             onChange={(e) => setMonthFilter(e.target.value)}
-                            className="text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-medium text-gray-700"
+                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 px-4"
                         >
                             <option value="All">All Months</option>
                             {availableMonths.map(([val, label]) => (
@@ -347,7 +379,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-medium text-gray-700"
+                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 px-4"
                         >
                             <option value="Pending">Pending Action</option>
                             <option value="Completed">Completed Weeks</option>
@@ -357,24 +389,24 @@ export default function Index({ auth, myDutyMeals = [] }) {
                 </div>
 
                 {activeGroupedMeals.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center flex flex-col items-center">
-                        <div className={`rounded-full p-4 mb-4 ${statusFilter === 'Pending' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-16 text-center flex flex-col items-center">
+                        <div className={`rounded-2xl p-5 mb-5 ${statusFilter === 'Pending' ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-50 text-slate-400'}`}>
                             {statusFilter === 'Pending' ? (
-                                <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                                 </svg>
                             ) : (
-                                <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
                             )}
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900">
+                        <h3 className="text-xl font-bold text-slate-900">
                             {statusFilter === 'Pending' ? "You're all caught up!" : "No meals found"}
                         </h3>
-                        <p className="text-gray-500 mt-1">
+                        <p className="text-slate-500 mt-2 font-medium">
                             {statusFilter === 'Pending' 
-                                ? "No pending duty meals require your action right now." 
+                                ? "No pending duty meals require your action right now. Enjoy your day!" 
                                 : "No rosters match your current filter settings."}
                         </p>
                     </div>
@@ -382,30 +414,30 @@ export default function Index({ auth, myDutyMeals = [] }) {
                     <div className="mb-12">
                         
                         {activeGroupedMeals.length > 1 && (
-                            <div className="flex items-center justify-between mb-6 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                            <div className="flex items-center justify-between mb-8 bg-white p-2.5 rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto">
                                 <button
                                     onClick={() => setCurrentWeekIndex(prev => prev - 1)}
                                     disabled={currentWeekIndex === 0}
-                                    className={`px-4 py-2 rounded-lg font-semibold text-xs uppercase tracking-wider transition-colors ${
+                                    className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors ${
                                         currentWeekIndex === 0 
-                                        ? 'text-gray-400 bg-gray-50 cursor-not-allowed' 
-                                        : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
+                                        ? 'text-slate-300 bg-transparent cursor-not-allowed' 
+                                        : 'text-indigo-600 hover:bg-indigo-50'
                                     }`}
                                 >
-                                    &larr; Previous
+                                    &larr; Prev
                                 </button>
                                 
-                                <span className="text-sm font-medium text-gray-500">
-                                    Week <span className="text-gray-900 font-bold">{currentWeekIndex + 1}</span> of {activeGroupedMeals.length}
+                                <span className="text-sm font-semibold text-slate-500">
+                                    Week <span className="text-slate-900 font-black">{currentWeekIndex + 1}</span> of {activeGroupedMeals.length}
                                 </span>
                                 
                                 <button
                                     onClick={() => setCurrentWeekIndex(prev => prev + 1)}
                                     disabled={currentWeekIndex === activeGroupedMeals.length - 1}
-                                    className={`px-4 py-2 rounded-lg font-semibold text-xs uppercase tracking-wider transition-colors ${
+                                    className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors ${
                                         currentWeekIndex === activeGroupedMeals.length - 1 
-                                        ? 'text-gray-400 bg-gray-50 cursor-not-allowed' 
-                                        : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
+                                        ? 'text-slate-300 bg-transparent cursor-not-allowed' 
+                                        : 'text-indigo-600 hover:bg-indigo-50'
                                     }`}
                                 >
                                     Next &rarr;
@@ -422,14 +454,16 @@ export default function Index({ auth, myDutyMeals = [] }) {
                             const pendingMealsInWeek = mealsInWeek.filter(m => !m.is_locked && m.choice === 'none');
                             const totalRequired = pendingMealsInWeek.length;
                             
-                            // VALIDATION BEFORE SUBMIT (Ensuring Makati has Site selected)
                             const readyToSubmit = pendingMealsInWeek
                                 .filter(m => {
                                     const s = selections[m.participant_id];
-                                    if (!s || s.choice === '') return false;
+                                    if (!s || s.choice === '') return false; // Missing meal choice
                                     
-                                    const isMakati = m.branch_name?.toLowerCase().includes('makati');
-                                    if (isMakati && (!s.site || s.site === '')) return false; // Block if Makati and no site
+                                    const isMakati = (m.branch_name || '').toLowerCase().includes('makati');
+                                    if (isMakati && (!s.site || s.site === '')) return false; // Missing Makati site
+                                    
+                                    // REQUIRED LOGIC FOR SPECIAL REQUEST
+                                    if (s.choice === 'special' && (!s.custom_request || s.custom_request.trim() === '')) return false;
                                     
                                     return true;
                                 })
@@ -440,30 +474,33 @@ export default function Index({ auth, myDutyMeals = [] }) {
 
                             return (
                                 <div className="animate-fade-in-up">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-gray-200 pb-4">
-                                        <h3 className="text-xl font-bold text-gray-800">{weekLabel}</h3>
+                                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-slate-200/80 pb-6">
+                                        <div>
+                                            <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1 block">Roster Schedule</span>
+                                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{weekLabel}</h3>
+                                        </div>
                                         
                                         {totalRequired > 0 && (
                                             <button
                                                 onClick={() => handleBulkLockIn(readyToSubmit, weekLabel)}
                                                 disabled={isProcessing || !isFullySelected}
-                                                className={`inline-flex items-center px-6 py-2.5 border border-transparent rounded-lg font-bold text-xs text-white uppercase tracking-widest shadow-sm transition ease-in-out duration-150 ${
+                                                className={`inline-flex items-center px-8 py-3.5 border border-transparent rounded-2xl font-black text-[13px] text-white uppercase tracking-widest shadow-sm transition-all duration-200 ${
                                                     (isProcessing || !isFullySelected) 
-                                                    ? 'bg-gray-400 cursor-not-allowed' 
-                                                    : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+                                                    ? 'bg-slate-300 cursor-not-allowed shadow-none' 
+                                                    : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5 focus:ring-4 focus:ring-indigo-500/20'
                                                 }`}
                                             >
                                                 {isProcessing 
                                                     ? 'Processing...' 
                                                     : isFullySelected 
-                                                        ? 'Lock In Week' 
-                                                        : `Select ${totalRequired - currentSelected} more`
+                                                        ? 'Lock In Choices' 
+                                                        : `Complete ${totalRequired - currentSelected} more to lock in`
                                                 }
                                             </button>
                                         )}
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
                                         {mealsInWeek.map((meal) => (
                                             <MealCard 
                                                 key={meal.participant_id} 

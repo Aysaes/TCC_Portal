@@ -56,9 +56,11 @@ class DutyMealExport implements FromCollection, WithHeadings, WithMapping, Shoul
 
     public function map($participant): array
     {
+        // UPDATED: Added the check for 'special'
         $menu = 'Pending';
         if ($participant->choice === 'main') $menu = 'Main';
         elseif ($participant->choice === 'alt') $menu = 'Alt';
+        elseif ($participant->choice === 'special') $menu = 'Special Request';
 
         $shift = 'Unassigned';
         if ($participant->shift_type === 'day') $shift = 'Day Shift';
