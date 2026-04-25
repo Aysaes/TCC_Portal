@@ -52,7 +52,7 @@ function MemberCard({ member }) {
                     <img
                         src={`/storage/${member.image_path}`}
                         alt={member?.name || 'Member'}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover pointer-events-none"
                     />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
@@ -66,9 +66,9 @@ function MemberCard({ member }) {
                     {member?.name || 'No Name'}
                 </h4>
 
-                <p className="mt-2 min-h-[78px] line-clamp-3 text-base leading-6 text-gray-500">
+                <div className="mt-2 inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-indigo-700 transition-colors group-hover:bg-indigo-100">
                     {member?.position}
-                </p>
+                </div>
             </div>
         </div>
     );
@@ -95,7 +95,7 @@ function SideCarousel({ title, children }) {
 
                 <div
                     ref={scrollRef}
-                    className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto px-0 lg:px-10"
+                    className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto px-0 lg:px-10 pb-4"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     {...touchHandlers}
                 >
@@ -410,6 +410,28 @@ export default function OrgChart({ auth, members, orgChartSvg = null, structure 
         }));
     };
 
+    // Use the exact same Drag-and-Drop Sorting logic applied in the Admin Panel
+    const sortMembersByBranchHierarchy = (branchName, membersInBranch) => {
+        return [...membersInBranch].sort((a, b) => {
+            // 1. Give absolute priority to the DB sort_order (driven by Admin drag-and-drop)
+            const orderA = a.sort_order ?? 9999;
+            const orderB = b.sort_order ?? 9999;
+            
+            if (orderA !== orderB) return orderA - orderB;
+            
+            // 2. Fallback to Position Manager hierarchy ONLY if sort_order is identical
+            const positionOrder = structure?.positions?.[branchName] || [];
+            const orderMap = new Map(positionOrder.map((pos, index) => [pos, index]));
+            
+            const aIndex = orderMap.has(a.position) ? orderMap.get(a.position) : 999;
+            const bIndex = orderMap.has(b.position) ? orderMap.get(b.position) : 999;
+            
+            if (aIndex !== bIndex) return aIndex - bIndex;
+
+            return a.name.localeCompare(b.name);
+        });
+    };
+
     return (
         <SidebarLayout
             activeModule="General"
@@ -425,23 +447,16 @@ export default function OrgChart({ auth, members, orgChartSvg = null, structure 
                     {/* GRIDS: EXECUTIVE / MANAGEMENT COMMITTEES */}
                     <div className="mb-12">
                         {structure?.branches?.map((branchName) => {
-                            // Render as Grid if name implies it's a top-level committee
                             const isGridSection = branchName.toLowerCase().includes('committee') ||
                                                   branchName.toLowerCase().includes('execom') ||
                                                   branchName.toLowerCase().includes('mancomm');
 
                             if (!isGridSection) return null;
 
-                            const branchPositions = structure.positions[branchName] || [];
                             const membersInBranch = memberList.filter(m => m.branch === branchName);
-
                             if (membersInBranch.length === 0) return null;
 
-                            const sortedMembers = [...membersInBranch].sort((a, b) => {
-                                const aIndex = branchPositions.indexOf(a.position);
-                                const bIndex = branchPositions.indexOf(b.position);
-                                return (aIndex !== -1 ? aIndex : 999) - (bIndex !== -1 ? bIndex : 999);
-                            });
+                            const sortedMembers = sortMembersByBranchHierarchy(branchName, membersInBranch);
 
                             return (
                                 <div key={branchName} className="mb-10">
@@ -470,12 +485,19 @@ export default function OrgChart({ auth, members, orgChartSvg = null, structure 
                                                   branchName.toLowerCase().includes('execom') ||
                                                   branchName.toLowerCase().includes('mancomm');
 
-                            if (isGridSection) return null; // Already rendered above
+                            if (isGridSection) return null;
 
-                            const branchPositions = structure.positions[branchName] || [];
                             const membersInBranch = memberList.filter(m => m.branch === branchName);
-
                             if (membersInBranch.length === 0) return null;
+
+                            const sortedMembers = sortMembersByBranchHierarchy(branchName, membersInBranch);
+
+                            // Group sorted members dynamically by their position title
+                            const groupedByPosition = sortedMembers.reduce((acc, member) => {
+                                if (!acc[member.position]) acc[member.position] = [];
+                                acc[member.position].push(member);
+                                return acc;
+                            }, {});
 
                             return (
                                 <div key={branchName} className="mb-5 overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -491,24 +513,18 @@ export default function OrgChart({ auth, members, orgChartSvg = null, structure 
 
                                     {openSections[branchName] && (
                                         <div className="space-y-6 border-t border-gray-200 p-5 bg-gray-50/30">
-                                            {/* Render a SideCarousel for each position containing members */}
-                                            {branchPositions.map((positionName) => {
-                                                const membersInPosition = membersInBranch.filter(m => m.position === positionName);
-                                                
-                                                if (membersInPosition.length === 0) return null;
-
-                                                return (
-                                                    <div key={positionName}>
-                                                        <SideCarousel title={positionName}>
-                                                            {membersInPosition.map((member, idx) => (
-                                                                <div key={`carousel-member-${idx}`} className="min-w-[300px] max-w-[300px] snap-start">
-                                                                    <MemberCard member={member} />
-                                                                </div>
-                                                            ))}
-                                                        </SideCarousel>
-                                                    </div>
-                                                );
-                                            })}
+                                            {/* Iterate over the dynamically grouped positions */}
+                                            {Object.entries(groupedByPosition).map(([positionName, members]) => (
+                                                <div key={positionName}>
+                                                    <SideCarousel title={positionName}>
+                                                        {members.map((member, idx) => (
+                                                            <div key={`carousel-member-${idx}`} className="min-w-[300px] max-w-[300px] snap-start">
+                                                                <MemberCard member={member} />
+                                                            </div>
+                                                        ))}
+                                                    </SideCarousel>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
