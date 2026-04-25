@@ -368,7 +368,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
                         <select
                             value={monthFilter}
                             onChange={(e) => setMonthFilter(e.target.value)}
-                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 px-4"
+                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 pl-4 pr-10"
                         >
                             <option value="All">All Months</option>
                             {availableMonths.map(([val, label]) => (
@@ -379,7 +379,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 px-4"
+                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 pl-4 pr-10"
                         >
                             <option value="Pending">Pending Action</option>
                             <option value="Completed">Completed Weeks</option>

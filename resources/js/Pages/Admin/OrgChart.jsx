@@ -76,11 +76,11 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
     const [openSections, setOpenSections] = useState({});
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    // 👇 NEW: Dynamic Branch & Position States
+    // Dynamic Branch & Position States
     const [dynamicBranches, setDynamicBranches] = useState(INITIAL_CLINIC_BRANCHES);
     const [dynamicPositions, setDynamicPositions] = useState(INITIAL_BRANCH_SPECIFIC_POSITIONS);
     
-    // 👇 NEW: Manager Modals State
+    // Manager Modals State
     const [isBranchManagerOpen, setIsBranchManagerOpen] = useState(false);
     const [isPositionManagerOpen, setIsPositionManagerOpen] = useState(false);
     const [newItemName, setNewItemName] = useState('');
@@ -107,7 +107,6 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
         org_chart_file: null,
     });
 
-    // 👇 Changed to use dynamicPositions instead of constant
     const selectedBranchPositions = dynamicPositions[data.branch] || [];
 
     useEffect(() => {
@@ -118,7 +117,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
 
 
     // ==========================================
-    // 👇 NEW: BRANCH CRUD FUNCTIONS
+    // BRANCH CRUD FUNCTIONS
     // ==========================================
     const addBranch = () => {
         const name = newItemName.trim();
@@ -132,28 +131,39 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
         const newName = prompt("Enter new branch/department name:", oldName);
         if (!newName || newName.trim() === '' || newName === oldName) return;
         
-        setDynamicBranches(dynamicBranches.map(b => b === oldName ? newName.trim() : b));
+        const trimmedNewName = newName.trim();
+
+        setDynamicBranches(dynamicBranches.map(b => b === oldName ? trimmedNewName : b));
         setDynamicPositions(prev => {
             const updated = { ...prev };
-            updated[newName.trim()] = updated[oldName];
+            updated[trimmedNewName] = updated[oldName];
             delete updated[oldName];
             return updated;
         });
+
+        // FIX: Update local members to use the new branch name so they don't get lost
+        setLocalMembers(prev => prev.map(member => 
+            member.branch === oldName ? { ...member, branch: trimmedNewName } : member
+        ));
     };
 
     const deleteBranch = (branch) => {
-        if (!confirm(`Are you sure you want to delete ${branch}?`)) return;
+        if (!confirm(`Are you sure you want to delete ${branch}? Members in this branch will also be hidden.`)) return;
+        
         setDynamicBranches(dynamicBranches.filter(b => b !== branch));
         setDynamicPositions(prev => {
             const updated = { ...prev };
             delete updated[branch];
             return updated;
         });
+
+        // FIX: Filter out members of the deleted branch so they disappear from the main UI
+        setLocalMembers(prev => prev.filter(member => member.branch !== branch));
     };
 
 
     // ==========================================
-    // 👇 NEW: POSITION CRUD FUNCTIONS
+    // POSITION CRUD FUNCTIONS
     // ==========================================
     const addPosition = (branch) => {
         const name = newItemName.trim();
@@ -269,14 +279,12 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
         });
     };
 
-    // 👇 Changed CLINIC_BRANCHES to dynamicBranches
     const groupedMembers = dynamicBranches.reduce((acc, branch) => {
         const peopleInThisBranch = localMembers.filter((m) => m.branch === branch);
         acc[branch] = sortMembersByBranchHierarchy(branch, peopleInThisBranch);
         return acc;
     }, {});
 
-    // 👇 Changed CLINIC_BRANCHES to dynamicBranches
     const otherMembers = localMembers.filter((m) => !dynamicBranches.includes(m.branch));
     if (otherMembers.length > 0) {
         groupedMembers['Other Staff'] = otherMembers;
@@ -476,7 +484,6 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
                         </div>
 
-                        {/* 👇 UPDATED Branch Select to use dynamicBranches */}
                         <div>
                             <div className="mb-1 flex items-center justify-between">
                                 <label className="block text-sm font-bold text-gray-700">Department / Branch</label>
@@ -491,7 +498,6 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                             </select>
                         </div>
 
-                        {/* 👇 UPDATED Position Select to use dynamicPositions */}
                         <div>
                             <div className="mb-1 flex items-center justify-between">
                                 <label className="block text-sm font-bold text-gray-700">Position / Title</label>
@@ -537,7 +543,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
 
 
             {/* ==========================================
-                👇 NEW: BRANCH MANAGER MODAL
+                BRANCH MANAGER MODAL
                 ========================================== */}
             <Modal show={isBranchManagerOpen} onClose={() => { setIsBranchManagerOpen(false); setNewItemName(''); }} maxWidth="md">
                 <div className="p-6">
@@ -572,7 +578,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
             </Modal>
 
             {/* ==========================================
-                👇 NEW: POSITION MANAGER MODAL
+                POSITION MANAGER MODAL
                 ========================================== */}
             <Modal show={isPositionManagerOpen} onClose={() => { setIsPositionManagerOpen(false); setNewItemName(''); }} maxWidth="md">
                 <div className="p-6">
