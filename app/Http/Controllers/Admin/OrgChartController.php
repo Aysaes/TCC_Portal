@@ -20,7 +20,8 @@ class OrgChartController extends Controller
         // Return completely empty arrays if no structure has been saved yet
         return [
             'branches' => [],
-            'positions' => []
+            'positions' => [],
+            'branchSettings' => [] // <-- NEW: Default empty settings
         ];
     }
 
@@ -30,11 +31,13 @@ class OrgChartController extends Controller
         $request->validate([
             'branches' => 'present|array',
             'positions' => 'present|array',
+            'branchSettings' => 'nullable|array', // <-- NEW: Validate the settings
         ]);
 
         Storage::disk('local')->put('org_chart_structure.json', json_encode([
             'branches' => $request->branches,
             'positions' => $request->positions,
+            'branchSettings' => $request->branchSettings ?? [], // <-- NEW: Save the settings to JSON
         ]));
 
         return back()->with('success', 'Organization structure updated!');

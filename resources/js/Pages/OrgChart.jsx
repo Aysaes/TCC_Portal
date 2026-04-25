@@ -399,8 +399,10 @@ function OrgChartMapViewer({ svgPath }) {
 export default function OrgChart({ auth, members, orgChartSvg = null, structure }) {
     const dashboardLinks = getDashboardLinks();
     const memberList = members || [];
+    
+    // UI State
     const [openSections, setOpenSections] = useState({});
-
+    
     const normalizedOrgChartSvg = orgChartSvg && orgChartSvg.startsWith('/') ? orgChartSvg : orgChartSvg ? `/${orgChartSvg}` : null;
 
     const toggleSection = (name) => {
@@ -413,13 +415,11 @@ export default function OrgChart({ auth, members, orgChartSvg = null, structure 
     // Use the exact same Drag-and-Drop Sorting logic applied in the Admin Panel
     const sortMembersByBranchHierarchy = (branchName, membersInBranch) => {
         return [...membersInBranch].sort((a, b) => {
-            // 1. Give absolute priority to the DB sort_order (driven by Admin drag-and-drop)
             const orderA = a.sort_order ?? 9999;
             const orderB = b.sort_order ?? 9999;
             
             if (orderA !== orderB) return orderA - orderB;
             
-            // 2. Fallback to Position Manager hierarchy ONLY if sort_order is identical
             const positionOrder = structure?.positions?.[branchName] || [];
             const orderMap = new Map(positionOrder.map((pos, index) => [pos, index]));
             
@@ -478,7 +478,9 @@ export default function OrgChart({ auth, members, orgChartSvg = null, structure 
 
                     {/* ACCORDIONS: EMPLOYEES & DEPARTMENTS */}
                     <div>
-                        <h3 className="mb-5 text-2xl font-bold text-gray-900">Employees</h3>
+                        <div className="mb-5 border-b border-gray-200 pb-3">
+                            <h3 className="text-2xl font-bold text-gray-900">Employees</h3>
+                        </div>
 
                         {structure?.branches?.map((branchName) => {
                             const isGridSection = branchName.toLowerCase().includes('committee') ||
@@ -491,8 +493,11 @@ export default function OrgChart({ auth, members, orgChartSvg = null, structure 
                             if (membersInBranch.length === 0) return null;
 
                             const sortedMembers = sortMembersByBranchHierarchy(branchName, membersInBranch);
+                            
+                            // Check the specific setting set by the Admin. Default to 'carousel'.
+                            const branchViewMode = structure?.branchSettings?.[branchName] || 'carousel';
 
-                            // Group sorted members dynamically by their position title
+                            // Group sorted members dynamically by their position title (For Carousel Mode)
                             const groupedByPosition = sortedMembers.reduce((acc, member) => {
                                 if (!acc[member.position]) acc[member.position] = [];
                                 acc[member.position].push(member);
@@ -512,19 +517,31 @@ export default function OrgChart({ auth, members, orgChartSvg = null, structure 
                                     </button>
 
                                     {openSections[branchName] && (
-                                        <div className="space-y-6 border-t border-gray-200 p-5 bg-gray-50/30">
-                                            {/* Iterate over the dynamically grouped positions */}
-                                            {Object.entries(groupedByPosition).map(([positionName, members]) => (
-                                                <div key={positionName}>
-                                                    <SideCarousel title={positionName}>
-                                                        {members.map((member, idx) => (
-                                                            <div key={`carousel-member-${idx}`} className="min-w-[300px] max-w-[300px] snap-start">
-                                                                <MemberCard member={member} />
-                                                            </div>
-                                                        ))}
-                                                    </SideCarousel>
+                                        <div className="border-t border-gray-200 p-5 bg-gray-50/30">
+                                            {/* RENDER BASED ON ADMIN'S VIEW MODE SETTING FOR THIS SPECIFIC BRANCH */}
+                                            {branchViewMode === 'carousel' ? (
+                                                <div className="space-y-6">
+                                                    {Object.entries(groupedByPosition).map(([positionName, members]) => (
+                                                        <div key={positionName}>
+                                                            <SideCarousel title={positionName}>
+                                                                {members.map((member, idx) => (
+                                                                    <div key={`carousel-member-${idx}`} className="min-w-[300px] max-w-[300px] snap-start">
+                                                                        <MemberCard member={member} />
+                                                                    </div>
+                                                                ))}
+                                                            </SideCarousel>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            ) : (
+                                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                                                    {sortedMembers.map((member, idx) => (
+                                                        <div key={`grid-member-${idx}`} className="w-full">
+                                                            <MemberCard member={member} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

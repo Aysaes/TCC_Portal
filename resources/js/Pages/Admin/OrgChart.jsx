@@ -14,9 +14,10 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     const [openSections, setOpenSections] = useState({});
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    // Dynamic Branch & Position States from JSON
+    // Dynamic Branch, Position & Settings States from JSON
     const [dynamicBranches, setDynamicBranches] = useState(structure?.branches || []);
     const [dynamicPositions, setDynamicPositions] = useState(structure?.positions || {});
+    const [branchSettings, setBranchSettings] = useState(structure?.branchSettings || {}); // Per-branch display settings
     
     // Manager Modals State
     const [isBranchManagerOpen, setIsBranchManagerOpen] = useState(false);
@@ -67,11 +68,19 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     }, [data.branch]);
 
     // Database Sync Helper
-    const saveStructureToBackend = (newBranches, newPositions) => {
+    const saveStructureToBackend = (newBranches, newPositions, newBranchSettings) => {
         router.post(route('admin.org-chart.structure.save'), {
             branches: newBranches,
-            positions: newPositions
+            positions: newPositions,
+            branchSettings: newBranchSettings !== undefined ? newBranchSettings : branchSettings
         }, { preserveScroll: true });
+    };
+
+    // Handler to immediately update view mode and save to database
+    const handleUpdateBranchViewMode = (branch, mode) => {
+        const newSettings = { ...branchSettings, [branch]: mode };
+        setBranchSettings(newSettings);
+        saveStructureToBackend(dynamicBranches, dynamicPositions, newSettings);
     };
 
     // ==========================================
@@ -107,17 +116,16 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
 
     const handleBranchDragOver = (e, branchName) => {
         e.preventDefault();
-        e.stopPropagation(); // Prevent bubbling up
-        if (!draggedBranch) return; // Ignore if we are dragging a member, not a branch
+        e.stopPropagation(); 
+        if (!draggedBranch) return; 
 
         e.dataTransfer.dropEffect = 'move';
         
-        // Calculate where the mouse is relative to the branch container's height
         const rect = e.currentTarget.getBoundingClientRect();
-        const y = e.clientY - rect.top; // Mouse Y position within the branch container
+        const y = e.clientY - rect.top; 
         const height = rect.height;
         
-        let position = 'swap'; // Default to swap (center)
+        let position = 'swap'; 
         
         if (y < height * 0.3) {
             position = 'before';
@@ -175,7 +183,6 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
         setDynamicBranches(newBranches);
         setDraggedBranch(null);
         
-        // Save new branch order to database
         saveStructureToBackend(newBranches, dynamicPositions);
     };
 
@@ -189,7 +196,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     // MEMBER DRAG AND DROP HANDLERS 
     // ==========================================
     const handleDragStart = (e, id) => {
-        e.stopPropagation(); // Prevent triggering branch drag
+        e.stopPropagation(); 
         if (activeDropdown) {
             e.preventDefault();
             return;
@@ -201,8 +208,8 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
 
     const handleDragOver = (e, id) => {
         e.preventDefault(); 
-        e.stopPropagation(); // Prevent triggering branch drag over
-        if (!draggedId) return; // Ignore if we are dragging a branch
+        e.stopPropagation(); 
+        if (!draggedId) return; 
 
         e.dataTransfer.dropEffect = 'move';
         
@@ -230,7 +237,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
 
     const handleDrop = (e, targetId, branchName) => {
         e.preventDefault();
-        e.stopPropagation(); // Prevent triggering branch drop
+        e.stopPropagation();
 
         const finalPosition = dropPosition;
         setDragOverId(null);
@@ -295,7 +302,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
         setDynamicBranches(newBranches);
         setDynamicPositions(newPositions);
         setNewItemName('');
-        saveStructureToBackend(newBranches, newPositions);
+        saveStructureToBackend(newBranches, newPositions, branchSettings);
     };
 
     const updateBranch = (oldName) => {
@@ -309,13 +316,20 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
         newPositions[trimmedNewName] = newPositions[oldName];
         delete newPositions[oldName];
 
+        const newSettings = { ...branchSettings };
+        if (newSettings[oldName]) {
+            newSettings[trimmedNewName] = newSettings[oldName];
+            delete newSettings[oldName];
+        }
+
         setDynamicBranches(newBranches);
         setDynamicPositions(newPositions);
+        setBranchSettings(newSettings);
         setLocalMembers(prev => prev.map(member => 
             member.branch === oldName ? { ...member, branch: trimmedNewName } : member
         ));
 
-        saveStructureToBackend(newBranches, newPositions);
+        saveStructureToBackend(newBranches, newPositions, newSettings);
     };
 
     const deleteBranch = (branch) => {
@@ -325,11 +339,15 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
         const newPositions = { ...dynamicPositions };
         delete newPositions[branch];
 
+        const newSettings = { ...branchSettings };
+        delete newSettings[branch];
+
         setDynamicBranches(newBranches);
         setDynamicPositions(newPositions);
+        setBranchSettings(newSettings);
         setLocalMembers(prev => prev.filter(member => member.branch !== branch));
 
-        saveStructureToBackend(newBranches, newPositions);
+        saveStructureToBackend(newBranches, newPositions, newSettings);
     };
 
     // ==========================================
@@ -471,6 +489,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    
                     {/* ORG CHART SVG MANAGEMENT */}
                     <div className="mb-8 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
                         <div className="flex flex-col gap-4 border-b border-gray-100 p-6 lg:flex-row lg:items-start lg:justify-between">
@@ -556,9 +575,14 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                             <h3 className="mb-1 text-xl font-bold text-gray-900">The Cat Clinic People Directory</h3>
                             <p className="text-sm text-gray-500">Add members, assign departments, and manage them. <strong className="text-indigo-600 font-bold">Drag and Drop</strong> cards and departments to permanently reorder their visual sequence.</p>
                         </div>
-                        <button onClick={() => openModal()} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow transition-colors hover:bg-indigo-500">
-                            + Add member
-                        </button>
+                        <div className="flex gap-2">
+                            <button onClick={() => setIsBranchManagerOpen(true)} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50">
+                                + Add Branch
+                            </button>
+                            <button onClick={() => openModal()} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow transition-colors hover:bg-indigo-500">
+                                + Add Member
+                            </button>
+                        </div>
                     </div>
 
                     <div className="space-y-5">
@@ -566,6 +590,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                             const membersInBranch = groupedMembers[branchName];
                             const isOpen = !!openSections[branchName];
                             const isDraggableBranch = branchName !== 'Other Staff';
+                            const currentMode = branchSettings[branchName] || 'carousel';
 
                             return (
                                 <div 
@@ -577,22 +602,23 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                                     onDrop={(e) => isDraggableBranch && handleBranchDrop(e, branchName)}
                                     onDragEnd={handleBranchDragEnd}
                                     className={`overflow-hidden rounded-2xl bg-white shadow-sm transition-all
-                                        ${isDraggableBranch ? 'cursor-move' : ''}
                                         ${dragOverBranch === branchName && branchDropPosition === 'before' ? 'border-t-4 border-t-indigo-600 scale-[1.02] shadow-lg' : ''}
                                         ${dragOverBranch === branchName && branchDropPosition === 'after' ? 'border-b-4 border-b-indigo-600 scale-[1.02] shadow-lg' : ''}
                                         ${dragOverBranch === branchName && branchDropPosition === 'swap' ? 'border-4 border-indigo-500 scale-[1.02] ring-4 ring-indigo-100' : 'border border-gray-200'}
                                         ${draggedBranch === branchName ? 'opacity-40 scale-[0.98] border-dashed border-indigo-400' : ''}
                                     `}
                                 >
-                                    <button 
-                                        type="button" 
-                                        onClick={() => toggleSection(branchName)} 
-                                        className={`flex w-full items-center justify-between px-6 py-4 text-left transition hover:bg-gray-50 ${isDraggableBranch ? 'cursor-move' : 'cursor-pointer'}`}
+                                    {/* ACCORDION HEADER (Minimal Redesign) */}
+                                    <div 
+                                        className={`flex w-full items-center justify-between px-6 py-4 transition hover:bg-gray-50 ${isDraggableBranch ? 'cursor-move' : ''}`}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            {/* Branch Drag Handle Icon */}
+                                        {/* Left Side: Drag Handle & Title */}
+                                        <div 
+                                            className="flex flex-1 items-center gap-3 cursor-pointer"
+                                            onClick={() => toggleSection(branchName)}
+                                        >
                                             {isDraggableBranch && (
-                                                <div className="text-gray-300 transition-colors group-hover:text-gray-500">
+                                                <div className="text-gray-300 transition-colors hover:text-gray-500">
                                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
                                                     </svg>
@@ -600,13 +626,76 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                                             )}
                                             <div>
                                                 <h4 className="text-lg font-bold text-gray-800">{branchName}</h4>
-                                                <p className="mt-1 text-sm text-gray-500">{membersInBranch.length} {membersInBranch.length === 1 ? 'member' : 'members'}</p>
+                                                <p className="mt-0.5 text-sm text-gray-500">{membersInBranch.length} {membersInBranch.length === 1 ? 'member' : 'members'}</p>
                                             </div>
                                         </div>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
-                                            <path fillRule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-6-6a.75.75 0 111.06-1.06L12 14.69l5.47-5.47a.75.75 0 111.06 1.06l-6 6z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
+
+                                        {/* Right Side: Toggles, Edit, Delete */}
+                                        <div className="flex items-center gap-3">
+                                            {/* View Mode Toggle */}
+                                            {isDraggableBranch && (
+                                                <div className="flex items-center gap-0.5 rounded-md border border-gray-200 bg-gray-50 p-0.5 shadow-inner" onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateBranchViewMode(branchName, 'carousel')}
+                                                        title="Grouped Carousel View"
+                                                        className={`rounded px-2 py-1.5 transition-all ${currentMode === 'carousel' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 011.875 1.875v1.5a1.875 1.875 0 01-1.875 1.875H5.625a1.875 1.875 0 01-1.875-1.875v-1.5c0-1.036.84-1.875 1.875-1.875z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateBranchViewMode(branchName, 'grid')}
+                                                        title="Standard Grid View"
+                                                        className={`rounded px-2 py-1.5 transition-all ${currentMode === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* Edit & Delete Actions */}
+                                            {isDraggableBranch && (
+                                                <div className="flex items-center gap-1 border-l border-gray-200 pl-3" onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateBranch(branchName)}
+                                                        className="p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
+                                                        title="Edit Department Name"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => deleteBranch(branchName)}
+                                                        className="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors"
+                                                        title="Delete Department"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* Chevron Toggle */}
+                                            <button 
+                                                type="button"
+                                                onClick={() => toggleSection(branchName)}
+                                                className="p-1.5 text-gray-400 hover:text-gray-800 transition ml-1"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+                                                    <path fillRule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-6-6a.75.75 0 111.06-1.06L12 14.69l5.47-5.47a.75.75 0 111.06 1.06l-6 6z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
 
                                     {isOpen && (
                                         <div className="border-t border-gray-200 px-6 py-6 bg-gray-50/50 cursor-default" onDragOver={(e) => e.stopPropagation()} onDrop={(e) => e.stopPropagation()}>
@@ -758,9 +847,6 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                         <div>
                             <div className="mb-1 flex items-center justify-between">
                                 <label className="block text-sm font-bold text-gray-700">Department / Branch</label>
-                                <button type="button" onClick={() => setIsBranchManagerOpen(true)} className="text-xs font-semibold text-indigo-600 transition-colors hover:text-indigo-800">
-                                    Manage
-                                </button>
                             </div>
                             <select value={data.branch} onChange={(e) => setData('branch', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
                                 {dynamicBranches.map((branch) => (
@@ -802,38 +888,25 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                 </div>
             </Modal>
 
-
             {/* ==========================================
-                BRANCH MANAGER MODAL
+                BRANCH MANAGER MODAL (Now only used for ADDING new branches)
                 ========================================== */}
             <Modal show={isBranchManagerOpen} onClose={() => { setIsBranchManagerOpen(false); setNewItemName(''); }} maxWidth="md">
                 <div className="p-6">
                     <div className="mb-4 flex items-center justify-between border-b pb-4">
-                        <h2 className="text-xl font-bold text-gray-900">Manage Branches</h2>
+                        <h2 className="text-xl font-bold text-gray-900">Add New Branch</h2>
                         <button onClick={() => setIsBranchManagerOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                     </div>
                     
-                    <div className="mb-4 flex gap-2">
+                    <div className="flex gap-2">
                         <input
                             type="text"
                             value={newItemName}
                             onChange={(e) => setNewItemName(e.target.value)}
-                            placeholder="New branch name..."
+                            placeholder="Type new branch name..."
                             className="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         />
-                        <button onClick={addBranch} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-500">Add</button>
-                    </div>
-
-                    <div className="max-h-60 overflow-y-auto space-y-2">
-                        {dynamicBranches.map((branch) => (
-                            <div key={branch} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 border border-gray-100">
-                                <span className="text-sm font-medium text-gray-800">{branch}</span>
-                                <div className="flex gap-3 text-xs">
-                                    <button type="button" onClick={() => updateBranch(branch)} className="text-blue-600 hover:underline">Edit</button>
-                                    <button type="button" onClick={() => deleteBranch(branch)} className="text-red-600 hover:underline">Delete</button>
-                                </div>
-                            </div>
-                        ))}
+                        <button onClick={() => { addBranch(); setIsBranchManagerOpen(false); }} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-500 shrink-0">Add Branch</button>
                     </div>
                 </div>
             </Modal>
