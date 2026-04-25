@@ -69,10 +69,33 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     };
 
     // ==========================================
-    // DRAG AND DROP HANDLERS
+    // SORTING & GROUPING (UPDATED)
+    // ==========================================
+    const sortMembersByBranchHierarchy = (branchName, membersInBranch) => {
+        return [...membersInBranch].sort((a, b) => {
+            // 1. Give absolute priority to manual sort_order so free dragging works
+            const orderA = a.sort_order ?? 9999;
+            const orderB = b.sort_order ?? 9999;
+            
+            if (orderA !== orderB) return orderA - orderB;
+            
+            // 2. Fallback to Position Manager hierarchy ONLY if sort_order is identical (e.g. newly added members)
+            const positionOrder = dynamicPositions[branchName] || [];
+            const orderMap = new Map(positionOrder.map((position, index) => [position, index]));
+            
+            const aIndex = orderMap.has(a.position) ? orderMap.get(a.position) : 999;
+            const bIndex = orderMap.has(b.position) ? orderMap.get(b.position) : 999;
+            
+            if (aIndex !== bIndex) return aIndex - bIndex;
+
+            return a.name.localeCompare(b.name);
+        });
+    };
+
+    // ==========================================
+    // DRAG AND DROP HANDLERS (UPDATED)
     // ==========================================
     const handleDragStart = (e, id) => {
-        // If dropdown is open, don't drag
         if (activeDropdown) {
             e.preventDefault();
             return;
@@ -93,7 +116,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
         setDragOverId(null);
     };
 
-    const handleDrop = (e, targetId) => {
+    const handleDrop = (e, targetId, branchName) => {
         e.preventDefault();
         setDragOverId(null);
 
@@ -102,19 +125,32 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
             return;
         }
 
-        const draggedIndex = localMembers.findIndex(m => m.id === draggedId);
-        const targetIndex = localMembers.findIndex(m => m.id === targetId);
+        // 1. Isolate the exact visual array of this specific branch
+        const branchMembers = sortMembersByBranchHierarchy(branchName, localMembers.filter(m => m.branch === branchName));
+        
+        const draggedIndex = branchMembers.findIndex(m => m.id === draggedId);
+        const targetIndex = branchMembers.findIndex(m => m.id === targetId);
 
-        if (draggedIndex === -1 || targetIndex === -1) return;
+        if (draggedIndex === -1 || targetIndex === -1) {
+            setDraggedId(null);
+            return; // Prevents crashing if dragging between different branches
+        }
 
-        const newMembers = [...localMembers];
-        const [draggedMember] = newMembers.splice(draggedIndex, 1);
-        newMembers.splice(targetIndex, 0, draggedMember);
+        // 2. Reorder ONLY within the isolated branch
+        const [draggedMember] = branchMembers.splice(draggedIndex, 1);
+        branchMembers.splice(targetIndex, 0, draggedMember);
 
-        const updatedMembers = newMembers.map((m, i) => ({ ...m, sort_order: i }));
+        // 3. Keep other branches untouched
+        const otherMembers = localMembers.filter(m => m.branch !== branchName);
+
+        // 4. Merge back together and assign a clean 0 to N sequence
+        const newMasterList = [...branchMembers, ...otherMembers];
+        const updatedMembers = newMasterList.map((m, i) => ({ ...m, sort_order: i }));
+
         setLocalMembers(updatedMembers);
         setDraggedId(null);
 
+        // 5. Save to database
         const orderedIds = updatedMembers.map(m => m.id);
         router.post(route('admin.org-chart.reorder'), { orderedIds }, { preserveScroll: true });
     };
@@ -287,23 +323,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     };
 
 
-    // ==========================================
-    // SORTING & GROUPING
-    // ==========================================
-    const sortMembersByBranchHierarchy = (branchName, membersInBranch) => {
-        const positionOrder = dynamicPositions[branchName] || [];
-        const orderMap = new Map(positionOrder.map((position, index) => [position, index]));
-
-        return [...membersInBranch].sort((a, b) => {
-            const aIndex = orderMap.has(a.position) ? orderMap.get(a.position) : Number.MAX_SAFE_INTEGER;
-            const bIndex = orderMap.has(b.position) ? orderMap.get(b.position) : Number.MAX_SAFE_INTEGER;
-
-            if (aIndex !== bIndex) return aIndex - bIndex;
-            
-            return (a.sort_order || 0) - (b.sort_order || 0);
-        });
-    };
-
+    // Execute Final Grouping
     const groupedMembers = dynamicBranches.reduce((acc, branch) => {
         const peopleInThisBranch = localMembers.filter((m) => m.branch === branch);
         acc[branch] = sortMembersByBranchHierarchy(branch, peopleInThisBranch);
@@ -453,13 +473,13 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                                                             onDragStart={(e) => handleDragStart(e, member.id)}
                                                             onDragOver={(e) => handleDragOver(e, member.id)}
                                                             onDragLeave={handleDragLeave}
-                                                            onDrop={(e) => handleDrop(e, member.id)}
+                                                            onDrop={(e) => handleDrop(e, member.id, branchName)}
                                                             onDragEnd={handleDragEnd}
                                                             className={`group relative flex flex-col items-center rounded-2xl border bg-white p-6 shadow-sm transition-all cursor-move
                                                                 ${dragOverId === member.id ? 'border-indigo-500 scale-105 ring-4 ring-indigo-100 opacity-90' : 'border-gray-100 hover:border-indigo-300 hover:shadow-xl'}
                                                                 ${draggedId === member.id ? 'opacity-40 scale-95 border-dashed border-indigo-400' : ''}`}
                                                         >
-                                                            {/* Drag Handle Icon for UX hints */}
+                                                            {/* Drag Handle Icon */}
                                                             <div className="absolute left-4 top-4 text-gray-300 transition-colors group-hover:text-gray-500">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
@@ -469,7 +489,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                                                             {/* 3-Dot Actions Dropdown */}
                                                             <div className="absolute right-4 top-4 z-20">
                                                                 <button
-                                                                    onMouseDown={(e) => e.stopPropagation()} // Stop drag interaction
+                                                                    onMouseDown={(e) => e.stopPropagation()} 
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setActiveDropdown(activeDropdown === member.id ? null : member.id);
@@ -481,10 +501,8 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                                                                     </svg>
                                                                 </button>
 
-                                                                {/* Dropdown Menu Box */}
                                                                 {activeDropdown === member.id && (
                                                                     <>
-                                                                        {/* Invisible Overlay to Close Dropdown */}
                                                                         <div 
                                                                             className="fixed inset-0 z-10" 
                                                                             onMouseDown={(e) => { e.stopPropagation(); setActiveDropdown(null); }}
