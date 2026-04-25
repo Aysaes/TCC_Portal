@@ -23,10 +23,15 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     const [isPositionManagerOpen, setIsPositionManagerOpen] = useState(false);
     const [newItemName, setNewItemName] = useState('');
 
-    // Drag and Drop States
+    // Member Drag and Drop States
     const [draggedId, setDraggedId] = useState(null);
     const [dragOverId, setDragOverId] = useState(null);
     const [dropPosition, setDropPosition] = useState(null); // 'before', 'after', or 'swap'
+
+    // Branch Drag and Drop States
+    const [draggedBranch, setDraggedBranch] = useState(null);
+    const [dragOverBranch, setDragOverBranch] = useState(null);
+    const [branchDropPosition, setBranchDropPosition] = useState(null); // 'before', 'after', or 'swap'
 
     // 3-Dot Menu Dropdown State
     const [activeDropdown, setActiveDropdown] = useState(null);
@@ -92,9 +97,99 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     };
 
     // ==========================================
-    // DRAG AND DROP HANDLERS (INSERT & SWAP)
+    // BRANCH DRAG AND DROP HANDLERS
+    // ==========================================
+    const handleBranchDragStart = (e, branchName) => {
+        setDraggedBranch(branchName);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/branch', branchName);
+    };
+
+    const handleBranchDragOver = (e, branchName) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent bubbling up
+        if (!draggedBranch) return; // Ignore if we are dragging a member, not a branch
+
+        e.dataTransfer.dropEffect = 'move';
+        
+        // Calculate where the mouse is relative to the branch container's height
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top; // Mouse Y position within the branch container
+        const height = rect.height;
+        
+        let position = 'swap'; // Default to swap (center)
+        
+        if (y < height * 0.3) {
+            position = 'before';
+        } else if (y > height * 0.7) {
+            position = 'after';
+        }
+
+        if (dragOverBranch !== branchName) setDragOverBranch(branchName);
+        if (branchDropPosition !== position) setBranchDropPosition(position);
+    };
+
+    const handleBranchDragLeave = (e) => {
+        e.preventDefault();
+        setDragOverBranch(null);
+        setBranchDropPosition(null);
+    };
+
+    const handleBranchDrop = (e, targetBranchName) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const finalPosition = branchDropPosition;
+        setDragOverBranch(null);
+        setBranchDropPosition(null);
+
+        if (!draggedBranch || draggedBranch === targetBranchName) {
+            setDraggedBranch(null);
+            return;
+        }
+
+        const newBranches = [...dynamicBranches];
+        const draggedIndex = newBranches.indexOf(draggedBranch);
+        const targetIndex = newBranches.indexOf(targetBranchName);
+
+        if (draggedIndex === -1 || targetIndex === -1) {
+            setDraggedBranch(null);
+            return;
+        }
+
+        if (finalPosition === 'swap') {
+            const temp = newBranches[draggedIndex];
+            newBranches[draggedIndex] = newBranches[targetIndex];
+            newBranches[targetIndex] = temp;
+        } else {
+            newBranches.splice(draggedIndex, 1);
+            let actualTargetIndex = targetIndex;
+            if (draggedIndex < targetIndex) {
+                actualTargetIndex -= 1;
+            }
+            
+            const insertIndex = finalPosition === 'after' ? actualTargetIndex + 1 : actualTargetIndex;
+            newBranches.splice(insertIndex, 0, draggedBranch);
+        }
+
+        setDynamicBranches(newBranches);
+        setDraggedBranch(null);
+        
+        // Save new branch order to database
+        saveStructureToBackend(newBranches, dynamicPositions);
+    };
+
+    const handleBranchDragEnd = () => {
+        setDraggedBranch(null);
+        setDragOverBranch(null);
+        setBranchDropPosition(null);
+    };
+
+    // ==========================================
+    // MEMBER DRAG AND DROP HANDLERS 
     // ==========================================
     const handleDragStart = (e, id) => {
+        e.stopPropagation(); // Prevent triggering branch drag
         if (activeDropdown) {
             e.preventDefault();
             return;
@@ -106,20 +201,20 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
 
     const handleDragOver = (e, id) => {
         e.preventDefault(); 
+        e.stopPropagation(); // Prevent triggering branch drag over
+        if (!draggedId) return; // Ignore if we are dragging a branch
+
         e.dataTransfer.dropEffect = 'move';
         
-        // Calculate where the mouse is relative to the card's width
         const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left; // Mouse X position within the card
+        const x = e.clientX - rect.left; 
         const width = rect.width;
         
-        let position = 'swap'; // Default to swap (center)
+        let position = 'swap';
         
         if (x < width * 0.3) {
-            // Left 30% of the card
             position = 'before';
         } else if (x > width * 0.7) {
-            // Right 30% of the card
             position = 'after';
         }
 
@@ -135,9 +230,10 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
 
     const handleDrop = (e, targetId, branchName) => {
         e.preventDefault();
-        setDragOverId(null);
-        
+        e.stopPropagation(); // Prevent triggering branch drop
+
         const finalPosition = dropPosition;
+        setDragOverId(null);
         setDropPosition(null);
 
         if (!draggedId || draggedId === targetId) {
@@ -145,7 +241,6 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
             return;
         }
 
-        // 1. Isolate the exact visual array of this specific branch
         const branchMembers = sortMembersByBranchHierarchy(branchName, localMembers.filter(m => m.branch === branchName));
         
         const draggedIndex = branchMembers.findIndex(m => m.id === draggedId);
@@ -156,36 +251,26 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
             return;
         }
 
-        // 2. Perform either Swap or Insert logic based on the drop zone
         if (finalPosition === 'swap') {
-            // SWAP LOGIC: Exchange elements directly
             const temp = branchMembers[draggedIndex];
             branchMembers[draggedIndex] = branchMembers[targetIndex];
             branchMembers[targetIndex] = temp;
         } else {
-            // INSERT LOGIC: Remove dragged item, calculate new index, and insert
             const [draggedMember] = branchMembers.splice(draggedIndex, 1);
-            
             let actualTargetIndex = targetIndex;
-            if (draggedIndex < targetIndex) {
-                actualTargetIndex -= 1; // Adjust index because we removed an item before it
-            }
+            if (draggedIndex < targetIndex) actualTargetIndex -= 1;
             
             const insertIndex = finalPosition === 'after' ? actualTargetIndex + 1 : actualTargetIndex;
             branchMembers.splice(insertIndex, 0, draggedMember);
         }
 
-        // 3. Keep other branches untouched
         const otherMembers = localMembers.filter(m => m.branch !== branchName);
-
-        // 4. Merge back together and assign a clean 0 to N sequence
         const newMasterList = [...branchMembers, ...otherMembers];
         const updatedMembers = newMasterList.map((m, i) => ({ ...m, sort_order: i }));
 
         setLocalMembers(updatedMembers);
         setDraggedId(null);
 
-        // 5. Save to database
         const orderedIds = updatedMembers.map(m => m.id);
         router.post(route('admin.org-chart.reorder'), { orderedIds }, { preserveScroll: true });
     };
@@ -469,7 +554,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                     <div className="mb-10 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:flex-row">
                         <div>
                             <h3 className="mb-1 text-xl font-bold text-gray-900">The Cat Clinic People Directory</h3>
-                            <p className="text-sm text-gray-500">Add members, assign departments, and manage them. <strong className="text-indigo-600 font-bold">Drag and Drop</strong> cards to permanently reorder their visual sequence.</p>
+                            <p className="text-sm text-gray-500">Add members, assign departments, and manage them. <strong className="text-indigo-600 font-bold">Drag and Drop</strong> cards and departments to permanently reorder their visual sequence.</p>
                         </div>
                         <button onClick={() => openModal()} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow transition-colors hover:bg-indigo-500">
                             + Add member
@@ -480,13 +565,43 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                         {Object.keys(groupedMembers).map((branchName) => {
                             const membersInBranch = groupedMembers[branchName];
                             const isOpen = !!openSections[branchName];
+                            const isDraggableBranch = branchName !== 'Other Staff';
 
                             return (
-                                <div key={branchName} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                                    <button type="button" onClick={() => toggleSection(branchName)} className="flex w-full items-center justify-between px-6 py-4 text-left transition hover:bg-gray-50">
-                                        <div>
-                                            <h4 className="text-lg font-bold text-gray-800">{branchName}</h4>
-                                            <p className="mt-1 text-sm text-gray-500">{membersInBranch.length} {membersInBranch.length === 1 ? 'member' : 'members'}</p>
+                                <div 
+                                    key={branchName} 
+                                    draggable={isDraggableBranch}
+                                    onDragStart={(e) => isDraggableBranch && handleBranchDragStart(e, branchName)}
+                                    onDragOver={(e) => isDraggableBranch && handleBranchDragOver(e, branchName)}
+                                    onDragLeave={handleBranchDragLeave}
+                                    onDrop={(e) => isDraggableBranch && handleBranchDrop(e, branchName)}
+                                    onDragEnd={handleBranchDragEnd}
+                                    className={`overflow-hidden rounded-2xl bg-white shadow-sm transition-all
+                                        ${isDraggableBranch ? 'cursor-move' : ''}
+                                        ${dragOverBranch === branchName && branchDropPosition === 'before' ? 'border-t-4 border-t-indigo-600 scale-[1.02] shadow-lg' : ''}
+                                        ${dragOverBranch === branchName && branchDropPosition === 'after' ? 'border-b-4 border-b-indigo-600 scale-[1.02] shadow-lg' : ''}
+                                        ${dragOverBranch === branchName && branchDropPosition === 'swap' ? 'border-4 border-indigo-500 scale-[1.02] ring-4 ring-indigo-100' : 'border border-gray-200'}
+                                        ${draggedBranch === branchName ? 'opacity-40 scale-[0.98] border-dashed border-indigo-400' : ''}
+                                    `}
+                                >
+                                    <button 
+                                        type="button" 
+                                        onClick={() => toggleSection(branchName)} 
+                                        className={`flex w-full items-center justify-between px-6 py-4 text-left transition hover:bg-gray-50 ${isDraggableBranch ? 'cursor-move' : 'cursor-pointer'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            {/* Branch Drag Handle Icon */}
+                                            {isDraggableBranch && (
+                                                <div className="text-gray-300 transition-colors group-hover:text-gray-500">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                            <div>
+                                                <h4 className="text-lg font-bold text-gray-800">{branchName}</h4>
+                                                <p className="mt-1 text-sm text-gray-500">{membersInBranch.length} {membersInBranch.length === 1 ? 'member' : 'members'}</p>
+                                            </div>
                                         </div>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
                                             <path fillRule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-6-6a.75.75 0 111.06-1.06L12 14.69l5.47-5.47a.75.75 0 111.06 1.06l-6 6z" clipRule="evenodd" />
@@ -494,7 +609,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                                     </button>
 
                                     {isOpen && (
-                                        <div className="border-t border-gray-200 px-6 py-6 bg-gray-50/50">
+                                        <div className="border-t border-gray-200 px-6 py-6 bg-gray-50/50 cursor-default" onDragOver={(e) => e.stopPropagation()} onDrop={(e) => e.stopPropagation()}>
                                             {membersInBranch.length === 0 ? (
                                                 <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
                                                     <h5 className="text-base font-medium text-gray-900">No members yet</h5>
@@ -519,7 +634,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                                                                 ${draggedId === member.id ? 'opacity-40 scale-95 border-dashed border-indigo-400' : ''}
                                                             `}
                                                         >
-                                                            {/* Drag Handle Icon */}
+                                                            {/* Member Drag Handle Icon */}
                                                             <div className="absolute left-4 top-4 text-gray-300 transition-colors group-hover:text-gray-500">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
