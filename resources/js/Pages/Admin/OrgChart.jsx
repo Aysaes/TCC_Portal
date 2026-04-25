@@ -26,6 +26,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     // Drag and Drop States
     const [draggedId, setDraggedId] = useState(null);
     const [dragOverId, setDragOverId] = useState(null);
+    const [dropPosition, setDropPosition] = useState(null); // 'before', 'after', or 'swap'
 
     // 3-Dot Menu Dropdown State
     const [activeDropdown, setActiveDropdown] = useState(null);
@@ -69,17 +70,15 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     };
 
     // ==========================================
-    // SORTING & GROUPING (UPDATED)
+    // SORTING & GROUPING
     // ==========================================
     const sortMembersByBranchHierarchy = (branchName, membersInBranch) => {
         return [...membersInBranch].sort((a, b) => {
-            // 1. Give absolute priority to manual sort_order so free dragging works
             const orderA = a.sort_order ?? 9999;
             const orderB = b.sort_order ?? 9999;
             
             if (orderA !== orderB) return orderA - orderB;
             
-            // 2. Fallback to Position Manager hierarchy ONLY if sort_order is identical (e.g. newly added members)
             const positionOrder = dynamicPositions[branchName] || [];
             const orderMap = new Map(positionOrder.map((position, index) => [position, index]));
             
@@ -93,7 +92,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     };
 
     // ==========================================
-    // DRAG AND DROP HANDLERS (UPDATED)
+    // DRAG AND DROP HANDLERS (INSERT & SWAP)
     // ==========================================
     const handleDragStart = (e, id) => {
         if (activeDropdown) {
@@ -108,17 +107,38 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     const handleDragOver = (e, id) => {
         e.preventDefault(); 
         e.dataTransfer.dropEffect = 'move';
+        
+        // Calculate where the mouse is relative to the card's width
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left; // Mouse X position within the card
+        const width = rect.width;
+        
+        let position = 'swap'; // Default to swap (center)
+        
+        if (x < width * 0.3) {
+            // Left 30% of the card
+            position = 'before';
+        } else if (x > width * 0.7) {
+            // Right 30% of the card
+            position = 'after';
+        }
+
         if (dragOverId !== id) setDragOverId(id);
+        if (dropPosition !== position) setDropPosition(position);
     };
 
     const handleDragLeave = (e) => {
         e.preventDefault();
         setDragOverId(null);
+        setDropPosition(null);
     };
 
     const handleDrop = (e, targetId, branchName) => {
         e.preventDefault();
         setDragOverId(null);
+        
+        const finalPosition = dropPosition;
+        setDropPosition(null);
 
         if (!draggedId || draggedId === targetId) {
             setDraggedId(null);
@@ -133,12 +153,27 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
 
         if (draggedIndex === -1 || targetIndex === -1) {
             setDraggedId(null);
-            return; // Prevents crashing if dragging between different branches
+            return;
         }
 
-        // 2. Reorder ONLY within the isolated branch
-        const [draggedMember] = branchMembers.splice(draggedIndex, 1);
-        branchMembers.splice(targetIndex, 0, draggedMember);
+        // 2. Perform either Swap or Insert logic based on the drop zone
+        if (finalPosition === 'swap') {
+            // SWAP LOGIC: Exchange elements directly
+            const temp = branchMembers[draggedIndex];
+            branchMembers[draggedIndex] = branchMembers[targetIndex];
+            branchMembers[targetIndex] = temp;
+        } else {
+            // INSERT LOGIC: Remove dragged item, calculate new index, and insert
+            const [draggedMember] = branchMembers.splice(draggedIndex, 1);
+            
+            let actualTargetIndex = targetIndex;
+            if (draggedIndex < targetIndex) {
+                actualTargetIndex -= 1; // Adjust index because we removed an item before it
+            }
+            
+            const insertIndex = finalPosition === 'after' ? actualTargetIndex + 1 : actualTargetIndex;
+            branchMembers.splice(insertIndex, 0, draggedMember);
+        }
 
         // 3. Keep other branches untouched
         const otherMembers = localMembers.filter(m => m.branch !== branchName);
@@ -158,6 +193,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
     const handleDragEnd = () => {
         setDraggedId(null);
         setDragOverId(null);
+        setDropPosition(null);
     };
 
 
@@ -476,8 +512,12 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null, struc
                                                             onDrop={(e) => handleDrop(e, member.id, branchName)}
                                                             onDragEnd={handleDragEnd}
                                                             className={`group relative flex flex-col items-center rounded-2xl border bg-white p-6 shadow-sm transition-all cursor-move
-                                                                ${dragOverId === member.id ? 'border-indigo-500 scale-105 ring-4 ring-indigo-100 opacity-90' : 'border-gray-100 hover:border-indigo-300 hover:shadow-xl'}
-                                                                ${draggedId === member.id ? 'opacity-40 scale-95 border-dashed border-indigo-400' : ''}`}
+                                                                ${dragOverId === member.id && dropPosition === 'before' ? 'border-l-4 border-l-indigo-600 scale-105 shadow-lg opacity-90' : ''}
+                                                                ${dragOverId === member.id && dropPosition === 'after' ? 'border-r-4 border-r-indigo-600 scale-105 shadow-lg opacity-90' : ''}
+                                                                ${dragOverId === member.id && dropPosition === 'swap' ? 'border-indigo-500 scale-105 ring-4 ring-indigo-100 opacity-90' : ''}
+                                                                ${dragOverId !== member.id ? 'border-gray-100 hover:border-indigo-300 hover:shadow-xl' : ''}
+                                                                ${draggedId === member.id ? 'opacity-40 scale-95 border-dashed border-indigo-400' : ''}
+                                                            `}
                                                         >
                                                             {/* Drag Handle Icon */}
                                                             <div className="absolute left-4 top-4 text-gray-300 transition-colors group-hover:text-gray-500">
