@@ -4,69 +4,7 @@ import { Head, useForm, router } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import { useState, useEffect } from 'react';
 
-// Keep these as initial default values
-const INITIAL_CLINIC_BRANCHES = [
-    'ExeCom and ManComm',
-    'Corporate Operations Team',
-    'Makati Branch Medical Operations Team',
-    'Alabang Branch Medical Operations Team',
-    'Greenhills Branch Medical Operations Team',
-    'Makati Branch Services Operations Team',
-    'Alabang Branch Services Operations Team',
-    'Greenhills Branch Services Operations Team',
-];
-
-const INITIAL_BRANCH_SPECIFIC_POSITIONS = {
-    'ExeCom and ManComm': [
-        'Chairman', 'President', 'Director of Corporate & Services Operations',
-        'Medical Director', 'Operations & Finance Coordination Lead',
-        'Sales & Marketing Manager', 'Operations Manager', 'Store Manager',
-        'HR Business Partner', 'Internal Auditor', 'Executive Assistant',
-        'Chief Veterinarian', 'Senior Veterinarian TL', 'Junior Veterinarian TL',
-    ],
-    'Corporate Operations Team': [
-        'HR Business Partner', 'HR Consultant', 'HR Assistant', 'Procurement TL',
-        'Procurement Assistant', 'Internal Auditor', 'Audit Assistant', 'IT TL',
-        'IT Associates', 'Accounting Staff',
-    ],
-    'Makati Branch Medical Operations Team': [
-        'Veterinarian Assistant TL', 'Veterinarians', 'Vet Tech TL', 'Vet Tech',
-        'Clinic Assistant TL', 'Clinic Assistants',
-    ],
-    'Alabang Branch Medical Operations Team': [
-        'Veterinarian Assistant TL', 'Veterinarians', 'Vet Tech TL', 'Vet Tech',
-        'Clinic Assistant TL', 'Clinic Assistants',
-    ],
-    'Greenhills Branch Medical Operations Team': [
-        'Veterinarian Assistant TL', 'Veterinarians', 'Vet Tech TL', 'Vet Tech',
-        'Clinic Assistant TL', 'Clinic Assistants',
-    ],
-    'Makati Branch Services Operations Team': [
-        'Reception TL', 'Receptionist', 'Cashier TL', 'Cashier Assistant',
-        'Inventory TL', 'Inventory Assistant', 'Security Guard', 'Company Drivers',
-    ],
-    'Alabang Branch Services Operations Team': [
-        'Reception TL', 'Receptionist', 'Cashier TL', 'Cashier Assistant',
-        'Inventory TL', 'Inventory Assistant', 'Security Guard', 'Company Drivers',
-    ],
-    'Greenhills Branch Services Operations Team': [
-        'Reception TL', 'Receptionist', 'Cashier TL', 'Cashier Assistant',
-        'Inventory TL', 'Inventory Assistant', 'Security Guard', 'Company Drivers',
-    ],
-};
-
-const SECTION_TITLES = {
-    'ExeCom and ManComm': 'Executive and Management Committee',
-    'Corporate Operations Team': 'Corporate Operations Team',
-    'Makati Branch Medical Operations Team': 'Makati Branch Medical Operations Team',
-    'Alabang Branch Medical Operations Team': 'Alabang Branch Medical Operations Team',
-    'Greenhills Branch Medical Operations Team': 'Greenhills Branch Medical Operations Team',
-    'Makati Branch Services Operations Team': 'Makati Branch Services Operations Team',
-    'Alabang Branch Services Operations Team': 'Alabang Branch Services Operations Team',
-    'Greenhills Branch Services Operations Team': 'Greenhills Branch Services Operations Team',
-};
-
-export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
+export default function OrgChartAdmin({ auth, members, orgChartSvg = null, structure }) {
     const adminLinks = getAdminLinks();
     
     // Core Member & UI State
@@ -76,14 +14,21 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
     const [openSections, setOpenSections] = useState({});
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    // Dynamic Branch & Position States
-    const [dynamicBranches, setDynamicBranches] = useState(INITIAL_CLINIC_BRANCHES);
-    const [dynamicPositions, setDynamicPositions] = useState(INITIAL_BRANCH_SPECIFIC_POSITIONS);
+    // Dynamic Branch & Position States from JSON
+    const [dynamicBranches, setDynamicBranches] = useState(structure?.branches || []);
+    const [dynamicPositions, setDynamicPositions] = useState(structure?.positions || {});
     
     // Manager Modals State
     const [isBranchManagerOpen, setIsBranchManagerOpen] = useState(false);
     const [isPositionManagerOpen, setIsPositionManagerOpen] = useState(false);
     const [newItemName, setNewItemName] = useState('');
+
+    // Drag and Drop States
+    const [draggedId, setDraggedId] = useState(null);
+    const [dragOverId, setDragOverId] = useState(null);
+
+    // 3-Dot Menu Dropdown State
+    const [activeDropdown, setActiveDropdown] = useState(null);
 
     useEffect(() => {
         setLocalMembers(members || []);
@@ -98,7 +43,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
     const {
         data, setData, post, put, processing, errors, reset, clearErrors,
     } = useForm({
-        name: '', position: '', branch: 'ExeCom and ManComm', image: null,
+        name: '', position: '', branch: dynamicBranches[0] || '', image: null,
     });
 
     const {
@@ -115,6 +60,70 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
         }
     }, [data.branch]);
 
+    // Database Sync Helper
+    const saveStructureToBackend = (newBranches, newPositions) => {
+        router.post(route('admin.org-chart.structure.save'), {
+            branches: newBranches,
+            positions: newPositions
+        }, { preserveScroll: true });
+    };
+
+    // ==========================================
+    // DRAG AND DROP HANDLERS
+    // ==========================================
+    const handleDragStart = (e, id) => {
+        // If dropdown is open, don't drag
+        if (activeDropdown) {
+            e.preventDefault();
+            return;
+        }
+        setDraggedId(id);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', id); 
+    };
+
+    const handleDragOver = (e, id) => {
+        e.preventDefault(); 
+        e.dataTransfer.dropEffect = 'move';
+        if (dragOverId !== id) setDragOverId(id);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setDragOverId(null);
+    };
+
+    const handleDrop = (e, targetId) => {
+        e.preventDefault();
+        setDragOverId(null);
+
+        if (!draggedId || draggedId === targetId) {
+            setDraggedId(null);
+            return;
+        }
+
+        const draggedIndex = localMembers.findIndex(m => m.id === draggedId);
+        const targetIndex = localMembers.findIndex(m => m.id === targetId);
+
+        if (draggedIndex === -1 || targetIndex === -1) return;
+
+        const newMembers = [...localMembers];
+        const [draggedMember] = newMembers.splice(draggedIndex, 1);
+        newMembers.splice(targetIndex, 0, draggedMember);
+
+        const updatedMembers = newMembers.map((m, i) => ({ ...m, sort_order: i }));
+        setLocalMembers(updatedMembers);
+        setDraggedId(null);
+
+        const orderedIds = updatedMembers.map(m => m.id);
+        router.post(route('admin.org-chart.reorder'), { orderedIds }, { preserveScroll: true });
+    };
+
+    const handleDragEnd = () => {
+        setDraggedId(null);
+        setDragOverId(null);
+    };
+
 
     // ==========================================
     // BRANCH CRUD FUNCTIONS
@@ -122,9 +131,14 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
     const addBranch = () => {
         const name = newItemName.trim();
         if (!name || dynamicBranches.includes(name)) return;
-        setDynamicBranches([...dynamicBranches, name]);
-        setDynamicPositions((prev) => ({ ...prev, [name]: [] }));
+        
+        const newBranches = [...dynamicBranches, name];
+        const newPositions = { ...dynamicPositions, [name]: [] };
+
+        setDynamicBranches(newBranches);
+        setDynamicPositions(newPositions);
         setNewItemName('');
+        saveStructureToBackend(newBranches, newPositions);
     };
 
     const updateBranch = (oldName) => {
@@ -132,35 +146,34 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
         if (!newName || newName.trim() === '' || newName === oldName) return;
         
         const trimmedNewName = newName.trim();
+        const newBranches = dynamicBranches.map(b => b === oldName ? trimmedNewName : b);
+        
+        const newPositions = { ...dynamicPositions };
+        newPositions[trimmedNewName] = newPositions[oldName];
+        delete newPositions[oldName];
 
-        setDynamicBranches(dynamicBranches.map(b => b === oldName ? trimmedNewName : b));
-        setDynamicPositions(prev => {
-            const updated = { ...prev };
-            updated[trimmedNewName] = updated[oldName];
-            delete updated[oldName];
-            return updated;
-        });
-
-        // FIX: Update local members to use the new branch name so they don't get lost
+        setDynamicBranches(newBranches);
+        setDynamicPositions(newPositions);
         setLocalMembers(prev => prev.map(member => 
             member.branch === oldName ? { ...member, branch: trimmedNewName } : member
         ));
+
+        saveStructureToBackend(newBranches, newPositions);
     };
 
     const deleteBranch = (branch) => {
         if (!confirm(`Are you sure you want to delete ${branch}? Members in this branch will also be hidden.`)) return;
         
-        setDynamicBranches(dynamicBranches.filter(b => b !== branch));
-        setDynamicPositions(prev => {
-            const updated = { ...prev };
-            delete updated[branch];
-            return updated;
-        });
+        const newBranches = dynamicBranches.filter(b => b !== branch);
+        const newPositions = { ...dynamicPositions };
+        delete newPositions[branch];
 
-        // FIX: Filter out members of the deleted branch so they disappear from the main UI
+        setDynamicBranches(newBranches);
+        setDynamicPositions(newPositions);
         setLocalMembers(prev => prev.filter(member => member.branch !== branch));
-    };
 
+        saveStructureToBackend(newBranches, newPositions);
+    };
 
     // ==========================================
     // POSITION CRUD FUNCTIONS
@@ -168,30 +181,41 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
     const addPosition = (branch) => {
         const name = newItemName.trim();
         if (!name || !branch) return;
-        setDynamicPositions(prev => {
-            const branchPos = prev[branch] || [];
-            if (branchPos.includes(name)) return prev;
-            return { ...prev, [branch]: [...branchPos, name] };
-        });
-        setNewItemName('');
+        
+        const newPositions = { ...dynamicPositions };
+        const branchPos = newPositions[branch] || [];
+        
+        if (!branchPos.includes(name)) {
+            newPositions[branch] = [...branchPos, name];
+            setDynamicPositions(newPositions);
+            setNewItemName('');
+            saveStructureToBackend(dynamicBranches, newPositions);
+        }
     };
 
     const updatePosition = (branch, oldPos) => {
         const newPos = prompt("Enter new position title:", oldPos);
         if (!newPos || newPos.trim() === '' || newPos === oldPos) return;
         
-        setDynamicPositions(prev => ({
-            ...prev,
-            [branch]: prev[branch].map(p => p === oldPos ? newPos.trim() : p)
-        }));
+        const newPositions = {
+            ...dynamicPositions,
+            [branch]: dynamicPositions[branch].map(p => p === oldPos ? newPos.trim() : p)
+        };
+        
+        setDynamicPositions(newPositions);
+        saveStructureToBackend(dynamicBranches, newPositions);
     };
 
     const deletePosition = (branch, position) => {
         if (!confirm(`Are you sure you want to delete ${position}?`)) return;
-        setDynamicPositions(prev => ({
-            ...prev,
-            [branch]: prev[branch].filter(p => p !== position)
-        }));
+        
+        const newPositions = {
+            ...dynamicPositions,
+            [branch]: dynamicPositions[branch].filter(p => p !== position)
+        };
+
+        setDynamicPositions(newPositions);
+        saveStructureToBackend(dynamicBranches, newPositions);
     };
 
 
@@ -209,7 +233,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
             setData({
                 name: member.name || '',
                 position: member.position || '',
-                branch: member.branch || 'ExeCom and ManComm',
+                branch: member.branch || dynamicBranches[0] || '',
                 image: null,
             });
         } else {
@@ -217,7 +241,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
             setData({
                 name: '',
                 position: '',
-                branch: dynamicBranches[0] || '', // Use first available branch
+                branch: dynamicBranches[0] || '', 
                 image: null,
             });
         }
@@ -275,7 +299,8 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
             const bIndex = orderMap.has(b.position) ? orderMap.get(b.position) : Number.MAX_SAFE_INTEGER;
 
             if (aIndex !== bIndex) return aIndex - bIndex;
-            return a.name.localeCompare(b.name);
+            
+            return (a.sort_order || 0) - (b.sort_order || 0);
         });
     };
 
@@ -388,7 +413,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                     <div className="mb-10 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:flex-row">
                         <div>
                             <h3 className="mb-1 text-xl font-bold text-gray-900">The Cat Clinic People Directory</h3>
-                            <p className="text-sm text-gray-500">Add members, assign departments, and manage them according to the fixed position hierarchy.</p>
+                            <p className="text-sm text-gray-500">Add members, assign departments, and manage them. <strong className="text-indigo-600 font-bold">Drag and Drop</strong> cards to permanently reorder their visual sequence.</p>
                         </div>
                         <button onClick={() => openModal()} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow transition-colors hover:bg-indigo-500">
                             + Add member
@@ -404,7 +429,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                                 <div key={branchName} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                                     <button type="button" onClick={() => toggleSection(branchName)} className="flex w-full items-center justify-between px-6 py-4 text-left transition hover:bg-gray-50">
                                         <div>
-                                            <h4 className="text-lg font-bold text-gray-800">{SECTION_TITLES[branchName] || branchName}</h4>
+                                            <h4 className="text-lg font-bold text-gray-800">{branchName}</h4>
                                             <p className="mt-1 text-sm text-gray-500">{membersInBranch.length} {membersInBranch.length === 1 ? 'member' : 'members'}</p>
                                         </div>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
@@ -413,7 +438,7 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                                     </button>
 
                                     {isOpen && (
-                                        <div className="border-t border-gray-200 px-6 py-6">
+                                        <div className="border-t border-gray-200 px-6 py-6 bg-gray-50/50">
                                             {membersInBranch.length === 0 ? (
                                                 <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
                                                     <h5 className="text-base font-medium text-gray-900">No members yet</h5>
@@ -422,24 +447,97 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                                             ) : (
                                                 <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                                                     {membersInBranch.map((member) => (
-                                                        <div key={member.id} className="group relative flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:border-indigo-300 hover:shadow-xl">
-                                                            <button onClick={() => openModal(member)} className="absolute right-4 top-4 z-20 rounded-full bg-white/70 p-1.5 text-black transition-colors" title="Edit Member">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                                                                    <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.199z" />
+                                                        <div 
+                                                            key={member.id} 
+                                                            draggable
+                                                            onDragStart={(e) => handleDragStart(e, member.id)}
+                                                            onDragOver={(e) => handleDragOver(e, member.id)}
+                                                            onDragLeave={handleDragLeave}
+                                                            onDrop={(e) => handleDrop(e, member.id)}
+                                                            onDragEnd={handleDragEnd}
+                                                            className={`group relative flex flex-col items-center rounded-2xl border bg-white p-6 shadow-sm transition-all cursor-move
+                                                                ${dragOverId === member.id ? 'border-indigo-500 scale-105 ring-4 ring-indigo-100 opacity-90' : 'border-gray-100 hover:border-indigo-300 hover:shadow-xl'}
+                                                                ${draggedId === member.id ? 'opacity-40 scale-95 border-dashed border-indigo-400' : ''}`}
+                                                        >
+                                                            {/* Drag Handle Icon for UX hints */}
+                                                            <div className="absolute left-4 top-4 text-gray-300 transition-colors group-hover:text-gray-500">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
                                                                 </svg>
-                                                            </button>
+                                                            </div>
+
+                                                            {/* 3-Dot Actions Dropdown */}
+                                                            <div className="absolute right-4 top-4 z-20">
+                                                                <button
+                                                                    onMouseDown={(e) => e.stopPropagation()} // Stop drag interaction
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setActiveDropdown(activeDropdown === member.id ? null : member.id);
+                                                                    }}
+                                                                    className="rounded-full p-1.5 text-gray-500 transition-colors hover:bg-gray-100 focus:outline-none"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+                                                                    </svg>
+                                                                </button>
+
+                                                                {/* Dropdown Menu Box */}
+                                                                {activeDropdown === member.id && (
+                                                                    <>
+                                                                        {/* Invisible Overlay to Close Dropdown */}
+                                                                        <div 
+                                                                            className="fixed inset-0 z-10" 
+                                                                            onMouseDown={(e) => { e.stopPropagation(); setActiveDropdown(null); }}
+                                                                            onClick={(e) => { e.stopPropagation(); setActiveDropdown(null); }}
+                                                                        ></div>
+                                                                        
+                                                                        <div className="absolute right-0 top-full mt-1 w-40 z-20 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                                                                            <div className="py-1">
+                                                                                <button
+                                                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setActiveDropdown(null);
+                                                                                        openModal(member);
+                                                                                    }}
+                                                                                    className="flex w-full items-center px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                                                >
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-2.5 text-gray-500">
+                                                                                        <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+                                                                                    </svg>
+                                                                                    Edit Info
+                                                                                </button>
+                                                                                <button
+                                                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setActiveDropdown(null);
+                                                                                        deleteMemberAction(member.id);
+                                                                                    }}
+                                                                                    className="flex w-full items-center px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                                                                                >
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-2.5">
+                                                                                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                                                                                    </svg>
+                                                                                    Remove Member
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
 
                                                             <div className="relative z-10 mb-4 h-28 w-28 shrink-0 overflow-hidden rounded-full border-4 border-white bg-gray-100 shadow-md transition-colors group-hover:border-indigo-100">
                                                                 {member.image_path ? (
-                                                                    <img src={`/storage/${member.image_path}`} alt={member.name} className="h-full w-full object-cover" />
+                                                                    <img src={`/storage/${member.image_path}`} alt={member.name} className="h-full w-full object-cover pointer-events-none" />
                                                                 ) : (
-                                                                    <svg className="h-full w-full bg-gray-50 p-6 text-black" fill="currentColor" viewBox="0 0 24 24">
+                                                                    <svg className="h-full w-full bg-gray-50 p-6 text-black pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
                                                                         <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
                                                                     </svg>
                                                                 )}
                                                             </div>
 
-                                                            <div className="relative z-10 w-full text-center">
+                                                            <div className="relative z-10 w-full text-center pointer-events-none">
                                                                 <h4 className="px-2 text-lg font-bold text-gray-900 transition-colors group-hover:text-indigo-900">{member.name}</h4>
                                                                 <div className="mt-2 inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-indigo-700 transition-colors group-hover:bg-indigo-100">
                                                                     {member.position}
@@ -521,21 +619,11 @@ export default function OrgChartAdmin({ auth, members, orgChartSvg = null }) {
                             {errors.image && <p className="mt-1 text-xs text-red-500">{errors.image}</p>}
                         </div>
 
-                        <div className={`mt-8 flex gap-3 border-t pt-4 ${editingMember ? 'justify-between' : 'justify-end'}`}>
-                            {editingMember && (
-                                <button type="button" onClick={() => deleteMemberAction(editingMember.id)} disabled={processing} className="flex items-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-xs font-bold text-black shadow-inner transition-colors hover:bg-red-100 disabled:opacity-50">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                                        <path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478 48.567 48.567 0 01-3.622-.472v13.064c0 1.725-1.4 3.125-3.125 3.125H10.875c-1.725 0-3.125-1.4-3.125-3.125V6.16c-1.248.06-2.492.16-3.722.299a.75.75 0 01-.256-1.478 48.84 48.84 0 013.878-.512V4.478c0-1.326 1.057-2.382 2.382-2.382h2.236c1.326 0 2.382 1.056 2.382 2.382zm-9.431 3.524a.75.75 0 018.802 0 .75.75 0 01-.65 1.35 1.125 1.125 0 00-.918 0 .75.75 0 01-.65-1.35zM9 10.875a.75.75 0 01.75-.75h4.5a.75.75 0 01.75.75v6.75a.75.75 0 01-.75.75h-4.5a.75.75 0 01-.75-.75v-6.75z" clipRule="evenodd" />
-                                    </svg>
-                                    DELETE MEMBER
-                                </button>
-                            )}
-                            <div className="flex gap-3">
-                                <button type="button" onClick={closeModal} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Cancel</button>
-                                <button type="submit" disabled={processing} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow transition-colors hover:bg-indigo-500 disabled:opacity-50">
-                                    {editingMember ? 'Save Changes' : 'Save Member'}
-                                </button>
-                            </div>
+                        <div className={`mt-8 flex gap-3 border-t pt-4 justify-end`}>
+                            <button type="button" onClick={closeModal} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Cancel</button>
+                            <button type="submit" disabled={processing} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow transition-colors hover:bg-indigo-500 disabled:opacity-50">
+                                {editingMember ? 'Save Changes' : 'Save Member'}
+                            </button>
                         </div>
                     </form>
                 </div>

@@ -5,222 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 
 /*
 |--------------------------------------------------------------------------
-| EMPLOYEE STRUCTURE
-|--------------------------------------------------------------------------
-*/
-
-const EMPLOYEE_SECTIONS = [
-    {
-        name: 'Makati Branch Medical Operations Team',
-        departments: [
-            {
-                title: 'Veterinarian Department',
-                leadRoles: ['Veterinarian Assistant TL'],
-                subRoles: ['Veterinarians'],
-            },
-            {
-                title: 'Veterinary Technician Department',
-                leadRoles: ['Vet Tech TL'],
-                subRoles: ['Vet Tech'],
-            },
-            {
-                title: 'Clinic Assistance Department',
-                leadRoles: ['Clinic Assistant TL'],
-                subRoles: ['Clinic Assistants'],
-            },
-        ],
-    },
-    {
-        name: 'Alabang Branch Medical Operations Team',
-        departments: [
-            {
-                title: 'Veterinarian Department',
-                leadRoles: ['Veterinarian Assistant TL'],
-                subRoles: ['Veterinarians'],
-            },
-            {
-                title: 'Veterinary Technician Department',
-                leadRoles: ['Vet Tech TL'],
-                subRoles: ['Vet Tech'],
-            },
-            {
-                title: 'Clinic Assistance Department',
-                leadRoles: ['Clinic Assistant TL'],
-                subRoles: ['Clinic Assistants'],
-            },
-        ],
-    },
-    {
-        name: 'Greenhills Branch Medical Operations Team',
-        departments: [
-            {
-                title: 'Veterinarian Department',
-                leadRoles: ['Veterinarian Assistant TL'],
-                subRoles: ['Veterinarians'],
-            },
-            {
-                title: 'Veterinary Technician Department',
-                leadRoles: ['Vet Tech TL'],
-                subRoles: ['Vet Tech'],
-            },
-            {
-                title: 'Clinic Assistance Department',
-                leadRoles: ['Clinic Assistant TL'],
-                subRoles: ['Clinic Assistants'],
-            },
-        ],
-    },
-    {
-        name: 'Makati Branch Services Operations Team',
-        departments: [
-            {
-                title: 'Reception Department',
-                leadRoles: ['Reception TL'],
-                subRoles: ['Receptionist'],
-            },
-            {
-                title: 'Cashier Department',
-                leadRoles: ['Cashier TL'],
-                subRoles: ['Cashier Assistant'],
-            },
-            {
-                title: 'Inventory Department',
-                leadRoles: ['Inventory TL'],
-                subRoles: ['Inventory Assistant'],
-            },
-            {
-                title: 'Security Department',
-                leadRoles: [],
-                subRoles: ['Security Guard'],
-            },
-            {
-                title: 'Transport Department',
-                leadRoles: [],
-                subRoles: ['Company Drivers'],
-            },
-        ],
-    },
-    {
-        name: 'Alabang Branch Services Operations Team',
-        departments: [
-            {
-                title: 'Reception Department',
-                leadRoles: ['Reception TL'],
-                subRoles: ['Receptionist'],
-            },
-            {
-                title: 'Cashier Department',
-                leadRoles: ['Cashier TL'],
-                subRoles: ['Cashier Assistant'],
-            },
-            {
-                title: 'Inventory Department',
-                leadRoles: ['Inventory TL'],
-                subRoles: ['Inventory Assistant'],
-            },
-            {
-                title: 'Security Department',
-                leadRoles: [],
-                subRoles: ['Security Guard'],
-            },
-            {
-                title: 'Transport Department',
-                leadRoles: [],
-                subRoles: ['Company Drivers'],
-            },
-        ],
-    },
-    {
-        name: 'Greenhills Branch Services Operations Team',
-        departments: [
-            {
-                title: 'Reception Department',
-                leadRoles: ['Reception TL'],
-                subRoles: ['Receptionist'],
-            },
-            {
-                title: 'Cashier Department',
-                leadRoles: ['Cashier TL'],
-                subRoles: ['Cashier Assistant'],
-            },
-            {
-                title: 'Inventory Department',
-                leadRoles: ['Inventory TL'],
-                subRoles: ['Inventory Assistant'],
-            },
-            {
-                title: 'Security Department',
-                leadRoles: [],
-                subRoles: ['Security Guard'],
-            },
-            {
-                title: 'Transport Department',
-                leadRoles: [],
-                subRoles: ['Company Drivers'],
-            },
-        ],
-    },
-    {
-        name: 'Corporate Operations Team',
-        departments: [
-            {
-                title: 'Human Resources Department',
-                leadRoles: ['HR Business Partner', 'HR Consultant'],
-                subRoles: ['HR Assistant'],
-            },
-            {
-                title: 'Procurement Department',
-                leadRoles: ['Procurement TL'],
-                subRoles: ['Procurement Assistant'],
-            },
-            {
-                title: 'Audit Department',
-                leadRoles: ['Internal Auditor'],
-                subRoles: ['Audit Assistant'],
-            },
-            {
-                title: 'IT Department',
-                leadRoles: ['IT TL'],
-                subRoles: ['IT Associates'],
-            },
-            {
-                title: 'Accounting Department',
-                leadRoles: [],
-                subRoles: ['Accounting Staff'],
-            },
-        ],
-    },
-];
-
-/*
-|--------------------------------------------------------------------------
-| EXECUTIVE / MANAGEMENT ORDER
-|--------------------------------------------------------------------------
-*/
-
-const EXECOM_POSITIONS = [
-    'Chairman',
-    'President',
-    'Director of Corporate & Services Operations',
-    'Medical Director',
-];
-
-const MANCOMM_POSITIONS = [
-    'Operations & Finance Coordination Lead',
-    'Sales & Marketing Manager',
-    'Operations Manager',
-    'Store Manager',
-    'HR Business Partner',
-    'Internal Auditor',
-    'Executive Assistant',
-    'Chief Veterinarian',
-    'Senior Veterinarian TL',
-    'Junior Veterinarian TL',
-];
-
-
-/*
-|--------------------------------------------------------------------------
 | UI HELPERS
 |--------------------------------------------------------------------------
 */
@@ -334,7 +118,7 @@ function SideCarousel({ title, children }) {
 
 /*
 |--------------------------------------------------------------------------
-| ORG CHART VIEWER (FULLY UPDATED FOR MOBILE AND DESKTOP)
+| ORG CHART VIEWER
 |--------------------------------------------------------------------------
 */
 function OrgChartMapViewer({ svgPath }) {
@@ -347,36 +131,27 @@ function OrgChartMapViewer({ svgPath }) {
     const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
     const [isImageReady, setIsImageReady] = useState(false);
     
-    // Notifications for user interaction instructions
     const [showCtrlMessage, setShowCtrlMessage] = useState(false);
     const [showTouchMessage, setShowTouchMessage] = useState(false);
     const ctrlMessageTimeout = useRef(null);
     const touchMessageTimeout = useRef(null);
 
     const fitViewRef = useRef({ scale: 1, x: 0, y: 0 });
-
-    // References for mouse/touch tracking without causing re-renders
     const dragRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
     const touchRef = useRef({ lastX: 0, lastY: 0, lastDistance: 0 });
 
     const MIN_SCALE = 0.2;
     const MAX_SCALE = 4;
-
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     const applyFitToScreen = () => {
         const container = containerRef.current;
         if (!container || !imageSize.width || !imageSize.height) return;
 
-        const horizontalPadding = 8;
-        const verticalPadding = 8;
-
-        const availableWidth = Math.max(container.clientWidth - horizontalPadding * 2, 1);
-        const availableHeight = Math.max(container.clientHeight - verticalPadding * 2, 1);
-
+        const availableWidth = Math.max(container.clientWidth - 16, 1);
+        const availableHeight = Math.max(container.clientHeight - 16, 1);
         const widthScale = availableWidth / imageSize.width;
         const heightScale = availableHeight / imageSize.height;
-
         const fitScale = Math.min(widthScale, heightScale) * 0.98;
 
         const x = Math.max((container.clientWidth - imageSize.width * fitScale) / 2, 0);
@@ -393,11 +168,9 @@ function OrgChartMapViewer({ svgPath }) {
         setPosition({ x, y });
     };
 
-    // Safely calculates zoom based on previous state to prevent stale closures
     const zoomAtPoint = (clientX, clientY, deltaScale) => {
         const container = containerRef.current;
         if (!container || !isImageReady) return;
-
         const rect = container.getBoundingClientRect();
         
         setScale(prevScale => {
@@ -407,31 +180,23 @@ function OrgChartMapViewer({ svgPath }) {
             setPosition(prevPos => {
                 const offsetX = clientX - rect.left;
                 const offsetY = clientY - rect.top;
-
                 const worldX = (offsetX - prevPos.x) / prevScale;
                 const worldY = (offsetY - prevPos.y) / prevScale;
-
-                const nextX = offsetX - worldX * nextScale;
-                const nextY = offsetY - worldY * nextScale;
-
-                return { x: nextX, y: nextY };
+                return { x: offsetX - worldX * nextScale, y: offsetY - worldY * nextScale };
             });
-            
             return nextScale;
         });
     };
 
-    // --- NON-PASSIVE EVENT PREVENTION ---
-    // This strictly stops the browser from scrolling the page ONLY when we want it to.
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
         const handleNativeEvents = (e) => {
             if (e.type === 'wheel') {
-                if (e.ctrlKey || e.metaKey) e.preventDefault(); // Stop page scroll to allow zoom
+                if (e.ctrlKey || e.metaKey) e.preventDefault();
             } else if (e.type === 'touchmove') {
-                if (e.touches.length >= 2) e.preventDefault(); // Stop page scroll to allow 2-finger pan/zoom
+                if (e.touches.length >= 2) e.preventDefault();
             }
         };
 
@@ -444,21 +209,18 @@ function OrgChartMapViewer({ svgPath }) {
         };
     }, []);
 
-    // --- DESKTOP WHEEL HANDLER ---
     const handleWheel = (e) => {
         if (e.ctrlKey || e.metaKey) {
             const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
             zoomAtPoint(e.clientX, e.clientY, zoomFactor);
             setShowCtrlMessage(false);
         } else {
-            // Show helper message if they scroll without Ctrl
             setShowCtrlMessage(true);
             if (ctrlMessageTimeout.current) clearTimeout(ctrlMessageTimeout.current);
             ctrlMessageTimeout.current = setTimeout(() => setShowCtrlMessage(false), 2000);
         }
     };
 
-    // --- DESKTOP MOUSE PANNING ---
     const handleMouseDown = (e) => {
         if (!isImageReady) return;
         e.preventDefault();
@@ -470,32 +232,19 @@ function OrgChartMapViewer({ svgPath }) {
 
     const handleMouseMove = (e) => {
         if (!dragRef.current.isDragging) return;
-        
         const dx = e.clientX - dragRef.current.lastX;
         const dy = e.clientY - dragRef.current.lastY;
-        
         setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
-        
         dragRef.current.lastX = e.clientX;
         dragRef.current.lastY = e.clientY;
     };
 
-    const handleMouseUp = () => {
-        setIsDragging(false);
-        dragRef.current.isDragging = false;
-    };
+    const handleMouseUp = () => { setIsDragging(false); dragRef.current.isDragging = false; };
+    const handleMouseLeave = () => { setIsDragging(false); dragRef.current.isDragging = false; };
 
-    const handleMouseLeave = () => {
-        setIsDragging(false);
-        dragRef.current.isDragging = false;
-    };
-
-    // --- MOBILE TOUCH PAN & ZOOM ---
     const handleTouchStart = (e) => {
         if (!isImageReady) return;
-        
         if (e.touches.length === 2) {
-            // Setup 2-finger pan and zoom
             touchRef.current.lastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
             touchRef.current.lastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             touchRef.current.lastDistance = Math.hypot(
@@ -504,7 +253,6 @@ function OrgChartMapViewer({ svgPath }) {
             );
             setShowTouchMessage(false);
         } else if (e.touches.length === 1) {
-            // Show helper message if they use 1 finger (1 finger just scrolls the page)
             setShowTouchMessage(true);
             if (touchMessageTimeout.current) clearTimeout(touchMessageTimeout.current);
             touchMessageTimeout.current = setTimeout(() => setShowTouchMessage(false), 2000);
@@ -513,7 +261,6 @@ function OrgChartMapViewer({ svgPath }) {
 
     const handleTouchMove = (e) => {
         if (!isImageReady) return;
-        
         if (e.touches.length === 2) {
             const currentX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
             const currentY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -522,14 +269,12 @@ function OrgChartMapViewer({ svgPath }) {
                 e.touches[0].clientY - e.touches[1].clientY
             );
 
-            // Handle Panning
             const dx = currentX - touchRef.current.lastX;
             const dy = currentY - touchRef.current.lastY;
             if (dx !== 0 || dy !== 0) {
                 setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
             }
 
-            // Handle Zooming
             if (touchRef.current.lastDistance > 0) {
                 const deltaScale = currentDistance / touchRef.current.lastDistance;
                 if (Math.abs(deltaScale - 1) > 0.01) {
@@ -544,12 +289,9 @@ function OrgChartMapViewer({ svgPath }) {
     };
 
     const handleTouchEnd = (e) => {
-        if (e.touches.length < 2) {
-            touchRef.current.lastDistance = 0;
-        }
+        if (e.touches.length < 2) touchRef.current.lastDistance = 0;
     };
 
-    // --- BUTTON CONTROLS ---
     const zoomIn = () => {
         const container = containerRef.current;
         if (!container) return;
@@ -564,7 +306,6 @@ function OrgChartMapViewer({ svgPath }) {
         zoomAtPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, 0.87);
     };
 
-    // --- GLOBAL CLEANUP ---
     useEffect(() => {
         const handleWindowMouseUp = () => {
             setIsDragging(false);
@@ -576,22 +317,17 @@ function OrgChartMapViewer({ svgPath }) {
 
     useEffect(() => {
         if (!isImageReady) return;
-
         applyFitToScreen();
-
         const container = containerRef.current;
         if (!container || typeof ResizeObserver === 'undefined') return;
-
         const observer = new ResizeObserver(() => applyFitToScreen());
         observer.observe(container);
-
         return () => observer.disconnect();
     }, [isImageReady, imageSize.width, imageSize.height]);
 
     const handleImageLoad = () => {
         const img = imageRef.current;
         if (!img) return;
-
         setImageSize({
             width: img.naturalWidth || img.width || 0,
             height: img.naturalHeight || img.height || 0,
@@ -610,32 +346,13 @@ function OrgChartMapViewer({ svgPath }) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={zoomOut}
-                        className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-                    >
-                        −
-                    </button>
-                    <button
-                        type="button"
-                        onClick={zoomIn}
-                        className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-                    >
-                        +
-                    </button>
-                    <button
-                        type="button"
-                        onClick={resetView}
-                        className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-                    >
-                        Reset
-                    </button>
+                    <button type="button" onClick={zoomOut} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">−</button>
+                    <button type="button" onClick={zoomIn} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">+</button>
+                    <button type="button" onClick={resetView} className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Reset</button>
                 </div>
             </div>
 
             <div className="relative">
-                {/* Helper messages overlay */}
                 {(showCtrlMessage || showTouchMessage) && (
                     <div className="pointer-events-none absolute left-1/2 top-4 z-50 -translate-x-1/2 transform rounded-full bg-black/70 px-4 py-2 text-sm font-medium text-white shadow-md transition-opacity duration-300">
                         {showCtrlMessage ? 'Use Ctrl + Scroll to zoom' : 'Use two fingers to pan or zoom'}
@@ -656,28 +373,14 @@ function OrgChartMapViewer({ svgPath }) {
                     onMouseLeave={handleMouseLeave}
                 >
                     {svgPath ? (
-                        <div
-                            className="absolute left-0 top-0 will-change-transform"
-                            style={{
-                                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                                transformOrigin: '0 0',
-                            }}
-                        >
-                            <img
-                                ref={imageRef}
-                                src={svgPath}
-                                alt="Organizational Chart"
-                                draggable={false}
-                                onLoad={handleImageLoad}
-                                className="block max-w-none select-none"
-                            />
+                        <div className="absolute left-0 top-0 will-change-transform" style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`, transformOrigin: '0 0' }}>
+                            <img ref={imageRef} src={svgPath} alt="Organizational Chart" draggable={false} onLoad={handleImageLoad} className="block max-w-none select-none" />
                         </div>
                     ) : (
                         <div className="flex h-full w-full items-center justify-center">
                             <p className="text-gray-500 font-medium">No organizational chart has been uploaded yet.</p>
                         </div>
                     )}
-
                     <div className="pointer-events-none absolute bottom-4 right-4 rounded-xl bg-white/90 px-3 py-2 text-xs font-medium text-gray-600 shadow-sm border border-gray-200">
                         Zoom: {Math.round(scale * 100)}%
                     </div>
@@ -693,17 +396,12 @@ function OrgChartMapViewer({ svgPath }) {
 |--------------------------------------------------------------------------
 */
 
-export default function OrgChart({ auth, members, orgChartSvg = null }) {
+export default function OrgChart({ auth, members, orgChartSvg = null, structure }) {
     const dashboardLinks = getDashboardLinks();
     const memberList = members || [];
     const [openSections, setOpenSections] = useState({});
 
-    const normalizedOrgChartSvg =
-        orgChartSvg && orgChartSvg.startsWith('/')
-            ? orgChartSvg
-            : orgChartSvg
-            ? `/${orgChartSvg}`
-            : null;
+    const normalizedOrgChartSvg = orgChartSvg && orgChartSvg.startsWith('/') ? orgChartSvg : orgChartSvg ? `/${orgChartSvg}` : null;
 
     const toggleSection = (name) => {
         setOpenSections((prev) => ({
@@ -711,67 +409,6 @@ export default function OrgChart({ auth, members, orgChartSvg = null }) {
             [name]: !prev[name],
         }));
     };
-
-    const getMembersByBranchAndPosition = (branch, position) =>
-        memberList.filter((m) => m.branch === branch && m.position === position);
-
-    const getCardNodes = (branch, position) => {
-        const matches = getMembersByBranchAndPosition(branch, position);
-        if (!matches.length) return [];
-
-        return matches.map((member) => (
-            <MemberCard key={member.id} member={member} />
-        ));
-    };
-
-    const renderDepartment = (sectionName, department) => {
-        const leadCards = department.leadRoles
-            .map((role) => getCardNodes(sectionName, role))
-            .flat();
-
-        const subCards = department.subRoles
-            .map((role) => getCardNodes(sectionName, role))
-            .flat();
-
-        return (
-            <SideCarousel title={department.title}>
-                {leadCards.map((card, index) => (
-                    <div
-                        key={`${department.title}-lead-${index}`}
-                        className="min-w-[300px] max-w-[300px] snap-start"
-                    >
-                        {card}
-                    </div>
-                ))}
-
-                {subCards.length > 0 ? (
-                    subCards.map((card, index) => (
-                        <div
-                            key={`${department.title}-sub-${index}`}
-                            className="min-w-[300px] max-w-[300px] snap-start"
-                        >
-                            {card}
-                        </div>
-                    ))
-                ) : (
-                    <div className="min-w-[300px] max-w-[300px] snap-start rounded-3xl border border-gray-200 bg-white p-5 min-h-[235px] flex flex-col justify-center">
-                        <h6 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-600">
-                            {department.subRoles.join(', ')}
-                        </h6>
-                        <p className="text-sm text-gray-400">No employees assigned.</p>
-                    </div>
-                )}
-            </SideCarousel>
-        );
-    };
-
-    const executiveCommitteeCards = EXECOM_POSITIONS.flatMap((position) =>
-        getCardNodes('ExeCom and ManComm', position)
-    );
-
-    const managementCommitteeCards = MANCOMM_POSITIONS.flatMap((position) =>
-        getCardNodes('ExeCom and ManComm', position)
-    );
 
     return (
         <SidebarLayout
@@ -785,70 +422,98 @@ export default function OrgChart({ auth, members, orgChartSvg = null }) {
                 <div className="mx-auto max-w-7xl sm:px-4 lg:px-8">
                     <OrgChartMapViewer svgPath={normalizedOrgChartSvg} />
 
-                    {/* PEOPLE SECTIONS */}
+                    {/* GRIDS: EXECUTIVE / MANAGEMENT COMMITTEES */}
                     <div className="mb-12">
-                        {/* EXECUTIVE COMMITTEE */}
-                        {executiveCommitteeCards.length > 0 && (
-                            <div className="mb-10">
-                                <div className="mb-5 border-b border-gray-200 pb-3">
-                                    <h4 className="text-xl font-semibold text-gray-800">Executive Committee</h4>
-                                </div>
+                        {structure?.branches?.map((branchName) => {
+                            // Render as Grid if name implies it's a top-level committee
+                            const isGridSection = branchName.toLowerCase().includes('committee') ||
+                                                  branchName.toLowerCase().includes('execom') ||
+                                                  branchName.toLowerCase().includes('mancomm');
 
-                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-                                    {executiveCommitteeCards.map((card, index) => (
-                                        <div key={`executive-committee-${index}`} className="w-full">
-                                            {card}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                            if (!isGridSection) return null;
 
-                        {/* MANAGEMENT COMMITTEE */}
-                        {managementCommitteeCards.length > 0 && (
-                            <div>
-                                <div className="mb-5 border-b border-gray-200 pb-3">
-                                    <h4 className="text-xl font-semibold text-gray-800">Management Committee</h4>
-                                </div>
+                            const branchPositions = structure.positions[branchName] || [];
+                            const membersInBranch = memberList.filter(m => m.branch === branchName);
 
-                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-                                    {managementCommitteeCards.map((card, index) => (
-                                        <div key={`management-committee-${index}`} className="w-full">
-                                            {card}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                            if (membersInBranch.length === 0) return null;
 
-                    {/* EMPLOYEES */}
-                    <div>
-                        <h3 className="mb-5 text-2xl font-bold text-gray-900">Employees</h3>
+                            const sortedMembers = [...membersInBranch].sort((a, b) => {
+                                const aIndex = branchPositions.indexOf(a.position);
+                                const bIndex = branchPositions.indexOf(b.position);
+                                return (aIndex !== -1 ? aIndex : 999) - (bIndex !== -1 ? bIndex : 999);
+                            });
 
-                        {EMPLOYEE_SECTIONS.map((section) => (
-                            <div
-                                key={section.name}
-                                className="mb-5 overflow-hidden rounded-xl border border-gray-200"
-                            >
-                                <button
-                                    onClick={() => toggleSection(section.name)}
-                                    className="w-full px-5 py-3 text-left text-base font-semibold text-gray-800 transition hover:bg-gray-50"
-                                >
-                                    {section.name}
-                                </button>
+                            return (
+                                <div key={branchName} className="mb-10">
+                                    <div className="mb-5 border-b border-gray-200 pb-3">
+                                        <h4 className="text-xl font-semibold text-gray-800">{branchName}</h4>
+                                    </div>
 
-                                {openSections[section.name] && (
-                                    <div className="space-y-4 border-t border-gray-200 p-5">
-                                        {section.departments.map((department) => (
-                                            <div key={department.title}>
-                                                {renderDepartment(section.name, department)}
+                                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                                        {sortedMembers.map((member, index) => (
+                                            <div key={`grid-member-${index}`} className="w-full">
+                                                <MemberCard member={member} />
                                             </div>
                                         ))}
                                     </div>
-                                )}
-                            </div>
-                        ))}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* ACCORDIONS: EMPLOYEES & DEPARTMENTS */}
+                    <div>
+                        <h3 className="mb-5 text-2xl font-bold text-gray-900">Employees</h3>
+
+                        {structure?.branches?.map((branchName) => {
+                            const isGridSection = branchName.toLowerCase().includes('committee') ||
+                                                  branchName.toLowerCase().includes('execom') ||
+                                                  branchName.toLowerCase().includes('mancomm');
+
+                            if (isGridSection) return null; // Already rendered above
+
+                            const branchPositions = structure.positions[branchName] || [];
+                            const membersInBranch = memberList.filter(m => m.branch === branchName);
+
+                            if (membersInBranch.length === 0) return null;
+
+                            return (
+                                <div key={branchName} className="mb-5 overflow-hidden rounded-xl border border-gray-200 bg-white">
+                                    <button
+                                        onClick={() => toggleSection(branchName)}
+                                        className="w-full px-5 py-3 text-left text-base font-semibold text-gray-800 transition hover:bg-gray-50 flex justify-between items-center"
+                                    >
+                                        <span>{branchName}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 text-gray-500 transition-transform ${openSections[branchName] ? 'rotate-180' : ''}`}>
+                                            <path fillRule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-6-6a.75.75 0 111.06-1.06L12 14.69l5.47-5.47a.75.75 0 111.06 1.06l-6 6z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+
+                                    {openSections[branchName] && (
+                                        <div className="space-y-6 border-t border-gray-200 p-5 bg-gray-50/30">
+                                            {/* Render a SideCarousel for each position containing members */}
+                                            {branchPositions.map((positionName) => {
+                                                const membersInPosition = membersInBranch.filter(m => m.position === positionName);
+                                                
+                                                if (membersInPosition.length === 0) return null;
+
+                                                return (
+                                                    <div key={positionName}>
+                                                        <SideCarousel title={positionName}>
+                                                            {membersInPosition.map((member, idx) => (
+                                                                <div key={`carousel-member-${idx}`} className="min-w-[300px] max-w-[300px] snap-start">
+                                                                    <MemberCard member={member} />
+                                                                </div>
+                                                            ))}
+                                                        </SideCarousel>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
