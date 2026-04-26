@@ -296,15 +296,16 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
         <SidebarLayout activeModule="PR/PO Module" sidebarLinks={sidebarLinks}>
             <Head title="Purchase Orders" />
 
-            <div className="mx-auto max-w-7xl py-6 relative">
-                <div className="mb-6 flex items-center justify-between">
+            <div className="mx-auto max-w-7xl py-6 relative px-4 sm:px-6 lg:px-8">
+                <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">Purchase Orders</h2>
                         <p className="mt-1 text-sm text-gray-500">Manage drafted POs, apply negotiated discounts, and finalize for delivery.</p>
                     </div>
                 </div>
 
-                <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-fit border border-gray-200">
+                {/* Mobile Scrollable Tabs */}
+                <div className="mb-6 flex space-x-1 rounded-lg bg-gray-100 p-1 w-full sm:w-fit overflow-x-auto border border-gray-200 whitespace-nowrap">
                     <Link href={route('prpo.purchase-orders.index', { view: 'my_request' })} className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'my_request' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}>
                         My Request {currentView !== 'my_request'}
                     </Link>
@@ -321,8 +322,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                     )}
                 </div>
 
-                {/* 🟢 FILTER WIDGET */}
-                <div className="mb-6 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                <div className="mb-6 bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-200">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="relative">
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search Purchase Order</label>
@@ -375,7 +375,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                         <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
                             <button
                                 onClick={() => { setSearchQuery(''); setFilterBranch(''); setFilterPriority(''); }}
-                                className="text-sm text-gray-500 hover:text-gray-800 font-semibold bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md transition-colors"
+                                className="w-full sm:w-auto text-sm text-gray-500 hover:text-gray-800 font-semibold bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md transition-colors"
                             >
                                 Clear Filters
                             </button>
@@ -383,15 +383,16 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                     )}
                 </div>
 
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                {/* Added overflow-x-auto to contain the table on mobile */}
+                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 font-semibold text-gray-900">PO Number</th>
-                                <th className="px-6 py-3 font-semibold text-gray-900">Supplier</th>
-                                <th className="px-6 py-3 font-semibold text-gray-900">PO Date</th>
-                                <th className="px-6 py-3 font-semibold text-gray-900">Gross Amt</th>
-                                <th className="px-6 py-3 font-semibold text-gray-900">Grand Total</th>
+                                <th className="px-6 py-3 font-semibold text-gray-900 whitespace-nowrap">PO Number</th>
+                                <th className="px-6 py-3 font-semibold text-gray-900 min-w-[150px]">Supplier</th>
+                                <th className="px-6 py-3 font-semibold text-gray-900 whitespace-nowrap">PO Date</th>
+                                <th className="px-6 py-3 font-semibold text-gray-900 whitespace-nowrap">Gross Amt</th>
+                                <th className="px-6 py-3 font-semibold text-gray-900 whitespace-nowrap">Grand Total</th>
                                 <th className="px-6 py-3 font-semibold text-gray-900">Status</th>
                             </tr>
                         </thead>
@@ -405,13 +406,12 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                             ) : (
                                 filteredPOs.map((po) => (
                                     <tr key={po.id} onClick={() => openModal(po)} className="hover:bg-gray-50 transition cursor-pointer">
-                                        <td className="px-6 py-4 font-bold text-indigo-600">{po.po_number}</td>
+                                        <td className="px-6 py-4 font-bold text-indigo-600 whitespace-nowrap">{po.po_number}</td>
                                         <td className="px-6 py-4 font-medium text-gray-900">{po.supplier?.name || 'Unknown Supplier'}</td>
-                                        <td className="px-6 py-4 text-gray-500">{po.po_date}</td>
-                                        <td className="px-6 py-4 text-gray-500">{formatCurrency(po.gross_amount)}</td>
-                                        <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(po.grand_total)}</td>
-                                        
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap">{po.po_date}</td>
+                                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap">{formatCurrency(po.gross_amount)}</td>
+                                        <td className="px-6 py-4 font-bold text-gray-900 whitespace-nowrap">{formatCurrency(po.grand_total)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             {formatStatus(po.status)}
                                         </td>
                                     </tr>
@@ -422,13 +422,13 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                 </div>
 
                 {isModalOpen && selectedPO && (
-                    <div onClick={closeModal} className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900 bg-opacity-60 backdrop-blur-sm p-4 sm:p-0">
-                        <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-6xl rounded-2xl bg-white shadow-2xl transition-all flex flex-col max-h-[95vh]">
+                    <div onClick={closeModal} className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900 bg-opacity-60 backdrop-blur-sm p-4 sm:p-6">
+                        <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-6xl rounded-2xl bg-white shadow-2xl transition-all flex flex-col max-h-[90vh]">
                             
-                            {/* Modal Header */}
-                            <div className="flex items-center justify-between border-b px-6 py-4 shrink-0 bg-gray-50 rounded-t-2xl">
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                            {/* Modal Header: Stack on mobile, row on desktop */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b px-4 sm:px-6 py-4 shrink-0 bg-gray-50 rounded-t-2xl relative">
+                                <div className="pr-8 mb-3 sm:mb-0">
+                                    <h3 className="text-xl font-bold text-gray-900 flex flex-wrap items-center gap-2 sm:gap-3">
                                         {modalView === 'PO' ? selectedPO.po_number : `Original ${selectedPO.purchase_request?.pr_number}`}
                                         {modalView === 'PO' && formatStatus(selectedPO.status)}
                                     </h3>
@@ -439,35 +439,36 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                         }
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                                     {selectedPO.purchase_request && (
-                                        <button onClick={() => setModalView(modalView === 'PO' ? 'PR' : 'PO')} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-md border border-indigo-100 transition-colors">
+                                        <button onClick={() => setModalView(modalView === 'PO' ? 'PR' : 'PO')} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-md border border-indigo-100 transition-colors w-full sm:w-auto text-center">
                                             {modalView === 'PO' ? 'View Original PR ➔' : '← Back to PO'}
                                         </button>
                                     )}
 
                                     {modalView === 'PO' && selectedPO.status === 'approved' && (
-                                        <a href={route('prpo.purchase-orders.print', selectedPO.id)} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3 py-1.5 rounded-md flex items-center gap-1 shadow-sm transition-colors">
+                                        <a href={route('prpo.purchase-orders.print', selectedPO.id)} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3 py-2 rounded-md flex items-center justify-center gap-1 shadow-sm transition-colors w-full sm:w-auto">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                             Download PO PDF
                                         </a>
                                     )}
 
                                     {modalView === 'PR' && canManagePO && (
-                                        <a href={route('prpo.purchase-requests.print', selectedPO.purchase_request.id)} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-md flex items-center gap-1 shadow-sm transition-colors">
+                                        <a href={route('prpo.purchase-requests.print', selectedPO.purchase_request.id)} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-3 py-2 rounded-md flex items-center justify-center gap-1 shadow-sm transition-colors w-full sm:w-auto">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                             Download PR PDF
                                         </a>
                                     )}
-                                    <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
                                 </div>
+                                {/* Close Button */}
+                                <button onClick={closeModal} className="absolute top-4 right-4 sm:static text-gray-400 hover:text-gray-600 p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
                             </div>
 
                             {/* Modal Body */}
-                            <div className="overflow-y-auto px-6 py-6 flex-1 bg-white">
-                                <div className="mb-8 px-4 sm:px-24">
+                            <div className="overflow-y-auto px-4 sm:px-6 py-6 flex-1 bg-white">
+                                <div className="mb-8 sm:px-12 md:px-24">
                                     <TrackingStepper currentStatus={modalView === 'PO' ? selectedPO.status : selectedPO.purchase_request?.status} type={modalView === 'PO' ? 'PO' : 'PR'} />
                                 </div>
 
@@ -496,9 +497,9 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                             {selectedPO.attachments && selectedPO.attachments.length > 0 && (
                                                 <ul className="mb-3 space-y-2">
                                                     {selectedPO.attachments.map((file, idx) => (
-                                                        <li key={idx} className="flex items-center text-sm text-indigo-600 hover:text-indigo-800">
+                                                        <li key={idx} className="flex items-center text-sm text-indigo-600 hover:text-indigo-800 break-all">
                                                             <a href={file.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                                                                <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd"></path></svg>
+                                                                <svg className="w-4 h-4 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd"></path></svg>
                                                                 {file.original_name}
                                                             </a>
                                                         </li>
@@ -545,34 +546,34 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                         </div>
 
                                         {removedItems.length > 0 && (
-                                            <div className="mb-4 flex flex-col sm:flex-row gap-2 sm:items-center justify-between bg-red-50 p-3 rounded-lg border border-red-100">
+                                            <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between bg-red-50 p-3 rounded-lg border border-red-100">
                                                 <span className="text-sm font-medium text-red-800">
                                                     {removedItems.length} item(s) have been dropped from this PO.
                                                 </span>
-                                                <button onClick={() => setIsRemovedModalOpen(true)} className="text-xs font-bold bg-white text-red-700 px-3 py-1.5 rounded shadow-sm border border-red-200 hover:bg-red-50 transition">
+                                                <button onClick={() => setIsRemovedModalOpen(true)} className="w-full sm:w-auto text-xs font-bold bg-white text-red-700 px-3 py-2 rounded shadow-sm border border-red-200 hover:bg-red-50 transition text-center">
                                                     View Removed Items
                                                 </button>
                                             </div>
                                         )}
 
                                         <div className="flex flex-col lg:flex-row gap-8">
-                                            <div className="flex-1">
+                                            <div className="flex-1 overflow-hidden">
                                                 
                                                 {selectedItemIds.length > 0 && selectedPO.status === 'drafted' && isProcurement && (
-                                                    <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-lg flex justify-between items-center mb-4 transition-all">
+                                                    <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4 transition-all">
                                                         <span className="text-sm font-semibold text-indigo-800">
                                                             {selectedItemIds.length} item(s) selected
                                                         </span>
                                                         <button 
                                                             onClick={handleBulkAction}
-                                                            className="bg-red-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow-sm hover:bg-red-500 transition"
+                                                            className="w-full sm:w-auto bg-red-600 text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm hover:bg-red-500 transition"
                                                         >
                                                             {selectedItemIds.length === activeItems.length ? 'Cancel PO' : 'Drop Selected'}
                                                         </button>
                                                     </div>
                                                 )}
 
-                                                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                                <div className="overflow-x-auto rounded-lg border border-gray-200 w-full">
                                                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                                                         <thead className="bg-gray-100">
                                                             <tr>
@@ -586,12 +587,12 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                                                         />
                                                                     </th>
                                                                 )}
-                                                                <th className="px-4 py-2 font-semibold text-left">Description</th>
+                                                                <th className="px-4 py-2 font-semibold text-left min-w-[150px]">Description</th>
                                                                 <th className="px-4 py-2 font-semibold text-left min-w-[150px]">Notes</th>
-                                                                <th className="px-4 py-2 font-semibold text-center w-20">Qty</th>
-                                                                <th className="px-4 py-2 font-semibold text-right w-28">Unit Price</th>
-                                                                <th className="px-4 py-2 font-semibold text-right w-32">Line Total</th>
-                                                                {selectedPO.status === 'drafted' && isProcurement && <th className="px-4 py-2 font-semibold text-center w-20">Action</th>}
+                                                                <th className="px-4 py-2 font-semibold text-center whitespace-nowrap">Qty</th>
+                                                                <th className="px-4 py-2 font-semibold text-right whitespace-nowrap">Unit Price</th>
+                                                                <th className="px-4 py-2 font-semibold text-right whitespace-nowrap">Line Total</th>
+                                                                {selectedPO.status === 'drafted' && isProcurement && <th className="px-4 py-2 font-semibold text-center whitespace-nowrap">Action</th>}
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-gray-200 bg-white">
@@ -607,24 +608,24 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                                                             />
                                                                         </td>
                                                                     )}
-                                                                    <td className="px-4 py-3 font-medium text-gray-900">{item.description}</td>
-                                                                    <td className="px-4 py-3">
+                                                                    <td className="px-4 py-3 font-medium text-gray-900 min-w-[150px]">{item.description}</td>
+                                                                    <td className="px-4 py-3 min-w-[150px]">
                                                                         <input 
                                                                             type="text" 
                                                                             value={item.notes || ''} 
                                                                             onChange={(e) => handleItemNoteChange(item.id, e.target.value)}
                                                                             disabled={selectedPO.status !== 'drafted' || !isProcurement}
                                                                             placeholder="e.g. 15+1 Freebie"
-                                                                            className="block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent disabled:p-0 disabled:text-gray-600 font-medium"
+                                                                            className="block w-full min-w-[120px] rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-transparent disabled:border-transparent disabled:p-0 disabled:text-gray-600 font-medium"
                                                                         />
                                                                     </td>
-                                                                    <td className="px-4 py-3 text-center">{item.qty} {item.unit}</td>
-                                                                    <td className="px-4 py-3 text-right">₱{item.unit_price}</td>
-                                                                    <td className="px-4 py-3 text-right font-medium">₱{item.net_payable}</td>
+                                                                    <td className="px-4 py-3 text-center whitespace-nowrap">{item.qty} {item.unit}</td>
+                                                                    <td className="px-4 py-3 text-right whitespace-nowrap">₱{item.unit_price}</td>
+                                                                    <td className="px-4 py-3 text-right font-medium whitespace-nowrap">₱{item.net_payable}</td>
                                                                     
                                                                     {selectedPO.status === 'drafted' && isProcurement && (
                                                                         <td className="px-4 py-3 text-center">
-                                                                            <button onClick={() => handleRemoveItem(item.id)} className="text-red-600 hover:text-red-800 font-bold text-xs bg-red-50 hover:bg-red-100 border border-red-200 px-2 py-1 rounded transition">
+                                                                            <button onClick={() => handleRemoveItem(item.id)} className="text-red-600 hover:text-red-800 font-bold text-xs bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded transition">
                                                                                 Drop
                                                                             </button>
                                                                         </td>
@@ -668,7 +669,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                                         <span>{formatCurrency(selectedPO.vat_total || 0)}</span>
                                                     </div>
 
-                                                    <div className="flex justify-between items-center text-indigo-900 font-black text-lg pt-4 border-t border-gray-300">
+                                                    <div className="flex justify-between items-center text-indigo-900 font-black text-lg pt-4 border-t border-gray-300 mt-4">
                                                         <span>GRAND TOTAL</span>
                                                         <span>{formatCurrency(selectedPO.grand_total || 0)}</span>
                                                     </div>
@@ -678,7 +679,8 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                     </>
                                 ) : (
                                     <div className="animate-in fade-in duration-300">
-                                        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm">
+                                        {/* Mobile: 1 col, sm: 2 cols, lg: 4 cols */}
+                                        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm">
                                             <div><span className="block font-semibold text-gray-900">Branch</span> {selectedPO.purchase_request?.branch}</div>
                                             <div><span className="block font-semibold text-gray-900">Department</span> {selectedPO.purchase_request?.department}</div>
                                             <div><span className="block font-semibold text-gray-900">Request Type</span> {selectedPO.purchase_request?.request_type || 'N/A'}</div>
@@ -689,15 +691,15 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                         </div>
                                         
                                         <h4 className="mb-2 mt-6 font-bold text-gray-900 border-b pb-1">All Items Originally Requested</h4>
-                                        <div className="overflow-x-auto rounded-lg border border-gray-200">
-                                            <table className="min-w-full divide-y divide-gray-200 text-sm text-left table-fixed">
+                                        <div className="overflow-x-auto rounded-lg border border-gray-200 w-full">
+                                            <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
                                                 <thead className="bg-gray-100">
                                                     <tr>
-                                                        <th className="px-4 py-2 font-semibold w-1/4">Product</th>
-                                                        <th className="px-4 py-2 font-semibold w-1/3">Specs</th>
-                                                        <th className="px-4 py-2 font-semibold w-16">Unit</th>
-                                                        <th className="px-4 py-2 font-semibold text-center w-20">Qty Req.</th>
-                                                        <th className="px-4 py-2 font-semibold w-32">Preferred Supplier</th>
+                                                        <th className="px-4 py-2 font-semibold min-w-[150px]">Product</th>
+                                                        <th className="px-4 py-2 font-semibold min-w-[200px]">Specs</th>
+                                                        <th className="px-4 py-2 font-semibold whitespace-nowrap">Unit</th>
+                                                        <th className="px-4 py-2 font-semibold text-center whitespace-nowrap">Qty Req.</th>
+                                                        <th className="px-4 py-2 font-semibold min-w-[150px]">Preferred Supplier</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-200 bg-white">
@@ -709,7 +711,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                                             <td className="px-4 py-3 text-gray-500 max-w-xs break-words break-all whitespace-normal">
                                                                 {prItem.specifications || '-'}
                                                             </td>
-                                                            <td className="px-4 py-3 text-gray-500">{prItem.unit || '-'}</td>
+                                                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{prItem.unit || '-'}</td>
                                                             <td className="px-4 py-3 text-center font-bold">{prItem.qty_requested}</td>
                                                             <td className="px-4 py-3 text-gray-500 truncate">
                                                                 {prItem.supplier?.name || '-'}
@@ -728,16 +730,16 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                 
                                 {modalView === 'PO' && selectedPO.status === 'drafted' && isProcurement && (
                                     <>
-                                        <button onClick={() => confirmSave('drafted')} disabled={processing} className="rounded-md bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">Save Draft</button>
-                                        <button onClick={() => confirmSave('pending_approval')} disabled={processing} className="rounded-md bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Submit for DCSO Approval</button>
+                                        <button onClick={() => confirmSave('drafted')} disabled={processing} className="w-full sm:w-auto rounded-md bg-white border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">Save Draft</button>
+                                        <button onClick={() => confirmSave('pending_approval')} disabled={processing} className="w-full sm:w-auto rounded-md bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Submit for DCSO Approval</button>
                                     </>
                                 )}
 
                                 {modalView === 'PO' && selectedPO.status === 'pending_approval' && isDCSO && (
                                     <>
-                                        <button onClick={() => confirmSave('cancelled')} disabled={processing} className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500">Reject PO</button>
-                                        <button onClick={() => confirmSave('drafted')} disabled={processing} className="rounded-md bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-400">Return to Draft</button>
-                                        <button onClick={() => confirmSave('approved')} disabled={processing} className="rounded-md bg-green-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">Approve Purchase Order</button>
+                                        <button onClick={() => confirmSave('cancelled')} disabled={processing} className="w-full sm:w-auto rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500">Reject PO</button>
+                                        <button onClick={() => confirmSave('drafted')} disabled={processing} className="w-full sm:w-auto rounded-md bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-400">Return to Draft</button>
+                                        <button onClick={() => confirmSave('approved')} disabled={processing} className="w-full sm:w-auto rounded-md bg-green-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">Approve Purchase Order</button>
                                     </>
                                 )}
                             </div>
@@ -746,31 +748,35 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                 )}
             </div>
 
+            {/* Removed Items Modal */}
             {isRemovedModalOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900 bg-opacity-70 p-4">
-                    <div className="relative w-full max-w-2xl rounded-xl bg-white shadow-2xl overflow-hidden">
-                        <div className="bg-red-50 border-b border-red-100 px-6 py-4 flex justify-between items-center">
+                    <div className="relative w-full max-w-2xl rounded-xl bg-white shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="bg-red-50 border-b border-red-100 px-4 sm:px-6 py-4 flex justify-between items-center shrink-0">
                             <h3 className="text-lg font-bold text-red-800 flex items-center gap-2">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                Removed / Unavailable Items
+                                Removed Items
                             </h3>
-                            <button onClick={() => setIsRemovedModalOpen(false)} className="text-red-400 hover:text-red-600">
+                            <button onClick={() => setIsRemovedModalOpen(false)} className="text-red-400 hover:text-red-600 p-1">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
                         </div>
-                        <div className="p-6 max-h-[60vh] overflow-y-auto">
+                        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
                             <p className="text-sm text-gray-600 mb-4">The following items were dropped from this Purchase Order because they were unavailable from the supplier. Their costs have been deducted from the final Grand Total.</p>
                             <ul className="divide-y divide-gray-200 border border-gray-200 rounded-md overflow-hidden">
                                 {removedItems.map(item => (
-                                    <li key={item.id} className="p-3 flex justify-between items-center bg-gray-50">
-                                        <div><p className="font-bold text-gray-900">{item.description}</p><p className="text-xs text-gray-500">Requested: {item.qty} {item.unit}</p></div>
-                                        <div className="text-right line-through text-gray-400 font-medium">₱{item.net_payable}</div>
+                                    <li key={item.id} className="p-3 flex justify-between items-center bg-gray-50 gap-2">
+                                        <div className="truncate pr-2">
+                                            <p className="font-bold text-gray-900 truncate">{item.description}</p>
+                                            <p className="text-xs text-gray-500">Requested: {item.qty} {item.unit}</p>
+                                        </div>
+                                        <div className="text-right line-through text-gray-400 font-medium shrink-0">₱{item.net_payable}</div>
                                     </li>
                                 ))}
                             </ul>
                         </div>
-                        <div className="px-6 py-4 bg-gray-50 border-t flex justify-end">
-                            <button onClick={() => setIsRemovedModalOpen(false)} className="bg-white border border-gray-300 px-4 py-2 rounded-md text-sm font-semibold text-gray-700 hover:bg-gray-100 shadow-sm">Close List</button>
+                        <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t flex justify-end shrink-0">
+                            <button onClick={() => setIsRemovedModalOpen(false)} className="w-full sm:w-auto bg-white border border-gray-300 px-4 py-2 rounded-md text-sm font-semibold text-gray-700 hover:bg-gray-100 shadow-sm">Close List</button>
                         </div>
                     </div>
                 </div>
@@ -779,10 +785,10 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
             <ConfirmModal show={confirmDialog.isOpen} onClose={closeConfirmModal} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText} confirmColor={confirmDialog.confirmColor} onConfirm={confirmDialog.onConfirm} />
 
             <Modal show={isRejectModalOpen} onClose={() => setIsRejectModalOpen(false)} maxWidth="md">
-                <div className="p-6 max-h-[85vh] overflow-y-auto">
+                <div className="p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
                     <div className="flex items-center justify-between border-b pb-4 mb-5">
-                        <h2 className="text-xl font-bold text-gray-900">Reason for Rejection</h2>
-                        <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Reason for Rejection</h2>
+                        <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </div>
@@ -802,18 +808,18 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                             />
                         </div>
 
-                        <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
+                        <div className="mt-6 flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t">
                             <button
                                 type="button"
                                 onClick={() => setIsRejectModalOpen(false)}
-                                className="rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
+                                className="w-full sm:w-auto rounded-md border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="rounded-md bg-red-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-500 transition-colors disabled:opacity-50"
+                                className="w-full sm:w-auto rounded-md bg-red-600 px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-500 transition-colors disabled:opacity-50"
                             >
                                 Confirm Reject
                             </button>

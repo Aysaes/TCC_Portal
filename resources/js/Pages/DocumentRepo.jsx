@@ -11,7 +11,7 @@ import { formatAppDate } from '@/Utils/date';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function Documents({ auth, documents = [], categories = [], activeCategory }) {
+export default function Documents({ auth, documents = [], categories = [], departments = [], branches = [], activeCategory }) {
 
     const isAdmin = auth.user?.role?.name === 'admin' || auth.user?.permissions?.includes('director of corporate services and operations');
     const sidebarLinks = getDocumentSidebarLinks(categories, activeCategory);
@@ -19,6 +19,9 @@ export default function Documents({ auth, documents = [], categories = [], activ
 
     const [viewingDoc, setViewingDoc] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    
+    // NEW: State for the Department Filter
+    const [filterDepartment, setFilterDepartment] = useState('');
 
     // Office Viewer for Word/Excel files
     const getViewerUrl = (doc) => {
@@ -60,8 +63,14 @@ export default function Documents({ auth, documents = [], categories = [], activ
 
     // --- Upload Document Modal State ---
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    
     const { data: uploadData, setData: setUploadData, post: postDocument, processing: uploadProcessing, errors: uploadErrors, reset: resetUpload, clearErrors: clearUploadErrors } = useForm({
-        title: '', category: activeCategory !== 'Overview' ? activeCategory : '', description: '', file: null
+        title: '', 
+        category: activeCategory !== 'Overview' ? activeCategory : '', 
+        department_id: '', 
+        branch_id: '', 
+        description: '', 
+        file: null
     });
 
     const closeUploadModal = () => { setIsUploadModalOpen(false); resetUpload(); clearUploadErrors(); };
@@ -96,60 +105,72 @@ export default function Documents({ auth, documents = [], categories = [], activ
         });
     };
 
+    // UPDATED: Filter includes both search query AND department selection
     const filteredDocuments = documents.filter(doc => {
+        // 1. Text Search Logic
         const query = searchQuery.toLowerCase();
         const matchesTitle = doc.title?.toLowerCase().includes(query);
         const matchesDesc = doc.description?.toLowerCase().includes(query);
-        return matchesTitle || matchesDesc;
+        const matchesSearch = matchesTitle || matchesDesc;
+
+        // 2. Department Filter Logic
+        // If filter is empty string (''), show all. Otherwise, match the department_id.
+        const matchesDept = filterDepartment === '' || doc.department_id?.toString() === filterDepartment;
+
+        return matchesSearch && matchesDept;
     });
 
     return (
         <SidebarLayout activeModule="Document Repository" sidebarLinks={sidebarLinks}>
             <Head title={`Documents - ${activeCategory}`} />
 
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <h1 className="text-2xl font-semibold leading-tight text-gray-900">{activeCategory}</h1>
+            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <h1 className="text-2xl font-semibold leading-tight text-gray-900 shrink-0">{activeCategory}</h1>
 
-                <div className="w-full sm:max-w-xs relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                        </svg>
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Search documents..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
-                    />
-                </div>
-                
-                {isAdmin && (
-                   <div className="flex w-full flex-col sm:w-auto sm:flex-row gap-3">
-                        <button 
-                            onClick={() => setIsCategoryModalOpen(true)}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900 hover:shadow"
-                            title="Manage Categories"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-4 w-4 shrink-0 text-indigo-600">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5m-16.5 5.25h16.5m-16.5 5.25h10.5" />
+                <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto lg:flex-1 lg:justify-end items-center">
+                    
+                    {/* NEW: Department Filter Dropdown */}
+                    <select
+                        value={filterDepartment}
+                        onChange={(e) => setFilterDepartment(e.target.value)}
+                        className="block w-full sm:w-48 py-2 pl-3 pr-10 border border-gray-300 rounded-lg leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out text-gray-600"
+                    >
+                        <option value="">All Departments</option>
+                        {departments.map(dep => (
+                            <option key={dep.id} value={dep.id}>{dep.name}</option>
+                        ))}
+                    </select>
+
+                    {/* Search Bar */}
+                    <div className="w-full sm:max-w-xs relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                             </svg>
-                            Manage Categories
-                        </button>
-
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search documents..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                        />
+                    </div>
+                    
+                    {/* Upload Button */}
+                    {isAdmin && (
                         <button
                             type="button"
                             onClick={() => setIsUploadModalOpen(true)}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900 hover:shadow"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900 hover:shadow shrink-0"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-4 w-4 shrink-0 text-indigo-600">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V6.75m0 0L8.25 10.5M12 6.75l3.75 3.75M4.5 17.25v.75A1.5 1.5 0 006 19.5h12a1.5 1.5 0 001.5-1.5v-.75" />
                             </svg>
                             Upload Document
                         </button>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -158,7 +179,7 @@ export default function Documents({ auth, documents = [], categories = [], activ
                         <svg className="mx-auto mb-3 h-12 w-12 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        {searchQuery ? 'No documents match your search.' : 'No documents found in this category.'}
+                        {searchQuery || filterDepartment ? 'No documents match your filters.' : 'No documents found in this category.'}
                     </div>
                 ) : (
                     filteredDocuments.map((doc) => (
@@ -172,7 +193,17 @@ export default function Documents({ auth, documents = [], categories = [], activ
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-gray-900 line-clamp-1" title={doc.title}>{doc.title}</h3>
-                                        <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{doc.category}</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{doc.category}</span>
+                                            
+                                            {doc.department && (
+                                                 <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">{doc.department.name}</span>
+                                            )}
+                                            
+                                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${doc.branch ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
+                                                {doc.branch ? doc.branch.name : 'All Branches'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -274,7 +305,53 @@ export default function Documents({ auth, documents = [], categories = [], activ
                             {categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
                         </select>
                         <InputError message={uploadErrors.category} className="mt-2" />
+                        
+                        {isAdmin && (
+                            <div className="mt-2 flex justify-end">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsCategoryModalOpen(true)}
+                                    className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.99l1.005.828c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                    </svg>
+                                    Manage Categories
+                                </button>
+                            </div>
+                        )}
                     </div>
+
+                    <div>
+                        <InputLabel htmlFor="department_id" value="Department" />
+                        <select 
+                            id="department_id" 
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                            value={uploadData.department_id} 
+                            onChange={(e) => setUploadData('department_id', e.target.value)} 
+                            required
+                        >
+                            <option value="" disabled>Select a department...</option>
+                            {departments.map(dep => (<option key={dep.id} value={dep.id}>{dep.name}</option>))}
+                        </select>
+                        <InputError message={uploadErrors.department_id} className="mt-2" />
+                    </div>
+
+                    <div>
+                        <InputLabel htmlFor="branch_id" value="Branch Assignment" />
+                        <select 
+                            id="branch_id" 
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                            value={uploadData.branch_id} 
+                            onChange={(e) => setUploadData('branch_id', e.target.value)}
+                        >
+                            <option value="">All Branches</option>
+                            {branches.map(branch => (<option key={branch.id} value={branch.id}>{branch.name}</option>))}
+                        </select>
+                        <InputError message={uploadErrors.branch_id} className="mt-2" />
+                    </div>
+
                     <div>
                         <InputLabel htmlFor="description" value="Short Description (Optional)" />
                         <textarea id="description" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" rows="2" value={uploadData.description} onChange={(e) => setUploadData('description', e.target.value)} />

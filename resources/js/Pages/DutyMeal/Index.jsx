@@ -224,7 +224,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                 totalMeals++;
                 if (p.choice === 'main') totalMain++;
                 if (p.choice === 'alt') totalAlt++;
-                if (p.custom_request && p.custom_request.trim() !== '') totalSpecial++;
+                if (p.choice === 'special') totalSpecial++; // Fixed stats logic
             });
         });
 
@@ -328,7 +328,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                         </div>
                     </div>
                     <div className="bg-white rounded-lg border border-gray-100 p-4 sm:p-5 shadow-sm flex items-center">
-                        <div className="mr-4 rounded-full bg-rose-50 p-3 text-black">
+                        <div className="mr-4 rounded-full bg-purple-50 p-3 text-black">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
@@ -566,11 +566,13 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                                 className={`appearance-none inline-flex items-center py-0.5 pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
                                                                     ${p.choice === 'none' ? 'bg-gray-100 text-gray-500 border-gray-200 focus:ring-gray-400' : 
                                                                     p.choice === 'main' ? 'bg-blue-100 text-blue-800 border-blue-200 focus:ring-blue-400' : 
+                                                                    p.choice === 'special' ? 'bg-purple-100 text-purple-800 border-purple-200 focus:ring-purple-400' :
                                                                     'bg-amber-100 text-amber-800 border-amber-200 focus:ring-amber-400'}`}
                                                             >
                                                                 <option value="none" disabled>Pending</option>
                                                                 <option value="main">Main</option>
                                                                 <option value="alt">Alt</option>
+                                                                <option value="special">Special</option>
                                                             </select>
                                                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-current opacity-60">
                                                                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
@@ -581,6 +583,9 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                             {p.choice === 'none' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-medium bg-gray-100 text-gray-500 italic border border-gray-200">Pending</span>}
                                                             {p.choice === 'main' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wider">Main</span>}
                                                             {p.choice === 'alt' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">Alt</span>}
+                                                            {/* ADDED SPECIAL CHOICE BADGE */}
+                                                            {p.choice === 'special' && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wider">Special</span>}
+                                                            
                                                             {p.site && (
                                                                 <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wider">
                                                                     {p.site}
@@ -699,6 +704,7 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                             >
                                                 <option value="main">Main Meal</option>
                                                 <option value="alt">Alt Meal</option>
+                                                <option value="special">Special</option>
                                             </select>
                                             <SecondaryButton 
                                                 onClick={() => handleEmergencyAdd(emp.id, poolMealChoices[emp.id] || 'main')}
