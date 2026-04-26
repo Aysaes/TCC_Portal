@@ -32,7 +32,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
     // --- LIVE FILTER LOGIC ---
     const filteredPOs = useMemo(() => {
         return pos.filter(po => {
-            // 1. Search (PO ID, PR ID, Preparer, or Supplier)
             const searchLower = searchQuery.toLowerCase().trim();
             const poId = (po.po_number || '').toLowerCase();
             const prId = (po.purchase_request?.pr_number || '').toLowerCase();
@@ -45,10 +44,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                 preparedBy.includes(searchLower) || 
                 supplier.includes(searchLower);
 
-            // 2. Branch Filter (from original PR)
             const matchesBranch = !filterBranch || po.purchase_request?.branch === filterBranch;
-
-            // 3. Priority Filter (from original PR)
             const matchesPriority = !filterPriority || po.purchase_request?.priority === filterPriority;
 
             return matchesSearch && matchesBranch && matchesPriority;
@@ -81,10 +77,12 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
 
-    const { data, setData, processing, reset } = useForm({
+    // 🟢 ADDED: setError and clearErrors extracted from useForm
+    const { data, setData, processing, reset, errors, setError, clearErrors } = useForm({
         delivery_date: '',
         payment_terms: '',
         ship_to: '',
+        no_of_quotations: '',
         discount_total: 0,
         vat_rate: 12,
         status: 'drafted',
@@ -118,6 +116,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
         setRemovedItemIds([]); 
         setSelectedItemIds([]);
         setDiscountType('amount');
+        clearErrors(); // 🟢 Clear any lingering errors on open
         
         const formattedDeliveryDate = po.delivery_date ? po.delivery_date.split('T')[0] : '';
 
@@ -125,6 +124,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
             delivery_date: formattedDeliveryDate,
             payment_terms: po.payment_terms || '30 Days',
             ship_to: po.ship_to || 'Main Clinic',
+            no_of_quotations: po.no_of_quotations || '',
             discount_total: po.discount_total || 0,
             vat_rate: 12, 
             status: po.status,
@@ -175,6 +175,12 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
     };
 
     const confirmSave = (newStatus) => {
+        // 🟢 REPLACED: Removed alert() and used Inertia's built in setError
+        if (newStatus === 'pending_approval' && (!data.no_of_quotations || data.no_of_quotations <= 0)) {
+            setError('no_of_quotations', 'You must provide the Number of Quotations before submitting for approval.');
+            return;
+        }
+
         if (newStatus === 'drafted' && selectedPO.status === 'drafted') {
             handleSave(newStatus);
             return;
@@ -303,7 +309,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                         My Request {currentView !== 'my_request'}
                     </Link>
                     
-                    {/* 🟢 Hide these tabs if the user is restricted */}
                     {!isRestrictedRole && (
                         <>
                             <Link href={route('prpo.purchase-orders.index', { view: 'action_needed' })} className={`px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center gap-2 ${currentView === 'action_needed' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}>
@@ -319,7 +324,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                 {/* 🟢 FILTER WIDGET */}
                 <div className="mb-6 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Live Search */}
                         <div className="relative">
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search Purchase Order</label>
                             <div className="relative">
@@ -338,7 +342,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                             </div>
                         </div>
 
-                        {/* Branch Filter */}
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Branch</label>
                             <select
@@ -353,7 +356,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                             </select>
                         </div>
 
-                        {/* Priority Filter */}
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Priority</label>
                             <select
@@ -369,7 +371,6 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                         </div>
                     </div>
 
-                    {/* Reset Filters Button */}
                     {(searchQuery || filterBranch || filterPriority) && (
                         <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
                             <button
@@ -510,7 +511,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                             )}
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Delivery Date</label>
                                                 <input type="date" disabled={selectedPO.status !== 'drafted'} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100" value={data.delivery_date} onChange={e => setData('delivery_date', e.target.value)} />
@@ -522,6 +523,24 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700">Ship To</label>
                                                 <input type="text" disabled={selectedPO.status !== 'drafted'} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100" value={data.ship_to} onChange={e => setData('ship_to', e.target.value)} />
+                                            </div>
+                                            
+                                            {/* 🟢 REPLACED: Use Inertia setError to show inline error message */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">No. of Quotations <span className="text-red-500">*</span></label>
+                                                <input 
+                                                    type="number" 
+                                                    disabled={selectedPO.status !== 'drafted'} 
+                                                    min="0"
+                                                    required
+                                                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm disabled:bg-gray-100 ${errors.no_of_quotations ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`} 
+                                                    value={data.no_of_quotations} 
+                                                    onChange={e => {
+                                                        setData('no_of_quotations', e.target.value);
+                                                        clearErrors('no_of_quotations');
+                                                    }} 
+                                                />
+                                                {errors.no_of_quotations && <p className="mt-1 text-xs font-semibold text-red-600">{errors.no_of_quotations}</p>}
                                             </div>
                                         </div>
 
@@ -620,47 +639,24 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                                 </div>
                                             </div>
 
-                                            <div className="w-full lg:w-80 shrink-0 bg-gray-50 rounded-lg p-5 border border-gray-200 h-fit">
+                                            <div className="w-full lg:w-80 shrink-0 bg-gray-50 rounded-lg p-5 border border-gray-200 h-fit mt-6 lg:mt-0">
                                                 <h4 className="font-bold text-gray-900 mb-4 border-b pb-2">Amount Summary</h4>
                                                 <div className="space-y-3 text-sm">
                                                     <div className="flex justify-between text-gray-600">
                                                         <span>Gross Amount:</span>
-                                                        <span className="font-medium text-gray-900">{formatCurrency(liveTotals.gross)}</span>
+                                                        <span className="font-medium text-gray-900">{formatCurrency(selectedPO.gross_amount || 0)}</span>
                                                     </div>
                                                     
-                                                    <div className="flex justify-between items-center text-gray-600">
-                                                        <span>Less: Discount</span>
-                                                        <div className="flex items-center gap-1">
-                                                            <select 
-                                                                value={discountType} 
-                                                                onChange={e => setDiscountType(e.target.value)}
-                                                                disabled={selectedPO.status !== 'drafted'}
-                                                                className="py-1 pl-2 pr-6 text-xs rounded border-gray-300 shadow-sm disabled:bg-gray-100 cursor-pointer focus:ring-indigo-500 focus:border-indigo-500"
-                                                            >
-                                                                <option value="amount">₱</option>
-                                                                <option value="percentage">%</option>
-                                                            </select>
-                                                            <input 
-                                                                type="number" 
-                                                                min="0"
-                                                                step="any"
-                                                                disabled={selectedPO.status !== 'drafted'} 
-                                                                className="w-20 text-right rounded border-gray-300 shadow-sm py-1 px-2 text-sm disabled:bg-gray-100 focus:ring-indigo-500 focus:border-indigo-500" 
-                                                                value={data.discount_total} 
-                                                                onChange={e => setData('discount_total', e.target.value)} 
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {discountType === 'percentage' && liveTotals.actualDiscount > 0 && (
-                                                        <div className="flex justify-end text-xs text-indigo-500 -mt-2 font-medium">
-                                                            (-{formatCurrency(liveTotals.actualDiscount)})
+                                                    {selectedPO.discount_total > 0 && (
+                                                        <div className="flex justify-between text-gray-600">
+                                                            <span>Less: Discount</span>
+                                                            <span className="font-medium text-indigo-500">-{formatCurrency(selectedPO.discount_total)}</span>
                                                         </div>
                                                     )}
                                                     
                                                     <div className="flex justify-between text-gray-600 font-medium pt-2 border-t border-gray-200">
                                                         <span>Net of Discount:</span>
-                                                        <span>{formatCurrency(liveTotals.net)}</span>
+                                                        <span>{formatCurrency(selectedPO.net_of_discount || selectedPO.gross_amount || 0)}</span>
                                                     </div>
 
                                                     <div className="flex justify-between items-center text-gray-600">
@@ -669,12 +665,12 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                                                             <input type="number" disabled={selectedPO.status !== 'drafted'} className="w-16 rounded border-gray-300 shadow-sm py-0.5 px-1 text-xs text-center disabled:bg-gray-100" value={data.vat_rate} onChange={e => setData('vat_rate', e.target.value)} />
                                                             <span>%</span>
                                                         </div>
-                                                        <span>{formatCurrency(liveTotals.vat)}</span>
+                                                        <span>{formatCurrency(selectedPO.vat_total || 0)}</span>
                                                     </div>
 
                                                     <div className="flex justify-between items-center text-indigo-900 font-black text-lg pt-4 border-t border-gray-300">
                                                         <span>GRAND TOTAL</span>
-                                                        <span>{formatCurrency(liveTotals.grand)}</span>
+                                                        <span>{formatCurrency(selectedPO.grand_total || 0)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -728,7 +724,7 @@ export default function PurchaseOrdersIndex({ auth, purchaseOrders, currentView,
                             </div>
 
                             <div className="flex items-center justify-end gap-3 border-t bg-gray-50 px-6 py-4 shrink-0 rounded-b-2xl">
-                                <button onClick={closeModal} className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2">Close Window</button>
+                                <button onClick={closeModal} className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-100">Close Window</button>
                                 
                                 {modalView === 'PO' && selectedPO.status === 'drafted' && isProcurement && (
                                     <>
