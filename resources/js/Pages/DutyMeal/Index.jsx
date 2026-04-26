@@ -521,7 +521,8 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                                 }}
                                                                 onBlur={() => setEditingShiftId(null)}
                                                                 onClick={(e) => e.stopPropagation()} 
-                                                                className={`appearance-none inline-flex items-center py-0.5 pl-1.5 sm:pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-medium rounded border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                // FIX: Added bg-none to hide Tailwind arrow
+                                                                className={`appearance-none bg-none inline-flex items-center py-0.5 pl-1.5 sm:pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-medium rounded border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
                                                                     ${!p.shift_type ? 'bg-gray-100 text-gray-800 border-gray-300 focus:ring-gray-400' :
                                                                     p.shift_type === 'graveyard' ? 'bg-indigo-100 text-indigo-800 border-indigo-200 focus:ring-indigo-400' : 
                                                                     p.shift_type === 'straight' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 focus:ring-emerald-400' : 
@@ -563,7 +564,8 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                                 }}
                                                                 onBlur={() => setEditingChoiceId(null)}
                                                                 onClick={(e) => e.stopPropagation()} 
-                                                                className={`appearance-none inline-flex items-center py-0.5 pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                // FIX: Added bg-none to hide Tailwind arrow here too
+                                                                className={`appearance-none bg-none inline-flex items-center py-0.5 pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
                                                                     ${p.choice === 'none' ? 'bg-gray-100 text-gray-500 border-gray-200 focus:ring-gray-400' : 
                                                                     p.choice === 'main' ? 'bg-blue-100 text-blue-800 border-blue-200 focus:ring-blue-400' : 
                                                                     p.choice === 'special' ? 'bg-purple-100 text-purple-800 border-purple-200 focus:ring-purple-400' :

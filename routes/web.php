@@ -73,7 +73,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // 3. Merge and clean the array
             $allowedBranchIds = array_values(array_unique(array_filter(array_merge($branchIds, $rotating))));
 
-            // 🟢 DEBUG LOG: Check your storage/logs/laravel.log to see this print out!
             \Illuminate\Support\Facades\Log::info('OVERVIEW RENDERED - Security Check:', [
                 'user' => $user->name,
                 'role' => $userRole,
@@ -109,7 +108,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $rotating = Illuminate\Support\Facades\DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray();
             $allowedBranchIds = array_values(array_unique(array_filter(array_merge($branchIds, $rotating))));
 
-            // 🟢 DEBUG LOG
             \Illuminate\Support\Facades\Log::info('DASHBOARD RENDERED - Security Check:', [
                 'user' => $user->name,
                 'role' => $userRole,
@@ -139,7 +137,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard.mission-vision');
 
-    // 🟢 NEW: RESOURCES LINKS 🟢
+    // --- RESOURCES LINKS ---
     Route::get('/resources/internal-links', function () {
         return Inertia::render('Resources/InternalLinks');
     })->name('resources.internal');
@@ -248,6 +246,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
 
     Route::post('/org-chart/asset', [OrgChartController::class, 'storeAsset'])->name('.org-chart.asset.store');
     Route::get('/org-chart', [OrgChartController::class, 'index'])->name('.org-chart.index');
+    Route::post('/org-chart/structure', [OrgChartController::class, 'saveStructure'])->name('.org-chart.structure.save'); // NEW JSON ROUTE
     Route::post('/org-chart', [OrgChartController::class, 'store'])->name('.org-chart.store');
     Route::put('/org-chart/{member}', [OrgChartController::class, 'update'])->name('.org-chart.update');
     Route::post('/org-chart/reorder', [OrgChartController::class, 'reorder'])->name('.org-chart.reorder'); 
