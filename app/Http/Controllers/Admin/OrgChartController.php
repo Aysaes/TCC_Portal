@@ -47,7 +47,7 @@ class OrgChartController extends Controller
     {
         // Validate that it is actually a file and specifically an SVG
         $request->validate([
-            'org_chart_file' => 'required|file|mimes:svg|max:5120', // Max 5MB
+            'org_chart_file' => 'required|file|mimes:svg|max:768000', 
         ]);
 
         if ($request->hasFile('org_chart_file')) {
@@ -79,7 +79,7 @@ class OrgChartController extends Controller
             'name' => 'required|string|max:255',
             'position' => 'required|string|max:255',
             'branch' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:768000',
         ]);
 
         $data = $request->only(['name', 'position', 'branch']); 
@@ -100,7 +100,7 @@ class OrgChartController extends Controller
             'name' => 'required|string|max:255',
             'position' => 'required|string|max:255',
             'branch' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Image optional on update
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:768000', // Image optional on update
         ]);
 
         $data = $request->only(['name', 'position', 'branch']);
