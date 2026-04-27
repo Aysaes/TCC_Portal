@@ -253,6 +253,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::delete('/org-chart/{member}', [OrgChartController::class, 'destroy'])->name('.org-chart.destroy');
 
     Route::post('/documents', [DocumentController::class, 'store'])->name('.documents.store');
+    Route::put('/documents/{document}', [DocumentController::class, 'update'])->name('.documents.update');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
