@@ -243,6 +243,8 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('.announcements.update');
     Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('.announcements.destroy');
     Route::post('/announcements/priority', [AnnouncementController::class, 'storePriority'])->name('.announcements.priority.store');
+    Route::put('/announcements/priority/{priority}', [AnnouncementController::class, 'updatePriority'])->name('.announcements.priority.update');
+    Route::delete('/announcements/priority/{priority}', [AnnouncementController::class, 'destroyPriority'])->name('.announcements.priority.destroy');
 
     Route::post('/org-chart/asset', [OrgChartController::class, 'storeAsset'])->name('.org-chart.asset.store');
     Route::get('/org-chart', [OrgChartController::class, 'index'])->name('.org-chart.index');

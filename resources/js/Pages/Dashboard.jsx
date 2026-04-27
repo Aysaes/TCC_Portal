@@ -257,14 +257,14 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="filter_priority" value="Priority Level" />
+                                <InputLabel htmlFor="filter_priority" value="Category" />
                                 <select
                                     id="filter_priority"
                                     className={`mt-1 block w-full rounded-md shadow-sm transition-all duration-200 focus:border-indigo-500 focus:ring-indigo-500 hover:bg-white hover:text-gray-700 hover:border-gray-300 ${getPrioritySelectClass(selectedPriorityId)}`}
                                     value={selectedPriorityId}
                                     onChange={(e) => setSelectedPriorityId(e.target.value)}
                                 >
-                                    <option value="">All Priorities</option>
+                                    <option value="">All Categories</option>
                                     {priorityOptions.map((priority) => (
                                         <option key={priority.id} value={priority.id}>
                                             {priority.name}
