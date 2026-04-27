@@ -66,7 +66,7 @@ class DocumentController extends Controller
             'branch_id' => 'nullable|exists:branches,id',        // Nullable for "All Branches"
             'description' => 'nullable|string',
             // The limit is set right here to 20480 kilobytes (20MB) -> wait, your comment says 20MB but max is 51200 (50MB). Kept as is.
-            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:51200', 
+            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:768000', 
         ]);
 
         $filePath = $request->file('file')->store('documents', 'public');

@@ -271,7 +271,7 @@ export const getPRPOLinks = (auth) => {
     }
 
      // 1. Products Masterlist (ONLY Admin & DCSO)
-    if (isAdminOrDCSO) {
+    if (isAdminOrDCSO || isInventory) {
         links.push({ 
             label: 'Products Masterlist', 
             href: route('prpo.products.index'), 
