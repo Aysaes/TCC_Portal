@@ -42,26 +42,6 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
         return Array.from(map.values()).sort((a, b) => Number(a.id) - Number(b.id));
     }, [priorities, allAnnouncements]);
 
-    // --- PRIORITY DROPDOWN COLOR HELPER ---
-    const getPrioritySelectClass = (priorityId) => {
-        switch (String(priorityId)) {
-            case '1':
-                return 'bg-blue-100 text-blue-700 border-blue-300';
-            case '2':
-                return 'bg-amber-100 text-amber-700 border-amber-300';
-            case '3':
-                return 'bg-red-100 text-red-700 border-red-300';
-            case '4':
-                return 'bg-green-100 text-green-700 border-green-300';
-            case '5':
-                return 'bg-violet-100 text-violet-700 border-violet-300';
-            case '6':
-                return 'bg-pink-100 text-pink-700 border-pink-300';
-            default:
-                return 'bg-white text-gray-700 border-gray-300';
-        }
-    };
-
     const userRole = String(auth.user?.role?.name || '').toLowerCase();
     const isGlobalViewer = userRole === 'admin' || userRole.includes('director');
     const userBranchId = auth.user?.branch_id;
@@ -162,7 +142,7 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
 
         return {
             backgroundColor: `rgba(${r}, ${g}, ${b}, 0.25)`, 
-            color: normalized,                                
+            color: normalized,                               
             borderColor: normalized, 
         };
     };
@@ -260,7 +240,7 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                                 <InputLabel htmlFor="filter_priority" value="Category" />
                                 <select
                                     id="filter_priority"
-                                    className={`mt-1 block w-full rounded-md shadow-sm transition-all duration-200 focus:border-indigo-500 focus:ring-indigo-500 hover:bg-white hover:text-gray-700 hover:border-gray-300 ${getPrioritySelectClass(selectedPriorityId)}`}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     value={selectedPriorityId}
                                     onChange={(e) => setSelectedPriorityId(e.target.value)}
                                 >
