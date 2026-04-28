@@ -1,11 +1,10 @@
-import React from 'react';
-import SidebarLayout from '@/Layouts/SidebarLayout';
-import { getHRLinks } from '@/Config/navigation';
-import { Head, useForm } from '@inertiajs/react';
-import InputLabel from '@/Components/InputLabel';
-import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
+import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
+import TextInput from '@/Components/TextInput';
+import { getHRLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { Head, useForm } from '@inertiajs/react';
 
 export default function Feedback({ auth }) {
     const hrLinks = getHRLinks(auth?.user?.role?.name || 'Employee', auth);
@@ -14,14 +13,14 @@ export default function Feedback({ auth }) {
         type: '',
         subject: '',
         message: '',
-        image: null, // NEW: Added image to the form state
+        image: null, 
+        is_anonymous: false, // 🟢 Add to state
     });
 
     const submit = (e) => {
         e.preventDefault();
         post(route('hr.feedback.store'), {
             preserveScroll: true,
-            // We use forceFormData because we are sending an actual file (multipart/form-data)
             forceFormData: true, 
             onSuccess: () => reset(), 
         });
@@ -42,7 +41,6 @@ export default function Feedback({ auth }) {
                 <div className="bg-white overflow-hidden shadow-sm sm:rounded-2xl border border-gray-100 p-8">
                     <form onSubmit={submit} className="space-y-6">
                         
-                        {/* Type of Feedback */}
                         <div>
                             <InputLabel htmlFor="type" value="Feedback Type" />
                             <select
@@ -60,7 +58,6 @@ export default function Feedback({ auth }) {
                             <InputError message={errors.type} className="mt-2" />
                         </div>
 
-                        {/* Subject */}
                         <div>
                             <InputLabel htmlFor="subject" value="Subject" />
                             <TextInput
@@ -75,7 +72,6 @@ export default function Feedback({ auth }) {
                             <InputError message={errors.subject} className="mt-2" />
                         </div>
 
-                        {/* Message */}
                         <div>
                             <InputLabel htmlFor="message" value="Detailed Message" />
                             <textarea
@@ -90,7 +86,6 @@ export default function Feedback({ auth }) {
                             <InputError message={errors.message} className="mt-2" />
                         </div>
 
-                        {/* NEW: Optional Image Upload */}
                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
                             <InputLabel htmlFor="image" value="Attach an Image (Optional)" className="font-bold mb-1" />
                             <p className="text-xs text-gray-500 mb-3">Include a screenshot or photo to provide more context (JPG, PNG).</p>
@@ -104,7 +99,21 @@ export default function Feedback({ auth }) {
                             <InputError message={errors.image} className="mt-2" />
                         </div>
 
-                        {/* Submit Button */}
+                        {/* 🟢 NEW: Anonymous Checkbox */}
+                        <div className="flex items-center bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                            <input
+                                id="is_anonymous"
+                                type="checkbox"
+                                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                checked={data.is_anonymous}
+                                onChange={(e) => setData('is_anonymous', e.target.checked)}
+                            />
+                            <label htmlFor="is_anonymous" className="ml-3 block text-sm font-bold text-indigo-900 cursor-pointer">
+                                Submit Anonymously
+                                <p className="font-normal text-indigo-700 text-xs mt-0.5">Your name will be hidden from HR when this feedback is reviewed.</p>
+                            </label>
+                        </div>
+
                         <div className="flex items-center justify-end pt-4 border-t border-gray-100 mt-8">
                             <PrimaryButton disabled={processing} className="px-6 py-3 shadow-sm">
                                 Submit Feedback

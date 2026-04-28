@@ -456,7 +456,7 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                 {selectedAnnouncement && (
                     <div className="flex flex-col bg-white overflow-hidden max-h-[85vh]">
                         
-                        {/* ✅ UPDATED: Removed aspect-[16/9] and added explicit heights (h-64 sm:h-80) */}
+                        {/* ✅ IMAGE SECTION (Fixed at top) */}
                         {selectedAnnouncement.image_path && (
                             <div className="relative w-full h-64 sm:h-80 shrink-0 bg-gray-50 border-b border-gray-200 overflow-hidden flex items-center justify-center">
                                 <img 
@@ -474,7 +474,8 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                             </div>
                         )}
                         
-                        <div className="p-6 sm:p-8 overflow-y-auto">
+                        {/* ✅ SCROLLABLE CONTENT SECTION (Takes up remaining space) */}
+                        <div className="p-6 sm:p-8 overflow-y-auto flex-1">
                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedAnnouncement.title}</h2>
@@ -487,12 +488,15 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                                 </span>
                             </div>
                             <hr className="my-6 border-gray-100" />
-                            <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed pb-20">
+                            
+                            {/* Text Content */}
+                            <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
                                 {selectedAnnouncement.content}
                             </div>
 
+                            {/* Attachment */}
                             {selectedAnnouncement.attachment_path && (
-                                <div className="mt-2 mb-10 border-t border-gray-100 pt-6">
+                                <div className="mt-8 border-t border-gray-100 pt-6">
                                     <h4 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Attached File</h4>
                                     <a 
                                         href={`/storage/${selectedAnnouncement.attachment_path}`} 
@@ -507,19 +511,22 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                                     </a>
                                 </div>
                             )}
-                            
-                            <div className="sticky bottom-0 -mx-6 -mb-6 sm:-mx-8 sm:-mb-8 px-6 pb-6 sm:px-8 sm:pb-8 pt-10 flex justify-end bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
-                                <button 
-                                    onClick={closeModal} 
-                                    className="pointer-events-auto rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors shadow-sm"
-                                >
-                                    Close 
-                                </button>
-                            </div>
                         </div>
+
+                        {/* ✅ SOLID FIXED FOOTER (Never scrolls, text cuts off cleanly above it) */}
+                        <div className="bg-gray-50 px-6 py-4 sm:px-8 border-t border-gray-200 flex justify-end shrink-0">
+                            <button 
+                                onClick={closeModal} 
+                                className="rounded-md bg-white px-6 py-2.5 text-sm font-bold text-gray-700 border border-gray-300 hover:bg-gray-100 transition-colors shadow-sm"
+                            >
+                                Close
+                            </button>
+                        </div>
+
                     </div>  
                 )}
             </Modal>
+            
         </SidebarLayout>
     );
 }
