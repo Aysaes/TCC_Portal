@@ -25,7 +25,15 @@ export default function EmployeeManagement({ users = [], departments = [], posit
     const isAdminRole = (roleId) => {
         if (!roleId) return false;
         const role = roles.find(r => r.id.toString() === roleId.toString());
-        return role && (role.name.toLowerCase() === 'admin' || role.name.toLowerCase() === 'super admin');
+        
+        if (!role) return false;
+        
+        const roleName = role.name.toLowerCase();
+        
+        return (
+            roleName === 'admin' || 
+            roleName === 'director of corporate services and operations'
+        );
     };
 
     // Global Confirm Modal
