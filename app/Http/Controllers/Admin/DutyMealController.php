@@ -25,20 +25,29 @@ class DutyMealController extends Controller
     
     public function index()
     {
-
         $today = now()->startOfDay();
-
         
-        if (now()->format('H:i') >= '10:00') {
-            $todayMealIds = DutyMeal::whereDate('duty_date', $today)->pluck('id');
+        // 🟢 NEW LOGIC: Calculate the date 3 days from now
+        $lockDateThreshold = now()->addDays(3)->startOfDay();
+
+        // 1. Lock the meals that are 3 days away (or closer)
+        DutyMeal::where('is_locked', false)
+            ->whereDate('duty_date', '<=', $lockDateThreshold)
+            ->update(['is_locked' => true]);
+
+        // 2. For any meal that is now locked (or was already locked), 
+        // force pending participants ('none') to the default 'main' meal.
+        $lockedMealIds = DutyMeal::where('is_locked', true)
+            ->whereDate('duty_date', '>=', $today) // Only bother with current/future locked meals
+            ->pluck('id');
             
-            if ($todayMealIds->isNotEmpty()) {
-                DutyMealParticipant::whereIn('duty_meal_id', $todayMealIds)
-                    ->where('choice', 'none')
-                    ->update(['choice' => 'main']);
-            }
+        if ($lockedMealIds->isNotEmpty()) {
+            DutyMealParticipant::whereIn('duty_meal_id', $lockedMealIds)
+                ->where('choice', 'none')
+                ->update(['choice' => 'main']);
         }
 
+        // 3. Catch-all for past meals (just in case)
         $pastMealIds = DutyMeal::whereDate('duty_date', '<', $today)->pluck('id');
         if ($pastMealIds->isNotEmpty()) {
             DutyMealParticipant::whereIn('duty_meal_id', $pastMealIds)
@@ -48,14 +57,12 @@ class DutyMealController extends Controller
 
         $user = Auth::user();
         
-       
         $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
 
         $dutymeals = DutyMeal::with([
             'branch', 
             'participants.user:id,name' 
         ])
-        
         ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
             $query->whereIn('branch_id', $allowedBranchIds);
         })
@@ -159,8 +166,8 @@ class DutyMealController extends Controller
 
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
-            'week_start' => 'required|date', // This now represents ANY starting date the user picks
-            'schedule' => 'required|array|min:1|max:7', // Ensures they only submit up to 7 days
+            'week_start' => 'required|date',
+            'schedule' => 'required|array|min:1|max:7',
             'schedule.*.date' => 'required|date',
             'schedule.*.main_meal' => 'nullable|string|max:255',
             'schedule.*.alt_meal' => 'nullable|string|max:255',
@@ -250,13 +257,9 @@ class DutyMealController extends Controller
     {
         $participant = DutyMealParticipant::findOrFail($id);
 
-        $meal = DutyMeal::findOrFail($participant->duty_meal_id);
-
+        // 🟢 REMOVED: The logic that blocked deletion if $meal->is_locked is true.
+        // Admins/Custodians can now delete employees from a locked meal (e.g., if they are absent).
         
-        if ($meal->is_locked) {
-            return back()->with('error', 'This roster is locked and can no longer be edited.');
-        }
-
         $participant->delete();
 
         return back()->with('success', 'Staff member removed from roster.');
