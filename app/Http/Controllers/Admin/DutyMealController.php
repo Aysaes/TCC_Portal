@@ -159,8 +159,8 @@ class DutyMealController extends Controller
 
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
-            'week_start' => 'required|date',
-            'schedule' => 'required|array|min:1',
+            'week_start' => 'required|date', // This now represents ANY starting date the user picks
+            'schedule' => 'required|array|min:1|max:7', // Ensures they only submit up to 7 days
             'schedule.*.date' => 'required|date',
             'schedule.*.main_meal' => 'nullable|string|max:255',
             'schedule.*.alt_meal' => 'nullable|string|max:255',
@@ -223,7 +223,7 @@ class DutyMealController extends Controller
                 }
             }
 
-            return redirect()->route('admin.duty-meals.index')->with('success', 'Weekly duty roster published successfully!');
+            return redirect()->route('admin.duty-meals.index')->with('success', '7-Day duty roster published successfully!');
 
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->errorInfo[1] == 1062) {
