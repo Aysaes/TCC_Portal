@@ -245,7 +245,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
         }
     }, [availableMonths, monthFilter]);
 
-    // 2. GROUP AND FILTER LOGIC
+    // 2. GROUP AND FILTER LOGIC (🟢 RESTORED: Groups by Week, Sorts Meals by Date)
     const activeGroupedMeals = useMemo(() => {
         const groups = {};
 
@@ -263,7 +263,11 @@ export default function Index({ auth, myDutyMeals = [] }) {
             groups[weekLabel].meals.push(meal);
         });
 
-        let entries = Object.entries(groups).map(([label, data]) => [label, data.meals, data.monday]);
+        let entries = Object.entries(groups).map(([label, data]) => {
+            // 🟢 NEW: Sort the meals inside the week by duty_date (Ascending)
+            const sortedMeals = data.meals.sort((a, b) => new Date(a.duty_date) - new Date(b.duty_date));
+            return [label, sortedMeals, data.monday];
+        });
 
         if (monthFilter && monthFilter !== 'All') {
             entries = entries.filter(([_, __, monday]) => {
@@ -281,6 +285,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
             });
         }
 
+        // Sort the actual weeks ascending
         return entries.sort((a, b) => a[2] - b[2]);
     }, [myDutyMeals, monthFilter, statusFilter]);
 
