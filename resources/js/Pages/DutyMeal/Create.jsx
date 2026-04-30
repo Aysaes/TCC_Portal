@@ -6,7 +6,7 @@ import TextInput from '@/Components/TextInput';
 import { getDutyMealLinks } from '@/Config/navigation';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function CreateDutyMeal({ auth, employees = [], branches = [], departments = [], positions = [] }) {
     const dutyMealsLinks = getDutyMealLinks();
@@ -36,20 +36,25 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
     tomorrow.setDate(tomorrow.getDate() + 1);
     const minDate = tomorrow.toISOString().split('T')[0];
 
-    // --- WEEK GENERATOR HELPER ---
+    // --- WEEK GENERATOR HELPER (🟢 FIXED: Starts on exact selected date) ---
     const generateWeekSchedule = (selectedDateStr) => {
         if (!selectedDateStr) return [];
-        const selected = new Date(selectedDateStr);
-        const day = selected.getDay();
-        const diff = selected.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(selected.setDate(diff));
+        
+        // Use the exact date the user picked
+        const startDate = new Date(`${selectedDateStr}T00:00:00`);
 
         const newSchedule = [];
         for (let i = 0; i < 7; i++) {
-            const currentDate = new Date(monday);
-            currentDate.setDate(monday.getDate() + i);
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
+            
+            // Fix formatting to ensure local YYYY-MM-DD
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const date = String(currentDate.getDate()).padStart(2, '0');
+            
             newSchedule.push({
-                date: currentDate.toISOString().split('T')[0],
+                date: `${year}-${month}-${date}`,
                 dayName: currentDate.toLocaleDateString('en-US', { weekday: 'long' }), 
                 main_meal: '',
                 alt_meal: '',
@@ -206,7 +211,7 @@ export default function CreateDutyMeal({ auth, employees = [], branches = [], de
                 {/* WEEK & BRANCH SETUP */}
                 <div className="mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-6">
                     <div className="flex-1">
-                        <InputLabel htmlFor="week_picker" value="🗓️ Select Date" className="font-bold" />
+                        <InputLabel htmlFor="week_picker" value="🗓️ Select Starting Date" className="font-bold" />
                         <TextInput id="week_picker" type="date" className="mt-2 block w-full" 
                             onChange={handleWeekChange} min={minDate} required />
                         <InputError message={errors.week_start} className="mt-2" />

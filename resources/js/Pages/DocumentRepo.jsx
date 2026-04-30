@@ -19,8 +19,6 @@ export default function Documents({ auth, documents = [], categories = [], depar
 
     const [viewingDoc, setViewingDoc] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    
-    // NEW: State for the Department Filter
     const [filterDepartment, setFilterDepartment] = useState('');
 
     // Office Viewer for Word/Excel files
@@ -61,8 +59,9 @@ export default function Documents({ auth, documents = [], categories = [], depar
         }
     };
 
-    // --- Upload Document Modal State ---
+    // --- Upload / Edit Document Modal State ---
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [editingDoc, setEditingDoc] = useState(null); // NEW: Track document being edited
     
     const { data: uploadData, setData: setUploadData, post: postDocument, processing: uploadProcessing, errors: uploadErrors, reset: resetUpload, clearErrors: clearUploadErrors } = useForm({
         title: '', 
@@ -70,13 +69,42 @@ export default function Documents({ auth, documents = [], categories = [], depar
         department_id: '', 
         branch_id: '', 
         description: '', 
-        file: null
+        file: null,
+        _method: 'POST', // Used for spoofing PUT during edit
     });
 
-    const closeUploadModal = () => { setIsUploadModalOpen(false); resetUpload(); clearUploadErrors(); };
+    const closeUploadModal = () => { 
+        setIsUploadModalOpen(false); 
+        setEditingDoc(null);
+        resetUpload(); 
+        clearUploadErrors(); 
+    };
+
+    // NEW: Open Edit Modal & populate data
+    const openEditModal = (doc) => {
+        clearUploadErrors();
+        setEditingDoc(doc);
+        setUploadData({
+            title: doc.title,
+            category: doc.category,
+            department_id: doc.department_id || '',
+            branch_id: doc.branch_id || '',
+            description: doc.description || '',
+            file: null, // Don't pre-fill file
+            _method: 'PUT', // Spoof PUT request for Laravel
+        });
+        setIsUploadModalOpen(true);
+    };
+
     const submitDocument = (e) => {
         e.preventDefault();
-        postDocument(route('admin.documents.store'), { 
+        
+        // If editing, send to update route, otherwise store route
+        const targetRoute = editingDoc 
+            ? route('admin.documents.update', editingDoc.id) 
+            : route('admin.documents.store');
+
+        postDocument(targetRoute, { 
             preserveScroll: true, 
             forceFormData: true,
             onSuccess: () => closeUploadModal() 
@@ -105,16 +133,11 @@ export default function Documents({ auth, documents = [], categories = [], depar
         });
     };
 
-    // UPDATED: Filter includes both search query AND department selection
     const filteredDocuments = documents.filter(doc => {
-        // 1. Text Search Logic
         const query = searchQuery.toLowerCase();
         const matchesTitle = doc.title?.toLowerCase().includes(query);
         const matchesDesc = doc.description?.toLowerCase().includes(query);
         const matchesSearch = matchesTitle || matchesDesc;
-
-        // 2. Department Filter Logic
-        // If filter is empty string (''), show all. Otherwise, match the department_id.
         const matchesDept = filterDepartment === '' || doc.department_id?.toString() === filterDepartment;
 
         return matchesSearch && matchesDept;
@@ -129,7 +152,6 @@ export default function Documents({ auth, documents = [], categories = [], depar
 
                 <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto lg:flex-1 lg:justify-end items-center">
                     
-                    {/* NEW: Department Filter Dropdown */}
                     <select
                         value={filterDepartment}
                         onChange={(e) => setFilterDepartment(e.target.value)}
@@ -141,7 +163,6 @@ export default function Documents({ auth, documents = [], categories = [], depar
                         ))}
                     </select>
 
-                    {/* Search Bar */}
                     <div className="w-full sm:max-w-xs relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -157,11 +178,14 @@ export default function Documents({ auth, documents = [], categories = [], depar
                         />
                     </div>
                     
-                    {/* Upload Button */}
                     {isAdmin && (
                         <button
                             type="button"
-                            onClick={() => setIsUploadModalOpen(true)}
+                            onClick={() => {
+                                setEditingDoc(null);
+                                setUploadData({ title: '', category: activeCategory !== 'Overview' ? activeCategory : '', department_id: '', branch_id: '', description: '', file: null, _method: 'POST' });
+                                setIsUploadModalOpen(true);
+                            }}
                             className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900 hover:shadow shrink-0"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-4 w-4 shrink-0 text-indigo-600">
@@ -220,12 +244,20 @@ export default function Documents({ auth, documents = [], categories = [], depar
                                         View
                                     </button>
                                     {isAdmin && (
-                                        <button 
-                                            onClick={() => triggerDelete(doc)}
-                                            className="text-sm font-medium text-red-600 hover:text-red-800"
-                                        >
-                                            Delete
-                                        </button>
+                                        <>
+                                            <button 
+                                                onClick={() => openEditModal(doc)}
+                                                className="text-sm font-medium text-amber-600 hover:text-amber-800"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button 
+                                                onClick={() => triggerDelete(doc)}
+                                                className="text-sm font-medium text-red-600 hover:text-red-800"
+                                            >
+                                                Delete
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -289,10 +321,12 @@ export default function Documents({ auth, documents = [], categories = [], depar
                 </div>
             </Modal>
 
-            {/* --- UPLOAD DOCUMENT MODAL --- */}
+            {/* --- UPLOAD / EDIT DOCUMENT MODAL --- */}
             <Modal show={isUploadModalOpen} onClose={closeUploadModal} maxWidth="md">
                 <form onSubmit={submitDocument} className="p-6 space-y-4">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">Upload New Document</h2>
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">
+                        {editingDoc ? 'Edit Document' : 'Upload New Document'}
+                    </h2>
                     <div>
                         <InputLabel htmlFor="title" value="Document Title" />
                         <TextInput id="title" className="mt-1 block w-full" value={uploadData.title} onChange={(e) => setUploadData('title', e.target.value)} required />
@@ -306,7 +340,7 @@ export default function Documents({ auth, documents = [], categories = [], depar
                         </select>
                         <InputError message={uploadErrors.category} className="mt-2" />
                         
-                        {isAdmin && (
+                        {!editingDoc && isAdmin && (
                             <div className="mt-2 flex justify-end">
                                 <button 
                                     type="button" 
@@ -358,13 +392,21 @@ export default function Documents({ auth, documents = [], categories = [], depar
                         <InputError message={uploadErrors.description} className="mt-2" />
                     </div>
                     <div>
-                        <InputLabel htmlFor="file" value="Select File (PDF, DOCX, XLSX)" />
-                        <input type="file" id="file" className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" onChange={(e) => setUploadData('file', e.target.files[0])} required />
+                        <InputLabel htmlFor="file" value={editingDoc ? "Replace File (Optional)" : "Select File (PDF, DOCX, XLSX)"} />
+                        <input 
+                            type="file" 
+                            id="file" 
+                            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
+                            onChange={(e) => setUploadData('file', e.target.files[0])} 
+                            required={!editingDoc} 
+                        />
                         <InputError message={uploadErrors.file} className="mt-2" />
                     </div>
                     <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
                         <SecondaryButton type="button" onClick={closeUploadModal}>Cancel</SecondaryButton>
-                        <PrimaryButton disabled={uploadProcessing}>Upload File</PrimaryButton>
+                        <PrimaryButton disabled={uploadProcessing}>
+                            {editingDoc ? 'Save Changes' : 'Upload File'}
+                        </PrimaryButton>
                     </div>
                 </form>
             </Modal>

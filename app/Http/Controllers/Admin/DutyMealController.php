@@ -25,20 +25,74 @@ class DutyMealController extends Controller
     
     public function index()
     {
-
         $today = now()->startOfDay();
-
         
-        if (now()->format('H:i') >= '10:00') {
-            $todayMealIds = DutyMeal::whereDate('duty_date', $today)->pluck('id');
+        // 🟢 NEW LOGIC: Lock the whole group if the FIRST day is within 3 days
+        $lockDateThreshold = now()->addDays(3)->startOfDay();
+
+        // 1. Get all unlocked meals
+        $unlockedMeals = DutyMeal::where('is_locked', false)
+            ->orderBy('branch_id')
+            ->orderBy('duty_date')
+            ->get();
+
+        $mealsToLock = [];
+
+        // Group the meals by branch to find continuous "blocks" or "weeks"
+        $groupedByBranch = $unlockedMeals->groupBy('branch_id');
+
+        foreach ($groupedByBranch as $branchId => $meals) {
+            // We assume a block is contiguous if the dates are within 7 days of each other.
+            // If the FIRST meal of a block is <= the threshold, the whole block locks.
             
-            if ($todayMealIds->isNotEmpty()) {
-                DutyMealParticipant::whereIn('duty_meal_id', $todayMealIds)
-                    ->where('choice', 'none')
-                    ->update(['choice' => 'main']);
+            $currentBlockStart = null;
+            $currentBlockMeals = [];
+
+            foreach ($meals as $meal) {
+                $mealDate = Carbon::parse($meal->duty_date)->startOfDay();
+
+                if ($currentBlockStart === null) {
+                    $currentBlockStart = $mealDate;
+                }
+
+                // If this meal is more than 7 days from the start of the block, it's a NEW block
+                if ($mealDate->diffInDays($currentBlockStart) > 7) {
+                    // Check if the previous block should be locked
+                    if ($currentBlockStart <= $lockDateThreshold) {
+                        $mealsToLock = array_merge($mealsToLock, $currentBlockMeals);
+                    }
+                    // Start new block
+                    $currentBlockStart = $mealDate;
+                    $currentBlockMeals = [];
+                }
+
+                $currentBlockMeals[] = $meal->id;
+            }
+
+            // Check the final block
+            if ($currentBlockStart !== null && $currentBlockStart <= $lockDateThreshold) {
+                $mealsToLock = array_merge($mealsToLock, $currentBlockMeals);
             }
         }
 
+        // Apply the lock to the calculated group
+        if (!empty($mealsToLock)) {
+            DutyMeal::whereIn('id', $mealsToLock)->update(['is_locked' => true]);
+        }
+
+        // 2. For any meal that is now locked (or was already locked), 
+        // force pending participants ('none') to the default 'main' meal.
+        $lockedMealIds = DutyMeal::where('is_locked', true)
+            ->whereDate('duty_date', '>=', $today) 
+            ->pluck('id');
+            
+        if ($lockedMealIds->isNotEmpty()) {
+            DutyMealParticipant::whereIn('duty_meal_id', $lockedMealIds)
+                ->where('choice', 'none')
+                ->update(['choice' => 'main']);
+        }
+
+        // 3. Catch-all for past meals
         $pastMealIds = DutyMeal::whereDate('duty_date', '<', $today)->pluck('id');
         if ($pastMealIds->isNotEmpty()) {
             DutyMealParticipant::whereIn('duty_meal_id', $pastMealIds)
@@ -48,14 +102,12 @@ class DutyMealController extends Controller
 
         $user = Auth::user();
         
-       
         $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
 
         $dutymeals = DutyMeal::with([
             'branch', 
             'participants.user:id,name' 
         ])
-        
         ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
             $query->whereIn('branch_id', $allowedBranchIds);
         })
@@ -160,7 +212,7 @@ class DutyMealController extends Controller
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
             'week_start' => 'required|date',
-            'schedule' => 'required|array|min:1',
+            'schedule' => 'required|array|min:1|max:7',
             'schedule.*.date' => 'required|date',
             'schedule.*.main_meal' => 'nullable|string|max:255',
             'schedule.*.alt_meal' => 'nullable|string|max:255',
@@ -223,7 +275,7 @@ class DutyMealController extends Controller
                 }
             }
 
-            return redirect()->route('admin.duty-meals.index')->with('success', 'Weekly duty roster published successfully!');
+            return redirect()->route('admin.duty-meals.index')->with('success', '7-Day duty roster published successfully!');
 
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->errorInfo[1] == 1062) {
@@ -250,13 +302,9 @@ class DutyMealController extends Controller
     {
         $participant = DutyMealParticipant::findOrFail($id);
 
-        $meal = DutyMeal::findOrFail($participant->duty_meal_id);
-
+        // 🟢 REMOVED: The logic that blocked deletion if $meal->is_locked is true.
+        // Admins/Custodians can now delete employees from a locked meal (e.g., if they are absent).
         
-        if ($meal->is_locked) {
-            return back()->with('error', 'This roster is locked and can no longer be edited.');
-        }
-
         $participant->delete();
 
         return back()->with('success', 'Staff member removed from roster.');
@@ -334,6 +382,7 @@ class DutyMealController extends Controller
         $user = Auth::user();
         $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
 
+        // 1. Get available archive months (Before current month)
         $availableDates = DutyMeal::whereDate('duty_date', '<', now()->startOfMonth())
             ->selectRaw('YEAR(duty_date) as year, MONTH(duty_date) as month')
             ->distinct()
@@ -341,32 +390,46 @@ class DutyMealController extends Controller
             ->orderByDesc('month')
             ->get();
 
-
         $defaultYear = $availableDates->first()->year ?? now()->subMonth()->year;
         $defaultMonth = $availableDates->first()->month ?? now()->subMonth()->month;
 
         $filterYear = $request->input('year', $defaultYear);
         $filterMonth = $request->input('month', $defaultMonth);
 
-       
-        $archivedMeals = DutyMeal::with('branch')
+        // 2. Fetch the actual archived meals
+        $archivedMeals = DutyMeal::with([
+                'branch',
+                'participants.user:id,name' // 🟢 ADDED: We need this data for the Modal
+            ])
             ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
                 $query->whereIn('branch_id', $allowedBranchIds);
             })
+            // 🟢 ADDED: Strict enforcement that archives must be before the current month
+            ->whereDate('duty_date', '<', now()->startOfMonth()) 
             ->whereYear('duty_date', $filterYear)
             ->whereMonth('duty_date', $filterMonth)
             ->withCount('participants')
             ->orderBy('duty_date', 'asc')
             ->get()
- 
             ->groupBy(function ($meal) {
                 return 'Week ' . Carbon::parse($meal->duty_date)->weekOfMonth;
             });
 
+        // 3. We also need to send departments/positions for the Modal to render employee details correctly
+        $employees = User::with(['department:id,name', 'position:id,name'])
+            ->select('id', 'name', 'department_id', 'position_id', 'branch_id')
+            ->get();
+        $departments = Department::select('id', 'name')->orderBy('name')->get();
+        $positions = Position::select('id', 'name', 'department_id')->orderBy('name')->get();
+
         return Inertia::render('DutyMeal/Archive', [
             'archivedMealsByWeek' => $archivedMeals,
             'availableDates' => $availableDates,
-            'currentFilter' => ['year' => $filterYear, 'month' => $filterMonth]
+            'currentFilter' => ['year' => $filterYear, 'month' => $filterMonth],
+            // 🟢 ADDED: Data needed for the viewing Modal
+            'employees' => $employees,
+            'departments' => $departments,
+            'positions' => $positions,
         ]);
     }
 

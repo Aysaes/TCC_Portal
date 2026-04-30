@@ -77,33 +77,33 @@ class PurchaseOrderController extends Controller
     // =====================================================================
     public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
-        // 1. Forgiving Validation (Removed strict array and mime checks that block FormData)
         $validated = $request->validate([
             'delivery_date' => 'nullable|date',
             'payment_terms' => 'nullable|string|max:255',
             'ship_to' => 'nullable|string|max:255',
+            'no_of_quotations' => 'required|integer|min:0', // 🟢 NEW REQUIREMENT
             'discount_total' => 'nullable|numeric|min:0',
             'vat_rate' => 'nullable|numeric|min:0|max:100', 
             'status' => 'required|in:drafted,pending_approval,approved,cancelled',
-            'remarks' => 'nullable|string', // 🟢 NEW: Allow remarks (rejection reason)
-            'removed_item_ids' => 'nullable', // Relaxed array rule
-            'new_attachments' => 'nullable',  // Relaxed array rule
+            'remarks' => 'nullable|string', 
+            'removed_item_ids' => 'nullable', 
+            'new_attachments' => 'nullable',  
             'new_attachments.*' => 'file|max:10240',
             'items' => 'nullable|array',
             'items.*.id' => 'required_with:items',
-            'items.*.notes' => 'nullable|string|max:255', // Max 10MB per file, any standard file type
+            'items.*.notes' => 'nullable|string|max:255', 
         ]);
 
-        // 2. Process Removed Items
+        // Process Removed Items
         if ($request->filled('removed_item_ids')) {
             $removedIds = is_array($request->removed_item_ids) 
                 ? $request->removed_item_ids 
-                : explode(',', $request->removed_item_ids); // Fallback for FormData strings
+                : explode(',', $request->removed_item_ids); 
                 
             $purchaseOrder->items()->whereIn('id', $removedIds)->update(['status' => 'removed']);
         }
 
-       if ($request->has('items')) {
+        if ($request->has('items')) {
             foreach ($request->items as $itemData) {
                 PurchaseOrderItem::where('id', $itemData['id'])
                     ->where('purchase_order_id', $purchaseOrder->id)
@@ -111,23 +111,18 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // 3. Process New File Uploads (Bulletproof Loop)
-        $attachments = $purchaseOrder->attachments ?? []; // Keep existing files
+        // Process New File Uploads
+        $attachments = $purchaseOrder->attachments ?? []; 
         
         if ($request->hasFile('new_attachments')) {
             $files = $request->file('new_attachments');
-            
-            // Force it to be an array just in case FormData sent a single file weirdly
             if (!is_array($files)) {
                 $files = [$files];
             }
 
             foreach ($files as $file) {
                 if ($file->isValid()) {
-                    // Save the file securely to the public disk
                     $path = $file->store('po_attachments', 'public');
-                    
-                    // Add the new file to our array
                     $attachments[] = [
                         'original_name' => $file->getClientOriginalName(),
                         'path' => $path,
@@ -137,7 +132,7 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // 4. Recalculate the Math based ONLY on active items
+        // Recalculate Math
         $activeItems = $purchaseOrder->items()->where('status', 'active')->get();
         $grossAmount = $activeItems->sum('net_payable');
         
@@ -147,28 +142,28 @@ class PurchaseOrderController extends Controller
         $vatTotal = $netOfDiscount * $vatDecimal;
         $grandTotal = $netOfDiscount + $vatTotal;
 
-        // 5. Save updates to the Database
+        // Save updates to DB
         $purchaseOrder->update([
             'delivery_date' => $validated['delivery_date'],
             'payment_terms' => $validated['payment_terms'],
             'ship_to' => $validated['ship_to'],
+            'no_of_quotations' => $validated['no_of_quotations'], // 🟢 SAVE NEW FIELD
             'gross_amount' => $grossAmount,
             'discount_total' => $discount,
             'net_of_discount' => $netOfDiscount,
             'vat_total' => $vatTotal,
             'grand_total' => $grandTotal,
             'status' => $validated['status'],
-            'remarks' => $validated['remarks'] ?? $purchaseOrder->remarks, // 🟢 NEW: Save remarks securely
-            'attachments' => empty($attachments) ? null : $attachments, // Forces save!
+            'remarks' => $validated['remarks'] ?? $purchaseOrder->remarks,
+            'attachments' => empty($attachments) ? null : $attachments,
         ]);
 
+        // Status Notifications...
         $status = $validated['status'];
         $originalRequester = $purchaseOrder->purchaseRequest->user ?? null;
 
         if ($status === 'pending_approval') {
             $message = 'Purchase Order submitted to DCSO for approval.';
-            
-            // Ping the Directors / Admins
             $dcsoUsers = User::whereHas('role', function($q) {
                 $q->where('name', 'like', '%director%')->orWhere('name', 'admin');
             })->get();
@@ -176,11 +171,8 @@ class PurchaseOrderController extends Controller
             if ($dcsoUsers->isNotEmpty()) {
                 Notification::send($dcsoUsers, new POStatusUpdate($purchaseOrder, "Requires DCSO Approval"));
             }
-
         } elseif ($status === 'approved') {
             $message = 'Purchase Order has been officially Approved by DCSO!';
-            
-            // Ping Procurement so they know they can send it to the supplier
             $procurementUsers = User::whereHas('role', function($q) {
                 $q->where('name', 'like', '%procurement%')->orWhere('name', 'admin');
             })->get();
@@ -188,15 +180,11 @@ class PurchaseOrderController extends Controller
             if ($procurementUsers->isNotEmpty()) {
                 Notification::send($procurementUsers, new POStatusUpdate($purchaseOrder, "Officially Approved by DCSO!"));
             }
-
-            // Ping the original employee who requested the items!
             if ($originalRequester) {
                 $originalRequester->notify(new POStatusUpdate($purchaseOrder, "Great news! Your items have been officially ordered."));
             }
-
         } elseif ($status === 'cancelled') {
             $message = 'Purchase Order has been cancelled.';
-            
             if ($originalRequester) {
                 $originalRequester->notify(new POStatusUpdate($purchaseOrder, "Notice: The Purchase Order for your items was cancelled."));
             }
@@ -205,7 +193,6 @@ class PurchaseOrderController extends Controller
         }
 
         $ccUser = $purchaseOrder->purchaseRequest->cc_user ?? null;
-
         if ($status === 'approved' && $ccUser) {
             $ccUser->notify(new PRPOCcStatusUpdate($purchaseOrder, 'PO', "Items on a request you are copied on have been officially ordered."));
         } elseif ($status === 'cancelled' && $ccUser) {
@@ -217,7 +204,6 @@ class PurchaseOrderController extends Controller
 
     public function generateFromPR(Request $request, PurchaseRequest $purchaseRequest)
     {
-
         $userRole = strtolower(trim(Auth::user()->role->name ?? ''));
         $allowedRoles = ['procurement assist', 'procurement tl', 'director of corporate services and operations', 'admin'];
         
@@ -225,7 +211,6 @@ class PurchaseOrderController extends Controller
             abort(403, 'Unauthorized Action. Only Procurement or Directors can generate Purchase Orders.');
         }
 
-        // 1. Safety Checks
         if ($purchaseRequest->status !== 'approved') {
             return back()->with('error', 'Only approved Purchase Requests can be converted to Purchase Orders.');
         }
@@ -234,24 +219,18 @@ class PurchaseOrderController extends Controller
             return back()->with('error', 'Purchase Orders have already been generated for this request.');
         }
 
-        // 2. Fetch items and group them by Supplier
         $items = $purchaseRequest->items()->with('product')->get();
         $groupedBySupplier = $items->groupBy('supplier_id');
 
-        // Use a transaction so if one PO fails to generate, they all roll back
         DB::transaction(function () use ($groupedBySupplier, $purchaseRequest) {
             foreach ($groupedBySupplier as $supplierId => $supplierItems) {
-                
-                // Safety catch: Skip items that don't have a supplier assigned
                 if (!$supplierId) continue;
 
-                // 3. Generate Unique PO Number (Format: PO-YYYY-XXXX)
                 $year = date('Y');
                 $latestPo = PurchaseOrder::whereYear('created_at', $year)->orderBy('id', 'desc')->first();
                 $nextNumber = $latestPo ? intval(substr($latestPo->po_number, -4)) + 1 : 1;
                 $poNumber = 'PO-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-                // 4. Create the PO Header
                 $po = PurchaseOrder::create([
                     'purchase_request_id' => $purchaseRequest->id,
                     'supplier_id' => $supplierId,
@@ -261,14 +240,13 @@ class PurchaseOrderController extends Controller
                     'delivery_date' => $purchaseRequest->date_needed,
                     'purpose' => $purchaseRequest->purpose_of_request,
                     'department' => $purchaseRequest->department,
-                    'status' => 'drafted' // Starts as a draft so Procurement can negotiate/edit it
+                    'no_of_quotations' => 0, // 🟢 INIT TO 0 SO DB DOESN'T COMPLAIN
+                    'status' => 'drafted'
                 ]);
 
                 $grossAmount = 0;
 
-                // 5. Create PO Items
                 foreach ($supplierItems as $prItem) {
-                    // Combine product name and specs for the PO description
                     $description = $prItem->product ? $prItem->product->name : 'Custom Item';
                     if ($prItem->specifications) {
                         $description .= ' - ' . $prItem->specifications;
@@ -287,13 +265,11 @@ class PurchaseOrderController extends Controller
                         'qty' => $qty,
                         'unit' => $prItem->unit,
                         'unit_price' => $unitPrice,
-                        'vat_rate' => 12.00, // Default to 12% VAT
+                        'vat_rate' => 12.00,
                         'net_payable' => $lineTotal
                     ]);
                 }
 
-                // 6. Update Initial PO Totals
-                // We do basic math here; the Procurement team can tweak discounts/VAT in the UI later
                 $vatTotal = $grossAmount * 0.12;
                 $grandTotal = $grossAmount + $vatTotal;
 
@@ -310,7 +286,6 @@ class PurchaseOrderController extends Controller
                     'status' => 'po_generated',
                     'updated_at' => now()
                 ]);
-                
         });
 
         $originalRequester = $purchaseRequest->user;

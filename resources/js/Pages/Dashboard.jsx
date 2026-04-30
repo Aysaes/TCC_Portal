@@ -42,26 +42,6 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
         return Array.from(map.values()).sort((a, b) => Number(a.id) - Number(b.id));
     }, [priorities, allAnnouncements]);
 
-    // --- PRIORITY DROPDOWN COLOR HELPER ---
-    const getPrioritySelectClass = (priorityId) => {
-        switch (String(priorityId)) {
-            case '1':
-                return 'bg-blue-100 text-blue-700 border-blue-300';
-            case '2':
-                return 'bg-amber-100 text-amber-700 border-amber-300';
-            case '3':
-                return 'bg-red-100 text-red-700 border-red-300';
-            case '4':
-                return 'bg-green-100 text-green-700 border-green-300';
-            case '5':
-                return 'bg-violet-100 text-violet-700 border-violet-300';
-            case '6':
-                return 'bg-pink-100 text-pink-700 border-pink-300';
-            default:
-                return 'bg-white text-gray-700 border-gray-300';
-        }
-    };
-
     const userRole = String(auth.user?.role?.name || '').toLowerCase();
     const isGlobalViewer = userRole === 'admin' || userRole.includes('director');
     const userBranchId = auth.user?.branch_id;
@@ -162,7 +142,7 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
 
         return {
             backgroundColor: `rgba(${r}, ${g}, ${b}, 0.25)`, 
-            color: normalized,                                
+            color: normalized,                               
             borderColor: normalized, 
         };
     };
@@ -257,14 +237,14 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="filter_priority" value="Priority Level" />
+                                <InputLabel htmlFor="filter_priority" value="Category" />
                                 <select
                                     id="filter_priority"
-                                    className={`mt-1 block w-full rounded-md shadow-sm transition-all duration-200 focus:border-indigo-500 focus:ring-indigo-500 hover:bg-white hover:text-gray-700 hover:border-gray-300 ${getPrioritySelectClass(selectedPriorityId)}`}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     value={selectedPriorityId}
                                     onChange={(e) => setSelectedPriorityId(e.target.value)}
                                 >
-                                    <option value="">All Priorities</option>
+                                    <option value="">All Categories</option>
                                     {priorityOptions.map((priority) => (
                                         <option key={priority.id} value={priority.id}>
                                             {priority.name}
@@ -456,7 +436,7 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                 {selectedAnnouncement && (
                     <div className="flex flex-col bg-white overflow-hidden max-h-[85vh]">
                         
-                        {/* ✅ UPDATED: Removed aspect-[16/9] and added explicit heights (h-64 sm:h-80) */}
+                        {/* ✅ IMAGE SECTION (Fixed at top) */}
                         {selectedAnnouncement.image_path && (
                             <div className="relative w-full h-64 sm:h-80 shrink-0 bg-gray-50 border-b border-gray-200 overflow-hidden flex items-center justify-center">
                                 <img 
@@ -474,7 +454,8 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                             </div>
                         )}
                         
-                        <div className="p-6 sm:p-8 overflow-y-auto">
+                        {/* ✅ SCROLLABLE CONTENT SECTION (Takes up remaining space) */}
+                        <div className="p-6 sm:p-8 overflow-y-auto flex-1">
                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedAnnouncement.title}</h2>
@@ -487,12 +468,15 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                                 </span>
                             </div>
                             <hr className="my-6 border-gray-100" />
-                            <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed pb-20">
+                            
+                            {/* Text Content */}
+                            <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
                                 {selectedAnnouncement.content}
                             </div>
 
+                            {/* Attachment */}
                             {selectedAnnouncement.attachment_path && (
-                                <div className="mt-2 mb-10 border-t border-gray-100 pt-6">
+                                <div className="mt-8 border-t border-gray-100 pt-6">
                                     <h4 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Attached File</h4>
                                     <a 
                                         href={`/storage/${selectedAnnouncement.attachment_path}`} 
@@ -507,19 +491,22 @@ export default function Dashboard({ auth, announcements, priorities = [] }) {
                                     </a>
                                 </div>
                             )}
-                            
-                            <div className="sticky bottom-0 -mx-6 -mb-6 sm:-mx-8 sm:-mb-8 px-6 pb-6 sm:px-8 sm:pb-8 pt-10 flex justify-end bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
-                                <button 
-                                    onClick={closeModal} 
-                                    className="pointer-events-auto rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors shadow-sm"
-                                >
-                                    Close 
-                                </button>
-                            </div>
                         </div>
+
+                        {/* ✅ SOLID FIXED FOOTER (Never scrolls, text cuts off cleanly above it) */}
+                        <div className="bg-gray-50 px-6 py-4 sm:px-8 border-t border-gray-200 flex justify-end shrink-0">
+                            <button 
+                                onClick={closeModal} 
+                                className="rounded-md bg-white px-6 py-2.5 text-sm font-bold text-gray-700 border border-gray-300 hover:bg-gray-100 transition-colors shadow-sm"
+                            >
+                                Close
+                            </button>
+                        </div>
+
                     </div>  
                 )}
             </Modal>
+            
         </SidebarLayout>
     );
 }

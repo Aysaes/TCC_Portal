@@ -14,50 +14,53 @@ use App\Notifications\NewFeedbackAlert;
 
 class FeedbackController extends Controller
 {
-    // ---> NEW METHOD FOR ADMIN VIEW <---
     public function index(Request $request)
     {
         $query = Feedback::with('user')->latest();
 
-        // Optional: Handle the search filter
         if ($request->filled('search')) {
             $query->where('subject', 'like', '%' . $request->search . '%');
         }
 
-        // Optional: Handle the type dropdown filter
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        // Paginate results (e.g., 10 per page) and keep query strings for pagination links
         $submissions = $query->paginate(10)->withQueryString()->through(function ($submission) {
             $submission->created_at_display = Carbon::parse($submission->created_at)
                 ->timezone(config('app.timezone'))
                 ->format('M j, Y');
+
+            // 🟢 SECURITY: If anonymous, scrub the user data before sending to React
+            if ($submission->is_anonymous) {
+                $submission->unsetRelation('user'); 
+                $submission->user_name_display = 'Anonymous';
+            } else {
+                $submission->user_name_display = $submission->user ? $submission->user->name : 'Unknown';
+            }
 
             return $submission;
         });
 
         return Inertia::render('HR/Admin/FeedbackSubmissions', [
             'submissions' => $submissions,
-            'filters' => $request->only(['search', 'type']) // Pass filters back to React to keep input states
+            'filters' => $request->only(['search', 'type']) 
         ]);
     }
 
-    // Existing create method
     public function create()
     {
         return Inertia::render('HR/Staff/Feedback');
     }
 
-    // Existing store method
    public function store(Request $request)
     {
         $request->validate([
             'type' => 'required|string|max:50',
             'subject' => 'required|string|max:255',
             'message' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', 
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:768000', 
+            'is_anonymous' => 'boolean', // 🟢 Validate the new field
         ]);
 
         $imagePath = null;
@@ -65,25 +68,27 @@ class FeedbackController extends Controller
             $imagePath = $request->file('image')->store('feedback_images', 'public');
         }
 
-        // 🟢 1. Save the feedback to a variable
+        $isAnonymous = $request->boolean('is_anonymous'); // 🟢 Safely cast to boolean
+
         $feedback = Feedback::create([
             'user_id' => Auth::id(), 
             'type' => $request->type,
             'subject' => $request->subject,
             'message' => $request->message,
             'image_path' => $imagePath,
+            'is_anonymous' => $isAnonymous, // 🟢 Save it
         ]);
 
-        // 🟢 2. Find the HR Team (Admins, HR, HRBP)
         $hrUsers = User::whereHas('role', function ($q) {
             $q->whereIn('name', ['admin', 'HR', 'HRBP', 'Human Resources', 'Director of Corporate Services and Operations']);
         })->orWhereHas('position', function ($q) {
             $q->where('name', 'Human Resources');
         })->get();
 
-        // 🟢 3. Fire the notification!
         if ($hrUsers->isNotEmpty()) {
-            Notification::send($hrUsers, new NewFeedbackAlert($feedback->type, Auth::user()->name));
+            // 🟢 Send "Anonymous" or the actual name to the email notification
+            $submitterName = $isAnonymous ? 'Anonymous' : Auth::user()->name;
+            Notification::send($hrUsers, new NewFeedbackAlert($feedback->type, $submitterName));
         }
 
         return back()->with('success', 'Thank you! Your feedback has been securely submitted to HR.');

@@ -472,7 +472,7 @@ export default function Overview({ auth, announcements, contents }) {
                                         )}
                                         <div className="flex flex-1 flex-col p-8">
                                             <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
-                                                Mission
+                                                {mission.type}
                                             </p>
                                             <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
                                                 {mission.title}
@@ -506,7 +506,7 @@ export default function Overview({ auth, announcements, contents }) {
                                         )}
                                         <div className="flex flex-1 flex-col p-8">
                                             <p className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">
-                                                Vision
+                                                {vision.type}
                                             </p>
                                             <h4 className="mb-4 text-2xl font-extrabold text-gray-900">
                                                 {vision.title}
@@ -569,15 +569,18 @@ export default function Overview({ auth, announcements, contents }) {
                 </div>
             </div>
 
+            {/* ✅ FIXED MODAL STRUCTURE */}
             <Modal show={isModalOpen} onClose={closeModal} maxWidth="2xl">
                 {selectedAnnouncement && (
-                    <div className="flex max-h-[85vh] flex-col overflow-hidden bg-white">
+                    <div className="flex flex-col bg-white overflow-hidden max-h-[85vh]">
+                        
+                        {/* ✅ IMAGE SECTION (Fixed at top, Shrinks to 0 so it doesn't flex weirdly) */}
                         {selectedAnnouncement.image_path && (
-                            <div className="relative aspect-[16/9] w-full shrink-0 border-b border-gray-200 bg-gray-100 overflow-hidden flex items-center justify-center">
-                                <img
-                                    src={`/storage/${selectedAnnouncement.image_path}`}
-                                    alt={selectedAnnouncement.title}
-                                    className="absolute left-1/2 top-1/2"
+                            <div className="relative w-full h-64 sm:h-80 shrink-0 bg-gray-50 border-b border-gray-200 overflow-hidden flex items-center justify-center">
+                                <img 
+                                    src={`/storage/${selectedAnnouncement.image_path}`} 
+                                    alt={selectedAnnouncement.title} 
+                                    className="absolute left-1/2 top-1/2" 
                                     style={{
                                         transform: `translate(calc(-50% + ${selectedAnnouncement.image_offset_x ?? 0}px), calc(-50% + ${selectedAnnouncement.image_offset_y ?? 0}px)) scale(${selectedAnnouncement.image_zoom ?? 1})`,
                                         transformOrigin: 'center center',
@@ -588,34 +591,37 @@ export default function Overview({ auth, announcements, contents }) {
                                 />
                             </div>
                         )}
-                        <div className="overflow-y-auto p-6 sm:p-8">
-                            <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                        
+                        {/* ✅ SCROLLABLE CONTENT SECTION (Takes up remaining space) */}
+                        <div className="p-6 sm:p-8 overflow-y-auto flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                                 <div>
-                                    <h2 className="mb-1 text-2xl font-bold text-gray-900">
-                                        {selectedAnnouncement.title}
-                                    </h2>
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedAnnouncement.title}</h2>
                                     <p className="text-sm font-medium text-gray-500">
-                                        Posted by {selectedAnnouncement.author} on{' '}
-                                        {formatAppDate(selectedAnnouncement.created_at, system?.timezone)}
+                                        Posted by {selectedAnnouncement.author} on {formatAppDate(selectedAnnouncement.created_at, system?.timezone)}
                                     </p>
                                 </div>
-                                <span
-                                    className="shrink-0 rounded-md border px-3 py-1 text-xs font-black uppercase tracking-wider"
+                                <span 
+                                    className="rounded-md border px-3 py-1 text-xs font-black uppercase tracking-wider shrink-0" 
                                     style={getSolidBadgeStyle(selectedAnnouncement.priority_level?.color)}
                                 >
                                     {selectedAnnouncement.priority_level?.name || 'Notice'}
                                 </span>
                             </div>
                             <hr className="my-6 border-gray-100" />
-                            <div className="prose max-w-none whitespace-pre-wrap leading-relaxed text-gray-700 pb-6">
+                            
+                            {/* Text Content */}
+                            <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
                                 {selectedAnnouncement.content}
                             </div>
+
+                            {/* Attachment */}
                             {selectedAnnouncement.attachment_path && (
-                                <div className="mt-2 mb-10 border-t border-gray-100 pt-6">
+                                <div className="mt-8 border-t border-gray-100 pt-6">
                                     <h4 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Attached File</h4>
-                                    <a
-                                        href={`/storage/${selectedAnnouncement.attachment_path}`}
-                                        target="_blank"
+                                    <a 
+                                        href={`/storage/${selectedAnnouncement.attachment_path}`} 
+                                        target="_blank" 
                                         rel="noreferrer"
                                         className="inline-flex items-center gap-2 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-4 py-3 rounded-lg hover:bg-indigo-100 hover:text-indigo-800 transition-colors shadow-sm w-full sm:w-auto"
                                     >
@@ -626,16 +632,19 @@ export default function Overview({ auth, announcements, contents }) {
                                     </a>
                                 </div>
                             )}
-                            <div className="pointer-events-none sticky bottom-0 -mx-6 -mb-6 flex justify-end bg-gradient-to-t from-white via-white to-transparent px-6 pb-6 pt-10 sm:-mx-8 sm:-mb-8 sm:px-8 sm:pb-8">
-                                <button
-                                    onClick={closeModal}
-                                    className="pointer-events-auto rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-200"
-                                >
-                                    Close
-                                </button>
-                            </div>
                         </div>
-                    </div>
+
+                        {/* ✅ SOLID FIXED FOOTER (Never scrolls, text cuts off cleanly above it) */}
+                        <div className="bg-gray-50 px-6 py-4 sm:px-8 border-t border-gray-200 flex justify-end shrink-0">
+                            <button 
+                                onClick={closeModal} 
+                                className="rounded-md bg-white px-6 py-2.5 text-sm font-bold text-gray-700 border border-gray-300 hover:bg-gray-100 transition-colors shadow-sm"
+                            >
+                                Close
+                            </button>
+                        </div>
+
+                    </div>  
                 )}
             </Modal>
         </SidebarLayout>

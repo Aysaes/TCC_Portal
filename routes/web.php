@@ -73,7 +73,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // 3. Merge and clean the array
             $allowedBranchIds = array_values(array_unique(array_filter(array_merge($branchIds, $rotating))));
 
-            // 🟢 DEBUG LOG: Check your storage/logs/laravel.log to see this print out!
             \Illuminate\Support\Facades\Log::info('OVERVIEW RENDERED - Security Check:', [
                 'user' => $user->name,
                 'role' => $userRole,
@@ -109,7 +108,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $rotating = Illuminate\Support\Facades\DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->toArray();
             $allowedBranchIds = array_values(array_unique(array_filter(array_merge($branchIds, $rotating))));
 
-            // 🟢 DEBUG LOG
             \Illuminate\Support\Facades\Log::info('DASHBOARD RENDERED - Security Check:', [
                 'user' => $user->name,
                 'role' => $userRole,
@@ -139,7 +137,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard.mission-vision');
 
-    // 🟢 NEW: RESOURCES LINKS 🟢
+    // --- RESOURCES LINKS ---
     Route::get('/resources/internal-links', function () {
         return Inertia::render('Resources/InternalLinks');
     })->name('resources.internal');
@@ -193,7 +191,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
         $totalActiveEmployees = \App\Models\User::whereIn('status', ['Active', 'Password reset'])->count();
         $totalBranches = \App\Models\Branch::count();
 
-        $activeSessions = \Illuminate\Support\Facades\DB::table('sessions')
+        $activeSessions = DB::table('sessions')
             ->whereNotNull('user_id')
             ->where('last_activity', '>=', now()->subMinutes(15)->getTimestamp())
             ->distinct('user_id')
@@ -245,15 +243,19 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('.announcements.update');
     Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('.announcements.destroy');
     Route::post('/announcements/priority', [AnnouncementController::class, 'storePriority'])->name('.announcements.priority.store');
+    Route::put('/announcements/priority/{priority}', [AnnouncementController::class, 'updatePriority'])->name('.announcements.priority.update');
+    Route::delete('/announcements/priority/{priority}', [AnnouncementController::class, 'destroyPriority'])->name('.announcements.priority.destroy');
 
     Route::post('/org-chart/asset', [OrgChartController::class, 'storeAsset'])->name('.org-chart.asset.store');
     Route::get('/org-chart', [OrgChartController::class, 'index'])->name('.org-chart.index');
+    Route::post('/org-chart/structure', [OrgChartController::class, 'saveStructure'])->name('.org-chart.structure.save'); // NEW JSON ROUTE
     Route::post('/org-chart', [OrgChartController::class, 'store'])->name('.org-chart.store');
     Route::put('/org-chart/{member}', [OrgChartController::class, 'update'])->name('.org-chart.update');
     Route::post('/org-chart/reorder', [OrgChartController::class, 'reorder'])->name('.org-chart.reorder'); 
     Route::delete('/org-chart/{member}', [OrgChartController::class, 'destroy'])->name('.org-chart.destroy');
 
     Route::post('/documents', [DocumentController::class, 'store'])->name('.documents.store');
+    Route::put('/documents/{document}', [DocumentController::class, 'update'])->name('.documents.update');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');

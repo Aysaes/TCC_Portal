@@ -35,7 +35,6 @@ export default function Index({ auth, dutymeals = [], employees = [], department
     const [editingShiftId, setEditingShiftId] = useState(null); 
     const [editingChoiceId, setEditingChoiceId] = useState(null); 
     
-    // NEW: States for editing the main and alt meals
     const [isEditingMeals, setIsEditingMeals] = useState(false);
     const [editMealData, setEditMealData] = useState({ main: '', alt: '' });
 
@@ -215,20 +214,25 @@ export default function Index({ auth, dutymeals = [], employees = [], department
     }, [filteredDutyMeals]);
 
 
-    // STATS CRUNCHER
+    // STATS CRUNCHER (Now includes Shifts)
     const stats = useMemo(() => {
         let totalMeals = 0; let totalMain = 0; let totalAlt = 0; let totalSpecial = 0;
+        let totalDay = 0; let totalGraveyard = 0; let totalStraight = 0;
 
         filteredDutyMeals.forEach(meal => {
             meal.participants.forEach(p => {
                 totalMeals++;
                 if (p.choice === 'main') totalMain++;
                 if (p.choice === 'alt') totalAlt++;
-                if (p.choice === 'special') totalSpecial++; // Fixed stats logic
+                if (p.choice === 'special') totalSpecial++;
+
+                if (p.shift_type === 'day') totalDay++;
+                if (p.shift_type === 'graveyard') totalGraveyard++;
+                if (p.shift_type === 'straight') totalStraight++;
             });
         });
 
-        return { totalMeals, totalMain, totalAlt, totalSpecial };
+        return { totalMeals, totalMain, totalAlt, totalSpecial, totalDay, totalGraveyard, totalStraight };
     }, [filteredDutyMeals]); 
 
     return (
@@ -247,7 +251,6 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                     
                     {/* FILTER ROW */}
                     <div className="flex flex-wrap items-center gap-2">
-                        {/* The Date Quick-Filter Dropdown */}
                         <select
                             value={dateFilterType}
                             onChange={(e) => {
@@ -336,6 +339,44 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                         <div>
                             <p className="text-xs sm:text-sm font-medium text-gray-500">Special Requests</p>
                             <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalSpecial}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* --- SHIFT STATISTICS --- */}
+                <h3 className="text-sm font-semibold text-gray-700 mt-6 mb-3 px-1">Shift Distribution</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm flex items-center">
+                        <div className="mr-4 rounded-full bg-yellow-50 p-3 text-yellow-600">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium text-gray-500">Day Shifts</p>
+                            <p className="text-lg font-bold text-gray-900">{stats.totalDay}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm flex items-center">
+                        <div className="mr-4 rounded-full bg-emerald-50 p-3 text-emerald-600">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium text-gray-500">Straight Shifts</p>
+                            <p className="text-lg font-bold text-gray-900">{stats.totalStraight}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm flex items-center">
+                        <div className="mr-4 rounded-full bg-indigo-50 p-3 text-indigo-600">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium text-gray-500">Graveyard Shifts</p>
+                            <p className="text-lg font-bold text-gray-900">{stats.totalGraveyard}</p>
                         </div>
                     </div>
                 </div>
@@ -521,7 +562,8 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                                 }}
                                                                 onBlur={() => setEditingShiftId(null)}
                                                                 onClick={(e) => e.stopPropagation()} 
-                                                                className={`appearance-none inline-flex items-center py-0.5 pl-1.5 sm:pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-medium rounded border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                // FIX: Added bg-none to hide Tailwind arrow
+                                                                className={`appearance-none bg-none inline-flex items-center py-0.5 pl-1.5 sm:pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-medium rounded border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
                                                                     ${!p.shift_type ? 'bg-gray-100 text-gray-800 border-gray-300 focus:ring-gray-400' :
                                                                     p.shift_type === 'graveyard' ? 'bg-indigo-100 text-indigo-800 border-indigo-200 focus:ring-indigo-400' : 
                                                                     p.shift_type === 'straight' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 focus:ring-emerald-400' : 
@@ -563,7 +605,8 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                                 }}
                                                                 onBlur={() => setEditingChoiceId(null)}
                                                                 onClick={(e) => e.stopPropagation()} 
-                                                                className={`appearance-none inline-flex items-center py-0.5 pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
+                                                                // FIX: Added bg-none to hide Tailwind arrow here too
+                                                                className={`appearance-none bg-none inline-flex items-center py-0.5 pl-2 pr-5 sm:pr-6 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-0 cursor-pointer transition-colors
                                                                     ${p.choice === 'none' ? 'bg-gray-100 text-gray-500 border-gray-200 focus:ring-gray-400' : 
                                                                     p.choice === 'main' ? 'bg-blue-100 text-blue-800 border-blue-200 focus:ring-blue-400' : 
                                                                     p.choice === 'special' ? 'bg-purple-100 text-purple-800 border-purple-200 focus:ring-purple-400' :
@@ -600,23 +643,21 @@ export default function Index({ auth, dutymeals = [], employees = [], department
                                                     )}
                                                 </td>
 
-                                                {/* Styled Action Column */}
+                                                {/* 🟢 FIXED: Removed condition so button is ALWAYS visible */}
                                                 <td className="px-3 sm:px-5 py-2.5 sm:py-3 whitespace-nowrap text-right text-sm font-medium">
-                                                    {!selectedRoster.is_locked && (
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={(e) => {
-                                                                 e.preventDefault();
-                                                                 e.stopPropagation();
-                                                                handleRemove(p.user?.name, p.id)}}
-                                                            className="rounded-full p-1 sm:p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none"
-                                                            title="Remove from Roster"
-                                                        >
-                                                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                        </button>
-                                                    )}
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={(e) => {
+                                                             e.preventDefault();
+                                                             e.stopPropagation();
+                                                            handleRemove(p.user?.name, p.id)}}
+                                                        className="rounded-full p-1 sm:p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none"
+                                                        title="Remove from Roster"
+                                                    >
+                                                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         )})}

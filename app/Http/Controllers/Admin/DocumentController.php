@@ -66,7 +66,7 @@ class DocumentController extends Controller
             'branch_id' => 'nullable|exists:branches,id',        // Nullable for "All Branches"
             'description' => 'nullable|string',
             // The limit is set right here to 20480 kilobytes (20MB) -> wait, your comment says 20MB but max is 51200 (50MB). Kept as is.
-            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:51200', 
+            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:768000', 
         ]);
 
         $filePath = $request->file('file')->store('documents', 'public');
@@ -168,4 +168,31 @@ class DocumentController extends Controller
         ];
         return response()->file($path, $headers);
     }
+    public function update(Request $request, Document $document)
+{
+    $request->validate([
+        'title' => 'required|string|max:255',
+        'category' => 'required|string|max:255',
+        'department_id' => 'required|exists:departments,id',
+        'branch_id' => 'nullable|exists:branches,id',
+        'description' => 'nullable|string',
+        'file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240', // 10MB max
+    ]);
+
+    $data = $request->only(['title', 'category', 'department_id', 'branch_id', 'description']);
+
+    // If the user uploaded a new replacement file
+    if ($request->hasFile('file')) {
+        // Delete the old file from storage first to save space
+        if ($document->file_path) {
+            Storage::disk('public')->delete($document->file_path);
+        }
+        // Save the new file
+        $data['file_path'] = $request->file('file')->store('documents', 'public');
+    }
+
+    $document->update($data);
+
+    return back()->with('success', 'Document updated successfully.');
+}
 }

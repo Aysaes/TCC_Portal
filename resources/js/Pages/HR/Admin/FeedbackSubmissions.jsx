@@ -9,38 +9,31 @@ export default function FeedbackSubmissions({ auth, submissions }) {
     
     const dataList = submissions?.data || [];
 
-    // --- STATE FOR THE MODAL ---
     const [viewingFeedback, setViewingFeedback] = useState(null);
 
-    // --- FILTER STATES ---
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
-    // --- SORTING STATE ---
     const [sortField, setSortField] = useState('date_submitted');
     const [sortDirection, setSortDirection] = useState('desc');
 
-    // Extract unique types for the filter dropdown dynamically
     const uniqueTypes = useMemo(() => {
         const types = dataList.map(s => s.type).filter(Boolean);
         return [...new Set(types)];
     }, [dataList]);
 
-    // --- LIVE FILTER LOGIC ---
     const filteredSubmissions = useMemo(() => {
         return dataList.filter(item => {
-            // 1. Search Filter (by Employee Name or Subject)
             const searchLower = searchQuery.toLowerCase().trim();
-            const employeeName = (item.user?.name || '').toLowerCase();
+            // 🟢 UPDATED: Use the secure display name from the controller
+            const employeeName = (item.user_name_display || '').toLowerCase();
             const subject = (item.subject || '').toLowerCase();
             const matchesSearch = !searchLower || employeeName.includes(searchLower) || subject.includes(searchLower);
 
-            // 2. Type Filter
             const matchesType = !filterType || item.type === filterType;
 
-            // 3. Date Range Filter
             let matchesDate = true;
             if (startDate || endDate) {
                 const itemDate = new Date(item.created_at);
@@ -62,7 +55,6 @@ export default function FeedbackSubmissions({ auth, submissions }) {
         });
     }, [dataList, searchQuery, filterType, startDate, endDate]);
 
-    // --- SORTING LOGIC ---
     const sortedSubmissions = useMemo(() => {
         return [...filteredSubmissions].sort((a, b) => {
             let aValue = '';
@@ -103,7 +95,6 @@ export default function FeedbackSubmissions({ auth, submissions }) {
 
     const renderHeaderSortButton = (field) => {
         const isActive = sortField === field;
-
         const upClass = isActive && sortDirection === 'asc' ? 'text-gray-900' : 'text-gray-300';
         const downClass = isActive && sortDirection === 'desc' ? 'text-gray-900' : 'text-gray-300';
 
@@ -149,10 +140,8 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                         </div>
                     </div>
 
-                    {/* 🟢 FILTER WIDGET */}
                     <div className="mb-6 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            {/* Live Search Bar */}
                             <div className="relative">
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Search</label>
                                 <div className="relative">
@@ -171,7 +160,6 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                                 </div>
                             </div>
 
-                            {/* Type Filter */}
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Feedback Type</label>
                                 <select
@@ -186,7 +174,6 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                                 </select>
                             </div>
 
-                            {/* Start Date */}
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Start Date</label>
                                 <input
@@ -197,7 +184,6 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                                 />
                             </div>
 
-                            {/* End Date */}
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">End Date</label>
                                 <input
@@ -209,7 +195,6 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                             </div>
                         </div>
 
-                        {/* Reset Filters Button */}
                         {(searchQuery || filterType || startDate || endDate) && (
                             <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
                                 <button
@@ -260,7 +245,10 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                                                     {item.subject}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {item.user?.name || 'Unknown'}
+                                                    {/* 🟢 UPDATED: Use the secure display name from the controller */}
+                                                    <span className={item.is_anonymous ? "font-semibold italic text-gray-400" : ""}>
+                                                        {item.user_name_display}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <button 
@@ -287,9 +275,6 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                 </div>
             </div>
 
-            {/* ==========================================
-                FEEDBACK VIEWER MODAL
-            ========================================== */}
             <Modal show={!!viewingFeedback} onClose={() => setViewingFeedback(null)} maxWidth="2xl">
                 {viewingFeedback && (
                     <div className="p-6 max-h-[85vh] overflow-y-auto flex flex-col">
@@ -298,7 +283,7 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900">{viewingFeedback.subject}</h2>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    Submitted by <span className="font-semibold text-gray-700">{viewingFeedback.user?.name || 'Unknown'}</span> on {viewingFeedback.created_at_display}
+                                    Submitted by <span className={`font-semibold ${viewingFeedback.is_anonymous ? 'italic text-gray-400' : 'text-gray-700'}`}>{viewingFeedback.user_name_display}</span> on {viewingFeedback.created_at_display}
                                 </p>
                             </div>
                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${getTypeColor(viewingFeedback.type)}`}>
@@ -334,7 +319,6 @@ export default function FeedbackSubmissions({ auth, submissions }) {
                     </div>
                 )}
             </Modal>
-
         </SidebarLayout>
     );
 }

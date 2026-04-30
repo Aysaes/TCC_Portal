@@ -3,9 +3,9 @@ import SidebarLayout from "@/Layouts/SidebarLayout";
 import { Head } from "@inertiajs/react";
 
 // Accept the new props passed from our Laravel route, setting defaults to 0 just in case
-export default function AdminDashboard({ totalActiveEmployees = 0, totalBranches = 0, activeSessions = 0 }) {
+export default function AdminDashboard({ auth, totalActiveEmployees = 0, totalBranches = 0, activeSessions = 0 }) {
 
-    const adminLinks = getAdminLinks();
+    const adminLinks = getAdminLinks(auth);
 
     return (
         <SidebarLayout

@@ -12,9 +12,9 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 
-export default function EmployeeManagement({ users = [], departments = [], positions = [], branches = [], roles = [] }) {
+export default function EmployeeManagement({ auth, users = [], departments = [], positions = [], branches = [], roles = [] }) {
 
-    const adminLinks = getAdminLinks();
+    const adminLinks = getAdminLinks(auth);
 
     // Helper to manually trigger the global toast
     const triggerToast = (message, type = 'success') => {
@@ -25,7 +25,15 @@ export default function EmployeeManagement({ users = [], departments = [], posit
     const isAdminRole = (roleId) => {
         if (!roleId) return false;
         const role = roles.find(r => r.id.toString() === roleId.toString());
-        return role && (role.name.toLowerCase() === 'admin' || role.name.toLowerCase() === 'super admin');
+        
+        if (!role) return false;
+        
+        const roleName = role.name.toLowerCase();
+        
+        return (
+            roleName === 'admin' || 
+            roleName === 'director of corporate services and operations'
+        );
     };
 
     // Global Confirm Modal

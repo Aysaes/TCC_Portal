@@ -11,7 +11,7 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function Announcements({ auth, announcements = [], branches = [], priorities = [] }) {
-    const adminLinks = getAdminLinks();
+    const adminLinks = getAdminLinks(auth);
     const { system } = usePage().props;
 
     const FRAME_RATIO_CLASS = 'aspect-[16/9] w-full max-w-[720px]';
@@ -774,14 +774,14 @@ export default function Announcements({ auth, announcements = [], branches = [],
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="filter_priority" value="Priority Level" />
+                                <InputLabel htmlFor="filter_priority" value="Categories" />
                                 <select
                                     id="filter_priority"
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     value={selectedPriorityId}
                                     onChange={(e) => setSelectedPriorityId(e.target.value)}
                                 >
-                                    <option value="">All Priorities</option>
+                                    <option value="">All Categories</option>
                                     {priorities.map((priority) => (
                                         <option key={priority.id} value={priority.id}>
                                             {priority.name}
@@ -1114,7 +1114,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                         </div>
 
                         <div className="md:col-span-2">
-                            <InputLabel htmlFor="add_priority" value="Priority Level" />
+                            <InputLabel htmlFor="add_priority" value="Category" />
                             <div className="mt-1 flex gap-2">
                                 <select
                                     id="add_priority"
@@ -1123,7 +1123,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                     onChange={(e) => setAddData('priority_level_id', e.target.value)}
                                     required
                                 >
-                                    <option value="" disabled>Select a priority...</option>
+                                    <option value="" disabled>Select a category...</option>
                                     {priorities.map(p => (
                                         <option key={p.id} value={p.id}>{p.name}</option>
                                     ))}
@@ -1134,7 +1134,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                     onClick={openManagePriorities}
                                     className="whitespace-nowrap rounded-md bg-indigo-100 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
                                 >
-                                    Manage Priorities
+                                    Manage Categories
                                 </button>
                             </div>
                             <InputError message={addErrors.priority || addErrors.priority_level_id} className="mt-2" />
@@ -1239,7 +1239,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                         </div>
 
                         <div className="md:col-span-2">
-                            <InputLabel htmlFor="edit_priority" value="Priority Level" />
+                            <InputLabel htmlFor="edit_priority" value="Category" />
                             <div className="mt-1 flex gap-2">
                                 <select
                                     id="edit_priority"
@@ -1248,7 +1248,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                     onChange={(e) => setEditData('priority_level_id', e.target.value)}
                                     required
                                 >
-                                    <option value="" disabled>Select a priority...</option>
+                                    <option value="" disabled>Select a category...</option>
                                     {priorities.map(p => (
                                         <option key={p.id} value={p.id}>{p.name}</option>
                                     ))}
@@ -1259,7 +1259,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
                                     onClick={openManagePriorities}
                                     className="whitespace-nowrap rounded-md bg-indigo-100 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
                                 >
-                                    Manage Priorities
+                                    Manage Categories
                                 </button>
                             </div>
                             <InputError message={editErrors.priority || editErrors.priority_level_id} className="mt-2" />
@@ -1333,7 +1333,7 @@ export default function Announcements({ auth, announcements = [], branches = [],
             {/* NEW: Manage Priorities CRUD Modal */}
             <Modal show={isManagePrioritiesModalOpen} onClose={closeManagePriorities} maxWidth="md">
                 <div className="p-6">
-                    <h2 className="mb-4 text-lg font-medium text-gray-900">Manage Priorities</h2>
+                    <h2 className="mb-4 text-lg font-medium text-gray-900">Manage Categories</h2>
 
                     {/* List of existing priorities */}
                     <div className="mb-6 space-y-2 max-h-60 overflow-y-auto pr-2">
@@ -1377,12 +1377,12 @@ export default function Announcements({ auth, announcements = [], branches = [],
                     {/* Add New Priority Form */}
                     {!editingPriorityId && (
                         <form onSubmit={submitSavePriority} className="mt-4 rounded-md bg-gray-50 p-4 border">
-                            <h3 className="mb-3 text-sm font-medium text-gray-700">Add New Priority</h3>
+                            <h3 className="mb-3 text-sm font-medium text-gray-700">Add New Category</h3>
                             <div className="flex items-center gap-3">
                                 <div className="flex-1">
                                     <TextInput
                                         className="block w-full text-sm"
-                                        placeholder="Priority Name (e.g. Urgent)"
+                                        placeholder="Category Name (e.g. Urgent)"
                                         value={priorityData.name}
                                         onChange={(e) => setPriorityData('name', e.target.value)}
                                         required

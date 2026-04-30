@@ -150,6 +150,30 @@ class AnnouncementController extends Controller
 
         PriorityLevel::create($request->only(['name', 'color']));
 
-        return back()->with('success', 'New priority level added!');
+        return back()->with('success', 'New Category added!');
+    }
+
+    // --- NEW METHODS ---
+
+    public function updatePriority(Request $request, PriorityLevel $priority)
+    {
+        $request->validate([
+            'name' => 'required|string|max:50|unique:priority_levels,name,' . $priority->id,
+            'color' => 'required|string|max:7',
+        ]);
+
+        $priority->update($request->only(['name', 'color']));
+
+        return back()->with('success', 'Category updated successfully!');
+    }
+
+    public function destroyPriority(PriorityLevel $priority)
+    {
+        try {
+            $priority->delete();
+            return back()->with('success', 'Category deleted successfully!');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to delete priority: ' . $e->getMessage()]);
+        }
     }
 }

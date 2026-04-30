@@ -221,12 +221,9 @@ export default function Index({ auth, myDutyMeals = [] }) {
         const months = new Map();
         myDutyMeals.forEach(meal => {
             const mealDate = new Date(meal.duty_date);
-            const day = mealDate.getDay();
-            const monday = new Date(mealDate);
-            monday.setDate(mealDate.getDate() - day + (day === 0 ? -6 : 1));
-
-            const val = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}`;
-            const label = monday.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            // 🟢 FIXED: Removed Monday logic from month filter
+            const val = `${mealDate.getFullYear()}-${String(mealDate.getMonth() + 1).padStart(2, '0')}`;
+            const label = mealDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             if (!months.has(val)) months.set(val, label);
         });
         return Array.from(months.entries()).sort((a, b) => b[0].localeCompare(a[0])); 
@@ -245,29 +242,65 @@ export default function Index({ auth, myDutyMeals = [] }) {
         }
     }, [availableMonths, monthFilter]);
 
-    // 2. GROUP AND FILTER LOGIC
+    // 2. GROUP AND FILTER LOGIC (🟢 NEW: Groups by contiguous 7-day blocks)
     const activeGroupedMeals = useMemo(() => {
-        const groups = {};
-
-        myDutyMeals.forEach(meal => {
-            const mealDate = new Date(meal.duty_date);
-            const day = mealDate.getDay();
-            const monday = new Date(mealDate);
-            monday.setDate(mealDate.getDate() - day + (day === 0 ? -6 : 1));
-
-            const weekLabel = `Week of ${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-
-            if (!groups[weekLabel]) {
-                groups[weekLabel] = { monday: monday, meals: [] };
-            }
-            groups[weekLabel].meals.push(meal);
+        // Sort all meals by branch first, then exact date ascending
+        const sortedMeals = [...myDutyMeals].sort((a, b) => {
+            if (a.branch_id !== b.branch_id) return (a.branch_id || 0) - (b.branch_id || 0);
+            return new Date(a.duty_date) - new Date(b.duty_date);
         });
 
-        let entries = Object.entries(groups).map(([label, data]) => [label, data.meals, data.monday]);
+        const groups = [];
+        let currentGroup = null;
 
+        sortedMeals.forEach(meal => {
+            const mealDate = new Date(meal.duty_date);
+            mealDate.setHours(0, 0, 0, 0);
+
+            // If no group exists, or branch changed -> Start a new block
+            if (!currentGroup || currentGroup.branch_id !== meal.branch_id) {
+                currentGroup = {
+                    branch_id: meal.branch_id,
+                    branch_name: meal.branch_name,
+                    startDate: mealDate,
+                    meals: [meal]
+                };
+                groups.push(currentGroup);
+            } else {
+                // Check if meal belongs in current 7-day block
+                const diffTime = Math.abs(mealDate - currentGroup.startDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays < 7) { 
+                    currentGroup.meals.push(meal);
+                } else {
+                    // Start new block
+                    currentGroup = {
+                        branch_id: meal.branch_id,
+                        branch_name: meal.branch_name,
+                        startDate: mealDate,
+                        meals: [meal]
+                    };
+                    groups.push(currentGroup);
+                }
+            }
+        });
+
+        // Convert the groups objects into the array format the UI expects
+        let entries = groups.map(g => {
+            const startStr = g.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const endObj = new Date(g.meals[g.meals.length - 1].duty_date);
+            const endStr = endObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            
+            const groupLabel = g.meals.length > 1 ? `${startStr} - ${endStr}` : startStr;
+
+            return [groupLabel, g.meals, g.startDate];
+        });
+
+        // Apply visual filters
         if (monthFilter && monthFilter !== 'All') {
-            entries = entries.filter(([_, __, monday]) => {
-                const groupMonthVal = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}`;
+            entries = entries.filter(([_, __, startDate]) => {
+                const groupMonthVal = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
                 return groupMonthVal === monthFilter;
             });
         }
@@ -281,19 +314,21 @@ export default function Index({ auth, myDutyMeals = [] }) {
             });
         }
 
+        // Final sort ascending
         return entries.sort((a, b) => a[2] - b[2]);
+
     }, [myDutyMeals, monthFilter, statusFilter]);
 
     // 3. PAGINATION & MASTER STATE
-    const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+    const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
     const [selections, setSelections] = useState({});
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
-        if (currentWeekIndex >= activeGroupedMeals.length) {
-            setCurrentWeekIndex(Math.max(0, activeGroupedMeals.length - 1));
+        if (currentGroupIndex >= activeGroupedMeals.length) {
+            setCurrentGroupIndex(Math.max(0, activeGroupedMeals.length - 1));
         }
-    }, [activeGroupedMeals.length, currentWeekIndex, monthFilter, statusFilter]);
+    }, [activeGroupedMeals.length, currentGroupIndex, monthFilter, statusFilter]);
 
     useEffect(() => {
         const initialSelections = {};
@@ -323,23 +358,23 @@ export default function Index({ auth, myDutyMeals = [] }) {
     });
     const closeConfirmModal = () => setConfirmDialog({ ...confirmDialog, isOpen: false });
 
-    const handleBulkLockIn = (weekSelectionsToSubmit, weekLabel) => {
+    const handleBulkLockIn = (groupSelectionsToSubmit, groupLabel) => {
         setConfirmDialog({
             isOpen: true,
-            title: `Lock In ${weekLabel}`,
-            message: `Are you sure you want to lock in your ${weekSelectionsToSubmit.length} meal choices for this week? You will not be able to change them after this.`,
+            title: `Lock In Choices`,
+            message: `Are you sure you want to lock in your ${groupSelectionsToSubmit.length} meal choices for this block (${groupLabel})? You will not be able to change them after this.`,
             confirmText: 'Lock In My Meals',
             confirmColor: 'bg-indigo-600 hover:bg-indigo-700',
             onConfirm: () => {
                 setIsProcessing(true);
                 router.post(route('staff.duty-meals.bulk-lock-in'), {
-                    selections: weekSelectionsToSubmit
+                    selections: groupSelectionsToSubmit
                 }, {
                     preserveScroll: true,
                     onSuccess: () => {
                         closeConfirmModal();
                         setIsProcessing(false);
-                        setCurrentWeekIndex(0); 
+                        setCurrentGroupIndex(0); 
                     },
                     onError: () => setIsProcessing(false)
                 });
@@ -368,7 +403,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
                         <select
                             value={monthFilter}
                             onChange={(e) => setMonthFilter(e.target.value)}
-                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 px-4"
+                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 pl-4 pr-10"
                         >
                             <option value="All">All Months</option>
                             {availableMonths.map(([val, label]) => (
@@ -379,10 +414,10 @@ export default function Index({ auth, myDutyMeals = [] }) {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 px-4"
+                            className="text-sm bg-white border-slate-200 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-semibold text-slate-700 py-2.5 pl-4 pr-10"
                         >
                             <option value="Pending">Pending Action</option>
-                            <option value="Completed">Completed Weeks</option>
+                            <option value="Completed">Completed Groups</option>
                             <option value="All">All Statuses</option>
                         </select>
                     </div>
@@ -416,10 +451,10 @@ export default function Index({ auth, myDutyMeals = [] }) {
                         {activeGroupedMeals.length > 1 && (
                             <div className="flex items-center justify-between mb-8 bg-white p-2.5 rounded-2xl shadow-sm border border-slate-100 max-w-sm mx-auto">
                                 <button
-                                    onClick={() => setCurrentWeekIndex(prev => prev - 1)}
-                                    disabled={currentWeekIndex === 0}
+                                    onClick={() => setCurrentGroupIndex(prev => prev - 1)}
+                                    disabled={currentGroupIndex === 0}
                                     className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors ${
-                                        currentWeekIndex === 0 
+                                        currentGroupIndex === 0 
                                         ? 'text-slate-300 bg-transparent cursor-not-allowed' 
                                         : 'text-indigo-600 hover:bg-indigo-50'
                                     }`}
@@ -428,14 +463,14 @@ export default function Index({ auth, myDutyMeals = [] }) {
                                 </button>
                                 
                                 <span className="text-sm font-semibold text-slate-500">
-                                    Week <span className="text-slate-900 font-black">{currentWeekIndex + 1}</span> of {activeGroupedMeals.length}
+                                    Group <span className="text-slate-900 font-black">{currentGroupIndex + 1}</span> of {activeGroupedMeals.length}
                                 </span>
                                 
                                 <button
-                                    onClick={() => setCurrentWeekIndex(prev => prev + 1)}
-                                    disabled={currentWeekIndex === activeGroupedMeals.length - 1}
+                                    onClick={() => setCurrentGroupIndex(prev => prev + 1)}
+                                    disabled={currentGroupIndex === activeGroupedMeals.length - 1}
                                     className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors ${
-                                        currentWeekIndex === activeGroupedMeals.length - 1 
+                                        currentGroupIndex === activeGroupedMeals.length - 1 
                                         ? 'text-slate-300 bg-transparent cursor-not-allowed' 
                                         : 'text-indigo-600 hover:bg-indigo-50'
                                     }`}
@@ -446,23 +481,22 @@ export default function Index({ auth, myDutyMeals = [] }) {
                         )}
 
                         {(() => {
-                            const currentGroup = activeGroupedMeals[currentWeekIndex];
+                            const currentGroup = activeGroupedMeals[currentGroupIndex];
                             if (!currentGroup) return null;
                             
-                            const [weekLabel, mealsInWeek] = currentGroup;
+                            const [groupLabel, mealsInGroup] = currentGroup;
                             
-                            const pendingMealsInWeek = mealsInWeek.filter(m => !m.is_locked && m.choice === 'none');
-                            const totalRequired = pendingMealsInWeek.length;
+                            const pendingMealsInGroup = mealsInGroup.filter(m => !m.is_locked && m.choice === 'none');
+                            const totalRequired = pendingMealsInGroup.length;
                             
-                            const readyToSubmit = pendingMealsInWeek
+                            const readyToSubmit = pendingMealsInGroup
                                 .filter(m => {
                                     const s = selections[m.participant_id];
-                                    if (!s || s.choice === '') return false; // Missing meal choice
+                                    if (!s || s.choice === '') return false; 
                                     
                                     const isMakati = (m.branch_name || '').toLowerCase().includes('makati');
-                                    if (isMakati && (!s.site || s.site === '')) return false; // Missing Makati site
+                                    if (isMakati && (!s.site || s.site === '')) return false; 
                                     
-                                    // REQUIRED LOGIC FOR SPECIAL REQUEST
                                     if (s.choice === 'special' && (!s.custom_request || s.custom_request.trim() === '')) return false;
                                     
                                     return true;
@@ -476,13 +510,13 @@ export default function Index({ auth, myDutyMeals = [] }) {
                                 <div className="animate-fade-in-up">
                                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-slate-200/80 pb-6">
                                         <div>
-                                            <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1 block">Roster Schedule</span>
-                                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{weekLabel}</h3>
+                                            <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1 block">Roster Group</span>
+                                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{groupLabel}</h3>
                                         </div>
                                         
                                         {totalRequired > 0 && (
                                             <button
-                                                onClick={() => handleBulkLockIn(readyToSubmit, weekLabel)}
+                                                onClick={() => handleBulkLockIn(readyToSubmit, groupLabel)}
                                                 disabled={isProcessing || !isFullySelected}
                                                 className={`inline-flex items-center px-8 py-3.5 border border-transparent rounded-2xl font-black text-[13px] text-white uppercase tracking-widest shadow-sm transition-all duration-200 ${
                                                     (isProcessing || !isFullySelected) 
@@ -501,7 +535,7 @@ export default function Index({ auth, myDutyMeals = [] }) {
                                     </div>
 
                                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                                        {mealsInWeek.map((meal) => (
+                                        {mealsInGroup.map((meal) => (
                                             <MealCard 
                                                 key={meal.participant_id} 
                                                 meal={meal} 

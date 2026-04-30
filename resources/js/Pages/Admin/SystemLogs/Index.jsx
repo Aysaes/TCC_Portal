@@ -1,8 +1,8 @@
-import { getAdminLinks } from "@/Config/navigation";
-import React, { useRef, useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
-import SidebarLayout from '@/Layouts/SidebarLayout';
 import Pagination from '@/Components/Pagination';
+import { getAdminLinks } from "@/Config/navigation";
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { Head, router } from '@inertiajs/react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function SystemLogsIndex({ auth, logs, filters }) {
     const [search, setSearch] = useState(filters.search || '');
@@ -136,7 +136,7 @@ export default function SystemLogsIndex({ auth, logs, filters }) {
     return (
         <SidebarLayout
             activeModule="Admin"
-            sidebarLinks={getAdminLinks()}
+            sidebarLinks={getAdminLinks(auth)}
             header={<h2 className="text-xl font-semibold leading-tight text-gray-800">System Logs & Security</h2>}
         >
             <Head title="System Logs" />
