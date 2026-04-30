@@ -59,7 +59,7 @@ class FeedbackController extends Controller
             'type' => 'required|string|max:50',
             'subject' => 'required|string|max:255',
             'message' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', 
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:768000', 
             'is_anonymous' => 'boolean', // 🟢 Validate the new field
         ]);
 
