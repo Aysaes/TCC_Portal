@@ -382,6 +382,7 @@ class DutyMealController extends Controller
         $user = Auth::user();
         $allowedBranchIds = $user->branches->pluck('id')->push($user->branch_id)->filter()->unique();
 
+        // 1. Get available archive months (Before current month)
         $availableDates = DutyMeal::whereDate('duty_date', '<', now()->startOfMonth())
             ->selectRaw('YEAR(duty_date) as year, MONTH(duty_date) as month')
             ->distinct()
@@ -389,32 +390,46 @@ class DutyMealController extends Controller
             ->orderByDesc('month')
             ->get();
 
-
         $defaultYear = $availableDates->first()->year ?? now()->subMonth()->year;
         $defaultMonth = $availableDates->first()->month ?? now()->subMonth()->month;
 
         $filterYear = $request->input('year', $defaultYear);
         $filterMonth = $request->input('month', $defaultMonth);
 
-       
-        $archivedMeals = DutyMeal::with('branch')
+        // 2. Fetch the actual archived meals
+        $archivedMeals = DutyMeal::with([
+                'branch',
+                'participants.user:id,name' // 🟢 ADDED: We need this data for the Modal
+            ])
             ->when($user->role_id !== 1, function ($query) use ($allowedBranchIds) {
                 $query->whereIn('branch_id', $allowedBranchIds);
             })
+            // 🟢 ADDED: Strict enforcement that archives must be before the current month
+            ->whereDate('duty_date', '<', now()->startOfMonth()) 
             ->whereYear('duty_date', $filterYear)
             ->whereMonth('duty_date', $filterMonth)
             ->withCount('participants')
             ->orderBy('duty_date', 'asc')
             ->get()
- 
             ->groupBy(function ($meal) {
                 return 'Week ' . Carbon::parse($meal->duty_date)->weekOfMonth;
             });
 
+        // 3. We also need to send departments/positions for the Modal to render employee details correctly
+        $employees = User::with(['department:id,name', 'position:id,name'])
+            ->select('id', 'name', 'department_id', 'position_id', 'branch_id')
+            ->get();
+        $departments = Department::select('id', 'name')->orderBy('name')->get();
+        $positions = Position::select('id', 'name', 'department_id')->orderBy('name')->get();
+
         return Inertia::render('DutyMeal/Archive', [
             'archivedMealsByWeek' => $archivedMeals,
             'availableDates' => $availableDates,
-            'currentFilter' => ['year' => $filterYear, 'month' => $filterMonth]
+            'currentFilter' => ['year' => $filterYear, 'month' => $filterMonth],
+            // 🟢 ADDED: Data needed for the viewing Modal
+            'employees' => $employees,
+            'departments' => $departments,
+            'positions' => $positions,
         ]);
     }
 
