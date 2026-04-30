@@ -27,18 +27,63 @@ class DutyMealController extends Controller
     {
         $today = now()->startOfDay();
         
-        // 🟢 NEW LOGIC: Calculate the date 3 days from now
+        // 🟢 NEW LOGIC: Lock the whole group if the FIRST day is within 3 days
         $lockDateThreshold = now()->addDays(3)->startOfDay();
 
-        // 1. Lock the meals that are 3 days away (or closer)
-        DutyMeal::where('is_locked', false)
-            ->whereDate('duty_date', '<=', $lockDateThreshold)
-            ->update(['is_locked' => true]);
+        // 1. Get all unlocked meals
+        $unlockedMeals = DutyMeal::where('is_locked', false)
+            ->orderBy('branch_id')
+            ->orderBy('duty_date')
+            ->get();
+
+        $mealsToLock = [];
+
+        // Group the meals by branch to find continuous "blocks" or "weeks"
+        $groupedByBranch = $unlockedMeals->groupBy('branch_id');
+
+        foreach ($groupedByBranch as $branchId => $meals) {
+            // We assume a block is contiguous if the dates are within 7 days of each other.
+            // If the FIRST meal of a block is <= the threshold, the whole block locks.
+            
+            $currentBlockStart = null;
+            $currentBlockMeals = [];
+
+            foreach ($meals as $meal) {
+                $mealDate = Carbon::parse($meal->duty_date)->startOfDay();
+
+                if ($currentBlockStart === null) {
+                    $currentBlockStart = $mealDate;
+                }
+
+                // If this meal is more than 7 days from the start of the block, it's a NEW block
+                if ($mealDate->diffInDays($currentBlockStart) > 7) {
+                    // Check if the previous block should be locked
+                    if ($currentBlockStart <= $lockDateThreshold) {
+                        $mealsToLock = array_merge($mealsToLock, $currentBlockMeals);
+                    }
+                    // Start new block
+                    $currentBlockStart = $mealDate;
+                    $currentBlockMeals = [];
+                }
+
+                $currentBlockMeals[] = $meal->id;
+            }
+
+            // Check the final block
+            if ($currentBlockStart !== null && $currentBlockStart <= $lockDateThreshold) {
+                $mealsToLock = array_merge($mealsToLock, $currentBlockMeals);
+            }
+        }
+
+        // Apply the lock to the calculated group
+        if (!empty($mealsToLock)) {
+            DutyMeal::whereIn('id', $mealsToLock)->update(['is_locked' => true]);
+        }
 
         // 2. For any meal that is now locked (or was already locked), 
         // force pending participants ('none') to the default 'main' meal.
         $lockedMealIds = DutyMeal::where('is_locked', true)
-            ->whereDate('duty_date', '>=', $today) // Only bother with current/future locked meals
+            ->whereDate('duty_date', '>=', $today) 
             ->pluck('id');
             
         if ($lockedMealIds->isNotEmpty()) {
@@ -47,7 +92,7 @@ class DutyMealController extends Controller
                 ->update(['choice' => 'main']);
         }
 
-        // 3. Catch-all for past meals (just in case)
+        // 3. Catch-all for past meals
         $pastMealIds = DutyMeal::whereDate('duty_date', '<', $today)->pluck('id');
         if ($pastMealIds->isNotEmpty()) {
             DutyMealParticipant::whereIn('duty_meal_id', $pastMealIds)
