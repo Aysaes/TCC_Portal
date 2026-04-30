@@ -28,41 +28,62 @@ export const getDashboardLinks = () => [
 
 // Admin Module Links
 
-export const getAdminLinks = () => [
-    {
-        label: 'Admin Overview',
-        href: route('admin.dashboard'),
-        active: route().current('admin.dashboard'),
-    },
-    {
-        label: 'Employee Management',
-        href: route('admin.employees'),
-        active: route().current('admin.employees'),
-    },
-    {
+export const getAdminLinks = (auth) => {
+    const userRole = auth?.user?.role?.name?.toLowerCase().trim() || '';
+    
+    // Define the roles
+    const isAdminOrDCSO = userRole === 'admin' || userRole === 'director of corporate services and operations';
+    const isHRBP = userRole === 'hr business partner' || userRole === 'human resources business partner' || userRole === 'hrbp';
+
+    // We define the announcements link as a variable since it's shared between roles
+    const announcementsLink = {
         label: 'Announcements & Notices',
         href: route('admin.announcements.index'),
         active: route().current('admin.announcements.*'),
-    },
-    {
-        label: 'Company Content Management',
-        href: route('admin.company-content.index'),
-        active: route().current('admin.company-content.*'),
-    },
-    { 
-        label: 'Organizational Directory', 
-        href: route('admin.org-chart.index'), 
-        active: route().current('admin.org-chart.index') 
-    },
-    {
-        label: 'System Logs & Security',
-        href: route('admin.logs.index'), // Updated from '#'
-        active: route().current('admin.logs.*'), // Updated from false
-    },
-   
-   
+    };
 
-];
+    // 1. IF HRBP: Return ONLY the announcements link
+    if (isHRBP && !isAdminOrDCSO) {
+        return [
+            announcementsLink
+        ];
+    }
+
+    // 2. IF ADMIN or DCSO: Return ALL the links
+    if (isAdminOrDCSO) {
+        return [
+            {
+                label: 'Admin Overview',
+                href: route('admin.dashboard'),
+                active: route().current('admin.dashboard'),
+            },
+            announcementsLink, // Include announcements here too
+            {
+                label: 'Employee Management',
+                href: route('admin.employees'),
+                active: route().current('admin.employees'),
+            },
+            {
+                label: 'Company Content Management',
+                href: route('admin.company-content.index'),
+                active: route().current('admin.company-content.*'),
+            },
+            { 
+                label: 'Organizational Directory', 
+                href: route('admin.org-chart.index'), 
+                active: route().current('admin.org-chart.index') 
+            },
+            {
+                label: 'System Logs & Security',
+                href: route('admin.logs.index'),
+                active: route().current('admin.logs.*'),
+            },
+        ];
+    }
+
+    // 3. Fallback: Return empty array for anyone else trying to access this function
+    return [];
+};
 
  // Document Repository Links
 

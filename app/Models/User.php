@@ -54,7 +54,8 @@ class User extends Authenticatable
         // Add ANY future top-level roles to this array!
         $allowedRoles = [
             'admin',
-            'director of corporate services and operations'
+            'director of corporate services and operations',
+            'hrbp'
         ];
 
         return in_array($safeRoleName, $allowedRoles);

@@ -1,11 +1,11 @@
-import SidebarLayout from '@/Layouts/SidebarLayout';
-import { getAdminLinks } from '@/Config/navigation';
-import { Head, useForm, router } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
-import { useState, useEffect } from 'react';
+import { getAdminLinks } from '@/Config/navigation';
+import SidebarLayout from '@/Layouts/SidebarLayout';
+import { Head, router, useForm } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 
 export default function OrgChartAdmin({ auth, members, orgChartSvg = null, structure }) {
-    const adminLinks = getAdminLinks();
+    const adminLinks = getAdminLinks(auth);
     
     // Core Member & UI State
     const [isModalOpen, setIsModalOpen] = useState(false);

@@ -11,7 +11,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function CompanyContent({ auth, contents = [], contentTypes = [] }) {
-    const adminLinks = getAdminLinks();
+    const adminLinks = getAdminLinks(auth);
 
     const FRAME_RATIO_CLASS = 'aspect-[16/9] w-full';
     const DEFAULT_ZOOM = 1;

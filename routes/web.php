@@ -191,7 +191,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
         $totalActiveEmployees = \App\Models\User::whereIn('status', ['Active', 'Password reset'])->count();
         $totalBranches = \App\Models\Branch::count();
 
-        $activeSessions = \Illuminate\Support\Facades\DB::table('sessions')
+        $activeSessions = DB::table('sessions')
             ->whereNotNull('user_id')
             ->where('last_activity', '>=', now()->subMinutes(15)->getTimestamp())
             ->distinct('user_id')

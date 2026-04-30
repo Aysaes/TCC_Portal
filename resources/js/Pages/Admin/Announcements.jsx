@@ -11,7 +11,7 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export default function Announcements({ auth, announcements = [], branches = [], priorities = [] }) {
-    const adminLinks = getAdminLinks();
+    const adminLinks = getAdminLinks(auth);
     const { system } = usePage().props;
 
     const FRAME_RATIO_CLASS = 'aspect-[16/9] w-full max-w-[720px]';

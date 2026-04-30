@@ -12,9 +12,9 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 
-export default function EmployeeManagement({ users = [], departments = [], positions = [], branches = [], roles = [] }) {
+export default function EmployeeManagement({ auth, users = [], departments = [], positions = [], branches = [], roles = [] }) {
 
-    const adminLinks = getAdminLinks();
+    const adminLinks = getAdminLinks(auth);
 
     // Helper to manually trigger the global toast
     const triggerToast = (message, type = 'success') => {
