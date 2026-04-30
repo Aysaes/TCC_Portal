@@ -51,9 +51,9 @@ export default function InternalLinks() {
     const header = (
         <div>
             <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                Company Links
+                Corporate Resources
             </h2>
-            <p className="text-sm text-gray-500 mt-1">Quick access to our internal systems and platforms.</p>
+            <p className="text-sm text-gray-500 mt-1">Essential links for internal operations and company systems.</p>
         </div>
     );
 

@@ -3,7 +3,10 @@ import SidebarLayout from '@/Layouts/SidebarLayout';
 import ImageIcon from '@/Components/ImageIcon';
 
 // Import your government portals logos here
+import birlogo from '@/Assets/BIR.png';
+import Avegalogo from '@/Assets/Avega.png';
 import pagibiglogo from '@/Assets/Pag-Ibig.png';
+import vplogo from '@/Assets/VP.png';
 import philhealthlogo from '@/Assets/PH.png';
 import ssslogo from '@/Assets/SSS.png';
 
@@ -18,10 +21,22 @@ export default function ExternalLinks() {
 
     const governmentPortals = [
         {
-            name: 'Pag-IBIG Fund',
-            url: 'https://www.pagibigfund.gov.ph/',
+            name: 'BIR TIN Inquiry',
+            url: 'https://revie.bir.gov.ph/tin-inquiry',
             bg: 'bg-red-50', 
-            iconSrc: pagibiglogo
+            iconSrc: birlogo
+        },
+        {
+            name: 'HMO AVEGA Request for LOA',
+            url: 'https://avega.com.ph/ercsrequest/',
+            bg: 'bg-red-50',
+            iconSrc: Avegalogo
+        },
+        {       
+            name: 'PhilHealth',
+            url: 'https://www.philhealth.gov.ph/',
+            bg: 'bg-red-50',
+            iconSrc: philhealthlogo
         },
         {
             name: 'Social Security System (SSS)',
@@ -30,19 +45,27 @@ export default function ExternalLinks() {
             iconSrc: ssslogo
         },
         {
-            name: 'PhilHealth',
-            url: 'https://www.philhealth.gov.ph/',
-            bg: 'bg-red-50',
-            iconSrc: philhealthlogo
+            name: 'Virtual Pag-IBIG',
+            url: 'https://www.pagibigfundservices.com/virtualpagibig/',
+            bg: 'bg-red-50', 
+            iconSrc: vplogo
         },
+        {
+            name: 'Pag-IBIG Salary Loan Form',
+            url: 'https://www.pagibigfund.gov.ph/documents/SLF065_MultiPurposeLoanApplicationForm.pdf',
+            bg: 'bg-red-50', 
+            iconSrc: pagibiglogo
+        },
+        
+        
     ];
 
     const header = (
         <div>
             <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                Government Portals
+                Employee Benefits & Services
             </h2>
-            <p className="text-sm text-gray-500 mt-1">External links for statutory and government services.</p>
+            <p className="text-sm text-gray-500 mt-1">External links for your statutory, healthcare, and government portals.</p>
         </div>
     );
 
