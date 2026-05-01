@@ -248,7 +248,7 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
 
     Route::post('/org-chart/asset', [OrgChartController::class, 'storeAsset'])->name('.org-chart.asset.store');
     Route::get('/org-chart', [OrgChartController::class, 'index'])->name('.org-chart.index');
-    Route::post('/org-chart/structure', [OrgChartController::class, 'saveStructure'])->name('.org-chart.structure.save'); // NEW JSON ROUTE
+    Route::post('/org-chart/structure', [OrgChartController::class, 'saveStructure'])->name('.org-chart.structure.save'); 
     Route::post('/org-chart', [OrgChartController::class, 'store'])->name('.org-chart.store');
     Route::put('/org-chart/{member}', [OrgChartController::class, 'update'])->name('.org-chart.update');
     Route::post('/org-chart/reorder', [OrgChartController::class, 'reorder'])->name('.org-chart.reorder'); 
@@ -257,8 +257,12 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::post('/documents', [DocumentController::class, 'store'])->name('.documents.store');
     Route::put('/documents/{document}', [DocumentController::class, 'update'])->name('.documents.update');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('.documents.destroy');
+    
+    // Document Categories Routes
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
+    // NEW ROUTE: Toggle downloadable status
+    Route::patch('/documents/category/{id}/toggle-downloadable', [DocumentController::class, 'toggleDownloadable'])->name('.documents.category.toggle-downloadable');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -300,7 +304,7 @@ Route::middleware(['auth', CheckDutyMealAccess::class])->group(function () {
     Route::delete('/duty-meals/{id}', [DutyMealController::class, 'destroy'])->name('admin.duty-meals.destroy');
     Route::post('/duty-meals/bulk-delete', [DutyMealController::class, 'bulkDelete'])->name('admin.duty-meals.bulk-delete');
     
-    // 🟢 NEW: EXPORT DUTY MEALS (Global List)
+    // NEW: EXPORT DUTY MEALS (Global List)
     Route::get('/admin/duty-meals/export', [DutyMealController::class, 'export'])->name('admin.duty-meals.export');
 });
 

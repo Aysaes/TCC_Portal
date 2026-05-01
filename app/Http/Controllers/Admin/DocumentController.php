@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\User;
-use App\Models\Department; // Added
-use App\Models\Branch;     // Added
+use App\Models\Department;
+use App\Models\Branch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Notification;
@@ -20,8 +20,8 @@ class DocumentController extends Controller
     public function index(Request $request)
     {
         $categories = DocumentCategory::all();
-        $departments = Department::all(); // Fetch Departments for the dropdown
-        $branches = Branch::all();       // Fetch Branches for the dropdown
+        $departments = Department::all(); 
+        $branches = Branch::all(); 
         $activeCategory = $request->query('category', 'Overview');
         
         $user = Auth::user();
@@ -52,43 +52,41 @@ class DocumentController extends Controller
         return Inertia::render('DocumentRepo', [
             'documents' => $documents,
             'categories' => $categories,
-            'departments' => $departments, // Pass to React
-            'branches' => $branches,       // Pass to React
+            'departments' => $departments, 
+            'branches' => $branches, 
             'activeCategory' => $activeCategory,
         ]);
     }
 
-   public function store(Request $request){
+    public function store(Request $request){
         $request->validate([
             'title' => 'required|string|max:255',
             'category' => 'required|string|max:255',
-            'department_id' => 'required|exists:departments,id', // Required department validation
-            'branch_id' => 'nullable|exists:branches,id',        // Nullable for "All Branches"
+            'department_id' => 'required|exists:departments,id', 
+            'branch_id' => 'nullable|exists:branches,id',        
             'description' => 'nullable|string',
-            // The limit is set right here to 20480 kilobytes (20MB) -> wait, your comment says 20MB but max is 51200 (50MB). Kept as is.
             'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:768000', 
         ]);
 
         $filePath = $request->file('file')->store('documents', 'public');
 
         try{
-            // 🟢 1. Save the document with department and branch
+            // 1. Save the document with department and branch
             $document = Document::create([
                 'title' => $request->input('title'),
                 'category' => $request->input('category'),
-                'department_id' => $request->input('department_id'), // Save Dept
-                'branch_id' => $request->input('branch_id'),         // Save Branch (Null = All Branches)
+                'department_id' => $request->input('department_id'), 
+                'branch_id' => $request->input('branch_id'),         
                 'description' => $request->input('description'),
                 'file_path' => $filePath,
             ]);
 
-            // 🟢 2. Filter users to notify based on branch
-            // If branch_id is null ("All Branches"), get all users. Otherwise, only get users of that branch.
+            // 2. Filter users to notify based on branch
             $usersToNotify = User::when($document->branch_id, function($query) use ($document) {
                 $query->where('branch_id', $document->branch_id);
             })->get();
 
-            // 🟢 3. Send the in-app notification to the filtered users
+            // 3. Send the in-app notification to the filtered users
             if ($usersToNotify->isNotEmpty()) {
                 Notification::send($usersToNotify, new NewDocumentAlert($document->title, Auth::user()->name));
             }
@@ -127,7 +125,6 @@ class DocumentController extends Controller
         return back()->with('success', 'New document category added!');
     }
 
-    // --- NEW FUNCTION: Delete a Category ---
     public function destroyCategory($id)
     {
         try {
@@ -145,6 +142,24 @@ class DocumentController extends Controller
             return back()->with('success', 'Category deleted successfully.');
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to delete category: ' . $e->getMessage());
+        }
+    }
+
+    // --- NEW FUNCTION: Toggle Downloadable status for a Category ---
+    public function toggleDownloadable(Request $request, $id)
+    {
+        $request->validate([
+            'is_downloadable' => 'required|boolean',
+        ]);
+
+        try {
+            $category = DocumentCategory::findOrFail($id);
+            $category->is_downloadable = $request->is_downloadable;
+            $category->save();
+
+            return back()->with('success', 'Category downloadable status updated.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update category: ' . $e->getMessage());
         }
     }
 
@@ -168,31 +183,32 @@ class DocumentController extends Controller
         ];
         return response()->file($path, $headers);
     }
+    
     public function update(Request $request, Document $document)
-{
-    $request->validate([
-        'title' => 'required|string|max:255',
-        'category' => 'required|string|max:255',
-        'department_id' => 'required|exists:departments,id',
-        'branch_id' => 'nullable|exists:branches,id',
-        'description' => 'nullable|string',
-        'file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240', // 10MB max
-    ]);
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'department_id' => 'required|exists:departments,id',
+            'branch_id' => 'nullable|exists:branches,id',
+            'description' => 'nullable|string',
+            'file' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240', // 10MB max
+        ]);
 
-    $data = $request->only(['title', 'category', 'department_id', 'branch_id', 'description']);
+        $data = $request->only(['title', 'category', 'department_id', 'branch_id', 'description']);
 
-    // If the user uploaded a new replacement file
-    if ($request->hasFile('file')) {
-        // Delete the old file from storage first to save space
-        if ($document->file_path) {
-            Storage::disk('public')->delete($document->file_path);
+        // If the user uploaded a new replacement file
+        if ($request->hasFile('file')) {
+            // Delete the old file from storage first to save space
+            if ($document->file_path) {
+                Storage::disk('public')->delete($document->file_path);
+            }
+            // Save the new file
+            $data['file_path'] = $request->file('file')->store('documents', 'public');
         }
-        // Save the new file
-        $data['file_path'] = $request->file('file')->store('documents', 'public');
+
+        $document->update($data);
+
+        return back()->with('success', 'Document updated successfully.');
     }
-
-    $document->update($data);
-
-    return back()->with('success', 'Document updated successfully.');
-}
 }

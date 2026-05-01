@@ -59,9 +59,18 @@ export default function Documents({ auth, documents = [], categories = [], depar
         }
     };
 
+    // Toggle Downloadable Status
+    const toggleDownloadable = (categoryId, isDownloadable) => {
+        router.patch(route('admin.documents.category.toggle-downloadable', categoryId), {
+            is_downloadable: isDownloadable
+        }, { 
+            preserveScroll: true 
+        });
+    };
+
     // --- Upload / Edit Document Modal State ---
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-    const [editingDoc, setEditingDoc] = useState(null); // NEW: Track document being edited
+    const [editingDoc, setEditingDoc] = useState(null); 
     
     const { data: uploadData, setData: setUploadData, post: postDocument, processing: uploadProcessing, errors: uploadErrors, reset: resetUpload, clearErrors: clearUploadErrors } = useForm({
         title: '', 
@@ -70,7 +79,7 @@ export default function Documents({ auth, documents = [], categories = [], depar
         branch_id: '', 
         description: '', 
         file: null,
-        _method: 'POST', // Used for spoofing PUT during edit
+        _method: 'POST', 
     });
 
     const closeUploadModal = () => { 
@@ -80,7 +89,7 @@ export default function Documents({ auth, documents = [], categories = [], depar
         clearUploadErrors(); 
     };
 
-    // NEW: Open Edit Modal & populate data
+    // Open Edit Modal & populate data
     const openEditModal = (doc) => {
         clearUploadErrors();
         setEditingDoc(doc);
@@ -90,8 +99,8 @@ export default function Documents({ auth, documents = [], categories = [], depar
             department_id: doc.department_id || '',
             branch_id: doc.branch_id || '',
             description: doc.description || '',
-            file: null, // Don't pre-fill file
-            _method: 'PUT', // Spoof PUT request for Laravel
+            file: null, 
+            _method: 'PUT', 
         });
         setIsUploadModalOpen(true);
     };
@@ -99,7 +108,6 @@ export default function Documents({ auth, documents = [], categories = [], depar
     const submitDocument = (e) => {
         e.preventDefault();
         
-        // If editing, send to update route, otherwise store route
         const targetRoute = editingDoc 
             ? route('admin.documents.update', editingDoc.id) 
             : route('admin.documents.store');
@@ -206,63 +214,81 @@ export default function Documents({ auth, documents = [], categories = [], depar
                         {searchQuery || filterDepartment ? 'No documents match your filters.' : 'No documents found in this category.'}
                     </div>
                 ) : (
-                    filteredDocuments.map((doc) => (
-                        <div key={doc.id} className="flex flex-col rounded-lg bg-white p-5 shadow-sm border border-gray-100 transition hover:shadow-md">
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="rounded bg-red-50 p-2 text-black">
-                                        <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-gray-900 line-clamp-1" title={doc.title}>{doc.title}</h3>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                            <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{doc.category}</span>
-                                            
-                                            {doc.department && (
-                                                 <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">{doc.department.name}</span>
-                                            )}
-                                            
-                                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${doc.branch ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
-                                                {doc.branch ? doc.branch.name : 'All Branches'}
-                                            </span>
+                    filteredDocuments.map((doc) => {
+                        // FIX: Explicitly cast to Boolean so we don't accidentally render '0'
+                        const docCategory = categories.find(c => c.name === doc.category);
+                        const isDownloadable = docCategory ? Boolean(docCategory.is_downloadable) : true; 
+
+                        return (
+                            <div key={doc.id} className="flex flex-col rounded-lg bg-white p-5 shadow-sm border border-gray-100 transition hover:shadow-md">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded bg-red-50 p-2 text-black">
+                                            <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-gray-900 line-clamp-1" title={doc.title}>{doc.title}</h3>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{doc.category}</span>
+                                                
+                                                {doc.department && (
+                                                     <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">{doc.department.name}</span>
+                                                )}
+                                                
+                                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${doc.branch ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
+                                                    {doc.branch ? doc.branch.name : 'All Branches'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <p className="mt-4 text-sm text-gray-600 line-clamp-2 flex-1">{doc.description || 'No description provided.'}</p>
-                            
-                            <div className="mt-6 flex items-center justify-between border-t pt-4">
-                                <span className="text-xs text-gray-400">Uploaded {formatAppDate(doc.created_at, system?.timezone)}</span>
-                                <div className="flex gap-3">
-                                    <button 
-                                        onClick={() => setViewingDoc(doc)}
-                                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
-                                    >
-                                        View
-                                    </button>
-                                    {isAdmin && (
-                                        <>
-                                            <button 
-                                                onClick={() => openEditModal(doc)}
-                                                className="text-sm font-medium text-amber-600 hover:text-amber-800"
+                                
+                                <p className="mt-4 text-sm text-gray-600 line-clamp-2 flex-1">{doc.description || 'No description provided.'}</p>
+                                
+                                <div className="mt-6 flex items-center justify-between border-t pt-4">
+                                    <span className="text-xs text-gray-400">Uploaded {formatAppDate(doc.created_at, system?.timezone)}</span>
+                                    <div className="flex items-center gap-3">
+                                        <button 
+                                            onClick={() => setViewingDoc(doc)}
+                                            className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                                        >
+                                            View
+                                        </button>
+                                        
+                                        {/* FIX: Use ternary operator to prevent rendering '0' */}
+                                        {isDownloadable ? (
+                                            <a 
+                                                href={`/storage/${doc.file_path}`}
+                                                download={doc.title}
+                                                className="text-sm font-medium text-emerald-600 hover:text-emerald-800"
                                             >
-                                                Edit
-                                            </button>
-                                            <button 
-                                                onClick={() => triggerDelete(doc)}
-                                                className="text-sm font-medium text-red-600 hover:text-red-800"
-                                            >
-                                                Delete
-                                            </button>
-                                        </>
-                                    )}
+                                                Download
+                                            </a>
+                                        ) : null}
+
+                                        {isAdmin && (
+                                            <>
+                                                <button 
+                                                    onClick={() => openEditModal(doc)}
+                                                    className="text-sm font-medium text-amber-600 hover:text-amber-800"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button 
+                                                    onClick={() => triggerDelete(doc)}
+                                                    className="text-sm font-medium text-red-600 hover:text-red-800"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 
@@ -283,12 +309,25 @@ export default function Documents({ auth, documents = [], categories = [], depar
                                 {categories.map(cat => (
                                     <li key={cat.id} className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-100">
                                         <span className="text-sm font-medium text-gray-800">{cat.name}</span>
-                                        <button 
-                                            onClick={() => deleteCategory(cat.id, cat.name)}
-                                            className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
-                                        >
-                                            Delete
-                                        </button>
+                                        <div className="flex items-center gap-4">
+                                            {/* Downloadable Toggle */}
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={Boolean(cat.is_downloadable ?? true)} 
+                                                    onChange={(e) => toggleDownloadable(cat.id, e.target.checked)}
+                                                    className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 w-3.5 h-3.5"
+                                                />
+                                                <span className="text-xs font-medium text-gray-500">Downloadable</span>
+                                            </label>
+
+                                            <button 
+                                                onClick={() => deleteCategory(cat.id, cat.name)}
+                                                className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>
