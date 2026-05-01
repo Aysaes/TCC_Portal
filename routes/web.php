@@ -260,8 +260,8 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     
     // Document Categories Routes
     Route::post('/documents/category', [DocumentController::class, 'storeCategory'])->name('.documents.category.store');
+    Route::patch('/documents/category/{id}', [DocumentController::class, 'updateCategory'])->name('.documents.category.update'); 
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
-    // NEW ROUTE: Toggle downloadable status
     Route::patch('/documents/category/{id}/toggle-downloadable', [DocumentController::class, 'toggleDownloadable'])->name('.documents.category.toggle-downloadable');
 });
 

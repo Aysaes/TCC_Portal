@@ -37,9 +37,19 @@ export default function Documents({ auth, documents = [], categories = [], depar
 
     // --- Manage Categories Modal State ---
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    
+    // Inline Category Edit State
+    const [editingCategoryId, setEditingCategoryId] = useState(null);
+    const [editCategoryName, setEditCategoryName] = useState('');
+
     const { data: catData, setData: setCatData, post: postCategory, processing: catProcessing, reset: resetCat, clearErrors: clearCatErrors } = useForm({ name: '' });
 
-    const closeCategoryModal = () => { setIsCategoryModalOpen(false); resetCat(); clearCatErrors(); };
+    const closeCategoryModal = () => { 
+        setIsCategoryModalOpen(false); 
+        resetCat(); 
+        clearCatErrors(); 
+        setEditingCategoryId(null);
+    };
     
     const submitCategory = (e) => {
         e.preventDefault();
@@ -48,6 +58,30 @@ export default function Documents({ auth, documents = [], categories = [], depar
             onSuccess: () => {
                 resetCat();
             } 
+        });
+    };
+
+    // Start inline edit
+    const startEditingCategory = (category) => {
+        setEditingCategoryId(category.id);
+        setEditCategoryName(category.name);
+    };
+
+    // Cancel inline edit
+    const cancelEditingCategory = () => {
+        setEditingCategoryId(null);
+        setEditCategoryName('');
+    };
+
+    // Save inline edit
+    const saveCategoryEdit = (categoryId) => {
+        if (!editCategoryName.trim()) return;
+        
+        router.patch(route('admin.documents.category.update', categoryId), {
+            name: editCategoryName
+        }, {
+            preserveScroll: true,
+            onSuccess: () => cancelEditingCategory(),
         });
     };
 
@@ -215,7 +249,6 @@ export default function Documents({ auth, documents = [], categories = [], depar
                     </div>
                 ) : (
                     filteredDocuments.map((doc) => {
-                        // FIX: Explicitly cast to Boolean so we don't accidentally render '0'
                         const docCategory = categories.find(c => c.name === doc.category);
                         const isDownloadable = docCategory ? Boolean(docCategory.is_downloadable) : true; 
 
@@ -257,7 +290,6 @@ export default function Documents({ auth, documents = [], categories = [], depar
                                             View
                                         </button>
                                         
-                                        {/* FIX: Use ternary operator to prevent rendering '0' */}
                                         {isDownloadable ? (
                                             <a 
                                                 href={`/storage/${doc.file_path}`}
@@ -308,26 +340,51 @@ export default function Documents({ auth, documents = [], categories = [], depar
                             <ul className="space-y-2 max-h-40 overflow-y-auto pr-2">
                                 {categories.map(cat => (
                                     <li key={cat.id} className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-100">
-                                        <span className="text-sm font-medium text-gray-800">{cat.name}</span>
-                                        <div className="flex items-center gap-4">
-                                            {/* Downloadable Toggle */}
-                                            <label className="flex items-center gap-2 cursor-pointer">
+                                        {editingCategoryId === cat.id ? (
+                                            <div className="flex items-center w-full gap-2">
                                                 <input 
-                                                    type="checkbox" 
-                                                    checked={Boolean(cat.is_downloadable ?? true)} 
-                                                    onChange={(e) => toggleDownloadable(cat.id, e.target.checked)}
-                                                    className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 w-3.5 h-3.5"
+                                                    type="text" 
+                                                    value={editCategoryName} 
+                                                    onChange={(e) => setEditCategoryName(e.target.value)}
+                                                    className="flex-1 rounded border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-1 px-2"
+                                                    autoFocus
                                                 />
-                                                <span className="text-xs font-medium text-gray-500">Downloadable</span>
-                                            </label>
+                                                <button onClick={() => saveCategoryEdit(cat.id)} className="text-xs font-medium text-indigo-600 hover:text-indigo-800">Save</button>
+                                                <button onClick={cancelEditingCategory} className="text-xs font-medium text-gray-500 hover:text-gray-700">Cancel</button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className="text-sm font-medium text-gray-800">{cat.name}</span>
+                                                <div className="flex items-center gap-3">
+                                                    
+                                                    {/* Hoverable Downloadable Checkbox */}
+                                                    <label 
+                                                        className="flex items-center cursor-pointer" 
+                                                        title="Toggle Downloadable Status"
+                                                    >
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={Boolean(cat.is_downloadable ?? true)} 
+                                                            onChange={(e) => toggleDownloadable(cat.id, e.target.checked)}
+                                                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                        />
+                                                    </label>
 
-                                            <button 
-                                                onClick={() => deleteCategory(cat.id, cat.name)}
-                                                className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors"
-                                            >
-                                                Delete
-                                            </button>
-                                        </div>
+                                                    <button 
+                                                        onClick={() => startEditingCategory(cat)}
+                                                        className="text-xs font-medium text-amber-500 hover:text-amber-700 transition-colors"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => deleteCategory(cat.id, cat.name)}
+                                                        className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

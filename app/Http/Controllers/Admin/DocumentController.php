@@ -19,7 +19,8 @@ class DocumentController extends Controller
 {
     public function index(Request $request)
     {
-        $categories = DocumentCategory::all();
+        $categories = DocumentCategory::orderBy('name', 'asc')->get();
+
         $departments = Department::all(); 
         $branches = Branch::all(); 
         $activeCategory = $request->query('category', 'Overview');
@@ -142,6 +143,22 @@ class DocumentController extends Controller
             return back()->with('success', 'Category deleted successfully.');
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to delete category: ' . $e->getMessage());
+        }
+    }
+    public function updateCategory(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:50|unique:document_categories,name,' . $id,
+        ]);
+
+        try {
+            $category = DocumentCategory::findOrFail($id);
+            $category->name = $request->name;
+            $category->save();
+
+            return back()->with('success', 'Category updated successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update category: ' . $e->getMessage());
         }
     }
 
