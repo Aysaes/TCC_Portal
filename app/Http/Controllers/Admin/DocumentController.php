@@ -28,7 +28,7 @@ class DocumentController extends Controller
         $user = Auth::user();
 
         // Check if the user is an admin or director (Adjust this if your permission logic differs)
-        $isAdmin = $user->role?->name === 'admin' || 
+        $isAdmin = in_array($user->role?->name, ['admin', 'hrbp']) || 
                    (is_array($user->permissions) && in_array('director of corporate services and operations', $user->permissions));
 
         // Load relations so we can display Department/Branch names on the frontend

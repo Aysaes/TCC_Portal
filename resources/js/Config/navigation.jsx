@@ -28,28 +28,45 @@ export const getDashboardLinks = () => [
 
 // Admin Module Links
 
+// Admin Module Links
 export const getAdminLinks = (auth) => {
     const userRole = auth?.user?.role?.name?.toLowerCase().trim() || '';
     
     // Define the roles
     const isAdminOrDCSO = userRole === 'admin' || userRole === 'director of corporate services and operations';
     const isHRBP = userRole === 'hr business partner' || userRole === 'human resources business partner' || userRole === 'hrbp';
+    const isHRAssistant = userRole === 'hr assistant' || userRole === 'human resources assistant'; // <-- Added HR Assistant check
 
-    // We define the announcements link as a variable since it's shared between roles
+    // We define these links as variables since they are shared between roles
     const announcementsLink = {
         label: 'Announcements & Notices',
         href: route('admin.announcements.index'),
         active: route().current('admin.announcements.*'),
     };
 
+    const orgChartLink = { 
+        label: 'Organizational Directory', 
+        href: route('admin.org-chart.index'), 
+        active: route().current('admin.org-chart.index') 
+    };
+
     // 1. IF HRBP: Return ONLY the announcements link
     if (isHRBP && !isAdminOrDCSO) {
         return [
-            announcementsLink
+            announcementsLink,
+            orgChartLink
         ];
     }
 
-    // 2. IF ADMIN or DCSO: Return ALL the links
+    // 2. IF HR ASSISTANT: Return Announcements and Org Chart
+    if (isHRAssistant && !isAdminOrDCSO) {
+        return [
+            announcementsLink,
+            orgChartLink
+        ];
+    }
+
+    // 3. IF ADMIN or DCSO: Return ALL the links
     if (isAdminOrDCSO) {
         return [
             {
@@ -57,7 +74,7 @@ export const getAdminLinks = (auth) => {
                 href: route('admin.dashboard'),
                 active: route().current('admin.dashboard'),
             },
-            announcementsLink, // Include announcements here too
+            announcementsLink, 
             {
                 label: 'Employee Management',
                 href: route('admin.employees'),
@@ -68,11 +85,7 @@ export const getAdminLinks = (auth) => {
                 href: route('admin.company-content.index'),
                 active: route().current('admin.company-content.*'),
             },
-            { 
-                label: 'Organizational Directory', 
-                href: route('admin.org-chart.index'), 
-                active: route().current('admin.org-chart.index') 
-            },
+            orgChartLink,
             {
                 label: 'System Logs & Security',
                 href: route('admin.logs.index'),
@@ -81,7 +94,7 @@ export const getAdminLinks = (auth) => {
         ];
     }
 
-    // 3. Fallback: Return empty array for anyone else trying to access this function
+    // 4. Fallback: Return empty array for anyone else trying to access this function
     return [];
 };
 

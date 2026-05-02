@@ -616,10 +616,10 @@ export default function SidebarLayout({
                             </Dropdown.Trigger>
 
                             <Dropdown.Content>
-                                {['admin', 'director of corporate services and operations', 'hr business partner', 'human resources business partner', 'hrbp'].includes(auth.user.role.name.toLowerCase().trim()) && (
+                                {['admin', 'director of corporate services and operations', 'hr business partner', 'human resources business partner', 'hrbp', 'hr assistant', 'human resources assistant'].includes(auth.user.role.name.toLowerCase().trim()) && (
                                     <Dropdown.Link 
                                       href={
-                                      ['hr business partner', 'human resources business partner', 'hrbp'].includes(auth.user.role.name.toLowerCase().trim()) 
+                                      ['hr business partner', 'human resources business partner', 'hrbp', 'hr assistant', 'human resources assistant'].includes(auth.user.role.name.toLowerCase().trim()) 
                                          ? route('admin.announcements.index'): route('admin.dashboard')}>
                                              Admin Module
                                      </Dropdown.Link>

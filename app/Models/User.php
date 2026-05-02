@@ -55,7 +55,8 @@ class User extends Authenticatable
         $allowedRoles = [
             'admin',
             'director of corporate services and operations',
-            'hrbp'
+            'hrbp',
+            'hr assistant'
         ];
 
         return in_array($safeRoleName, $allowedRoles);

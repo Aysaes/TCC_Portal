@@ -13,7 +13,8 @@ import { useState } from 'react';
 
 export default function Documents({ auth, documents = [], categories = [], departments = [], branches = [], activeCategory }) {
 
-    const isAdmin = auth.user?.role?.name === 'admin' || auth.user?.permissions?.includes('director of corporate services and operations');
+    const isAdmin = ['admin', 'HRBP', 'HR Assistant', 'Human Resources Assistant'].includes(auth.user?.role?.name) || 
+                    auth.user?.permissions?.includes('director of corporate services and operations');
     const sidebarLinks = getDocumentSidebarLinks(categories, activeCategory);
     const { system } = usePage().props;
 
