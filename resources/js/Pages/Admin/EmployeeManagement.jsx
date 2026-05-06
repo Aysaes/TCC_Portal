@@ -485,9 +485,10 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
             name: user.name,
             email: user.email,
             password: '',
-            role_id: user.role_id,
-            department_id: user.department_id,
-            position_id: user.position_id,
+            // FIXED: Added || '' to ensure placeholders show up if the value is null
+            role_id: user.role_id || '',
+            department_id: user.department_id || '',
+            position_id: user.position_id || '',
             device_limit: user.device_limit || 2,
             branch_ids: user.branches ? user.branches.map(b => b.id) : [],
         });
@@ -753,9 +754,9 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                             className="absolute left-0 z-50 mt-2 w-56 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                                         >
                                             <div className="py-1">
-                                                <button onClick={() => handleBulkAction('password-reset')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Send Reset / Activation Links</button>
+                                                <button onClick={() => handleBulkAction('password-reset')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Activation Links / Send Reset</button>
                                                 <button onClick={() => handleBulkAction('device-reset')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Device Reset</button>
-                                                <button onClick={() => handleBulkAction('toggle-status')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Toggle Status</button>
+                                                <button onClick={() => handleBulkAction('toggle-status')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Enable / Disable</button>
                                                 <button onClick={() => handleBulkAction('delete')} className="block w-full px-4 py-2 text-left text-sm text-red-600 font-bold hover:bg-red-50">Delete</button>
                                             </div>
                                         </div>
@@ -1428,7 +1429,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                 <select 
                                     id="edit_role_id" 
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
-                                    value={editUserData.role_id} 
+                                    value={editUserData.role_id || ''} // <-- ADD || '' HERE
                                     onChange={(e) => {
                                         const newRoleId = e.target.value;
                                         setEditData('role_id', newRoleId);
