@@ -14,6 +14,7 @@ export default function SidebarLayout({
 }) {
     const { auth } = usePage().props;
 
+    // ✅ SAFE VARIABLE: Uses optional chaining (?.) and a fallback string ('')
     const userRole = auth.user?.role?.name?.toLowerCase().trim() || '';
 
     const allowedPRRoles = [
@@ -616,12 +617,12 @@ export default function SidebarLayout({
                             </Dropdown.Trigger>
 
                             <Dropdown.Content>
-                                {['admin', 'director of corporate services and operations', 'hr business partner', 'human resources business partner', 'hrbp', 'hr assistant', 'human resources assistant'].includes(auth.user.role.name.toLowerCase().trim()) && (
+                                {['admin', 'director of corporate services and operations', 'hr business partner', 'human resources business partner', 'hrbp', 'hr assistant', 'human resources assistant'].includes(userRole) && (
                                     <Dropdown.Link 
                                       href={
-                                      ['hr business partner', 'human resources business partner', 'hrbp', 'hr assistant', 'human resources assistant'].includes(auth.user.role.name.toLowerCase().trim()) 
+                                      ['hr business partner', 'human resources business partner', 'hrbp', 'hr assistant', 'human resources assistant'].includes(userRole) 
                                          ? route('admin.announcements.index'): route('admin.dashboard')}>
-                                             Admin Module
+                                         Admin Module
                                      </Dropdown.Link>
                                 )}
                                 <Dropdown.Link href={route('hr.index')}>HR Module</Dropdown.Link>
@@ -630,7 +631,7 @@ export default function SidebarLayout({
                                  PR/PO Module
                                 </Dropdown.Link>
                                 
-                                {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL', 'Auditor TL', 'Audit Assistant'].includes(user.role?.name) && (
+                                {['admin', 'duty meal custodian', 'Director of Corporate Services and Operations', 'Housekeeping TL', 'Auditor TL', 'Audit Assistant'].includes(user?.role?.name) && (
                                     <Dropdown.Link href={route('admin.duty-meals.index')}>Duty Meal Module</Dropdown.Link>
                                 )}
                             </Dropdown.Content>
@@ -642,7 +643,7 @@ export default function SidebarLayout({
                                 <button className="inline-flex min-h-[36px] sm:min-h-[42px] items-center gap-1 sm:gap-2 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none">
                                     
                                     {/* Hide text on mobile, truncate if it gets too long on desktop */}
-                                    <span className="hidden sm:block max-w-[100px] lg:max-w-[150px] truncate">{user.name}</span>
+                                    <span className="hidden sm:block max-w-[100px] lg:max-w-[150px] truncate">{user?.name}</span>
                                     
                                     {/* Show simple user icon on mobile instead */}
                                     <svg className="h-4 w-4 sm:hidden text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -675,3 +676,4 @@ export default function SidebarLayout({
         </div>
     );
 }
+```</Dropdown.Content>
