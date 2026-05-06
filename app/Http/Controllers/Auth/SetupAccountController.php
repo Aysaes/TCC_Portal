@@ -32,8 +32,8 @@ class SetupAccountController extends Controller
             return redirect()->route('login')->with('error', 'Invalid request. Please contact IT support for assistance.');
         }
 
-        // 2. THE FIX: Safely check if the exact token matches the database using Laravel's Broker
-        $isValidToken = Password::broker()->tokenExists($user, $token);
+        // 2. THE FIX: Use the repository to securely check the hashed token
+        $isValidToken = Password::broker()->getRepository()->exists($user, $token);
 
         if (!$isValidToken) {
             // 🟢 SMART ERROR DETECTION: Check if they clicked an old link in an email thread
@@ -80,13 +80,18 @@ class SetupAccountController extends Controller
                 
                 event(new PasswordReset($user));
 
-                // 🟢 NEW: Notify the Admin team
-                $admins = User::whereHas('role', function ($q) {
-                    $q->where('name', 'Admin');
-                })->get();
+                // 🟢 NEW: Notify the Admin team (Wrapped in try/catch to prevent 500 errors!)
+                try {
+                    $admins = User::whereHas('role', function ($q) {
+                        $q->where('name', 'Admin');
+                    })->get();
 
-                if ($admins->isNotEmpty()) {
-                    Notification::send($admins, new PasswordResetSuccess($user));
+                    if ($admins->isNotEmpty()) {
+                        Notification::send($admins, new PasswordResetSuccess($user));
+                    }
+                } catch (\Throwable $e) {
+                    // If the email fails (or the class is missing), it won't crash the user's screen!
+                    \Illuminate\Support\Facades\Log::error('Failed to send admin notification: ' . $e->getMessage());
                 }
             }
         );
