@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Notifications\PasswordResetSuccess;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
 class SetupAccountController extends Controller
@@ -21,24 +19,25 @@ class SetupAccountController extends Controller
         $email = $request->email;
         $token = $request->token;
 
+        // 1. Find the user by their email address
         $user = User::where('email', $email)->first();
 
         if (!$user) {
             return redirect()->route('login')->with('error', 'Invalid request. Please contact IT support for assistance.');
         }
 
-        $tokenRecord = DB::table('password_reset_tokens')
-        ->where('email', $user->email)
-        ->first();
-
-        $isValid = $tokenRecord && 
-               Hash::check($token, $tokenRecord->token) &&
-               Carbon::parse($tokenRecord->created_at)->addMinutes(config('auth.passwords.users.expire', 60))->isFuture();
-
-        if (!$isValid) {
+        // 2. THE FIX: Use Laravel's password broker to securely check the token
+        // This automatically handles the hash comparison and expiration time
+        if (!Password::broker()->tokenExists($user, $token)) {
             return redirect()->route('link.expired')->with('error', 'This setup link is invalid or has expired. Please contact IT support for assistance.');
         }
 
+        // 3. (Optional but recommended) Prevent already-active users from accessing this page
+        if ($user->status === 'Active') {
+             return redirect()->route('login')->with('status', 'Your account is already active. Please log in.');
+        }
+
+        // 4. Send the user to the React setup page
         return Inertia::render('Auth/SetupAccount', [
             'email' => $email,
             'token' => $token,
