@@ -585,15 +585,16 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
     const handleAccountAction = (employee) => {
         setActiveDropdown(null); 
         
-        if (employee.has_password) {
-            router.post(route('employees.send-reset', [employee.id]), {}, {
-                preserveScroll: true,
-                onSuccess: () => triggerToast(`Reset link sent to ${employee.email}`, 'success'),
-            });
-        } else {
+        // Use status explicitly instead of has_password to combat batch import defaults
+        if (employee.status === 'Pending Setup') {
             router.post(route('employees.send-activation', [employee.id]), {}, {
                 preserveScroll: true,
                 onSuccess: () => triggerToast(`Activation link sent to ${employee.email}`, 'success'),
+            });
+        } else {
+            router.post(route('employees.send-reset', [employee.id]), {}, {
+                preserveScroll: true,
+                onSuccess: () => triggerToast(`Reset link sent to ${employee.email}`, 'success'),
             });
         }
     };
@@ -754,7 +755,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                             <div className="py-1">
                                                 <button onClick={() => handleBulkAction('password-reset')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Send Reset / Activation Links</button>
                                                 <button onClick={() => handleBulkAction('device-reset')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Device Reset</button>
-                                                <button onClick={() => handleBulkAction('toggle-status')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Enable / Disable Accounts</button>
+                                                <button onClick={() => handleBulkAction('toggle-status')} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Toggle Status</button>
                                                 <button onClick={() => handleBulkAction('delete')} className="block w-full px-4 py-2 text-left text-sm text-red-600 font-bold hover:bg-red-50">Delete</button>
                                             </div>
                                         </div>
@@ -986,7 +987,8 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                                                 handleAccountAction(employee);
                                                             }}
                                                         >
-                                                            {employee.has_password ? 'Password Reset' : 'Activation Link'}
+                                                            {/* FIXED: Check status instead of has_password */}
+                                                            {employee.status === 'Pending Setup' ? 'Activation Link' : 'Password Reset'}
                                                         </button>
 
                                                         <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
@@ -1092,7 +1094,8 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                                                 handleAccountAction(employee);
                                                             }}
                                                         >
-                                                            {employee.has_password ? 'Password Reset' : 'Activation Link'}
+                                                            {/* FIXED: Check status instead of has_password */}
+                                                            {employee.status === 'Pending Setup' ? 'Activation Link' : 'Password Reset'}
                                                         </button>
 
                                                         <Link as="button" className="block w-full px-4 py-2 text-left text-sm font-medium text-black hover:bg-gray-100 transition-colors" onClick={(e) => {
