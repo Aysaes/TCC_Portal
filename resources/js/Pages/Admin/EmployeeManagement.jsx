@@ -485,7 +485,6 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
             name: user.name,
             email: user.email,
             password: '',
-            // FIXED: Added || '' to ensure placeholders show up if the value is null
             role_id: user.role_id || '',
             department_id: user.department_id || '',
             position_id: user.position_id || '',
@@ -917,7 +916,8 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                     filteredUsers.map((employee) => (
                                         <tr 
                                             key={employee.id} 
-                                            className={`border-b transition-colors ${selectedUsers.includes(employee.id) ? 'bg-indigo-50 hover:bg-indigo-100' : 'bg-white hover:bg-gray-50'}`}
+                                            onClick={() => handleSelect(employee.id)}
+                                            className={`border-b cursor-pointer transition-colors ${selectedUsers.includes(employee.id) ? 'bg-indigo-50 hover:bg-indigo-100' : 'bg-white hover:bg-gray-50'}`}
                                         >
                                             {/* INDIVIDUAL ROW CHECKBOX */}
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -926,6 +926,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                                     className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
                                                     checked={selectedUsers.includes(employee.id)}
                                                     onChange={() => handleSelect(employee.id)}
+                                                    onClick={(e) => e.stopPropagation()}
                                                 />
                                             </td>
                                             <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
@@ -989,7 +990,6 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                                                 handleAccountAction(employee);
                                                             }}
                                                         >
-                                                            {/* FIXED: Check status instead of has_password */}
                                                             {employee.status === 'Pending Setup' ? 'Activation Link' : 'Password Reset'}
                                                         </button>
 
@@ -1050,7 +1050,8 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                 {filteredUsers.map((employee) => (
                                     <div 
                                         key={employee.id} 
-                                        className={`p-4 transition-colors ${selectedUsers.includes(employee.id) ? 'bg-indigo-50' : 'bg-white'}`}
+                                        onClick={() => handleSelect(employee.id)}
+                                        className={`p-4 cursor-pointer transition-colors ${selectedUsers.includes(employee.id) ? 'bg-indigo-50' : 'bg-white'}`}
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex items-start gap-3 min-w-0">
@@ -1060,6 +1061,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                                     className="mt-1 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer flex-shrink-0"
                                                     checked={selectedUsers.includes(employee.id)}
                                                     onChange={() => handleSelect(employee.id)}
+                                                    onClick={(e) => e.stopPropagation()}
                                                 />
                                                 <div>
                                                     <div className="font-medium text-gray-900 break-words">
@@ -1096,7 +1098,6 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                                                 handleAccountAction(employee);
                                                             }}
                                                         >
-                                                            {/* FIXED: Check status instead of has_password */}
                                                             {employee.status === 'Pending Setup' ? 'Activation Link' : 'Password Reset'}
                                                         </button>
 
@@ -1429,7 +1430,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                 <select 
                                     id="edit_role_id" 
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
-                                    value={editUserData.role_id || ''} // <-- ADD || '' HERE
+                                    value={editUserData.role_id || ''} 
                                     onChange={(e) => {
                                         const newRoleId = e.target.value;
                                         setEditData('role_id', newRoleId);
