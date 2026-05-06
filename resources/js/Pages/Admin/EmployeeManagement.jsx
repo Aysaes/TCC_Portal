@@ -956,7 +956,8 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                                     employee.status === 'Disabled' ? 'bg-gray-100 text-gray-600 ring-gray-500/20' : 
                                                     employee.status === 'Password Reset' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
                                                     employee.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
-                                                    'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+                                                    employee.status === 'Pending Setup' ? 'bg-yellow-50 text-yellow-800 ring-yellow-600/20' :
+                                                    'bg-gray-50 text-gray-800 ring-gray-600/20'
                                                 }`}>
                                                     {employee.status}
                                                 </span>
@@ -1165,7 +1166,8 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                                     employee.status === 'Disabled' ? 'bg-gray-100 text-gray-600 ring-gray-500/20' : 
                                                     employee.status === 'Password Reset' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
                                                     employee.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
-                                                    'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
+                                                    employee.status === 'Pending Setup' ? 'bg-yellow-50 text-yellow-800 ring-yellow-600/20' :
+                                                    'bg-gray-50 text-gray-800 ring-gray-600/20'
                                                 }`}>
                                                     {employee.status}
                                                 </span>
