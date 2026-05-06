@@ -676,4 +676,3 @@ export default function SidebarLayout({
         </div>
     );
 }
-```</Dropdown.Content>
