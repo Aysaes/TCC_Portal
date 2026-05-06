@@ -50,6 +50,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
     const [filterDepartment, setFilterDepartment] = useState('');
     const [filterBranch, setFilterBranch] = useState('');
     const [filterPosition, setFilterPosition] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
 
     // Sorting state
     const [sortField, setSortField] = useState('name');
@@ -79,10 +80,11 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
         }
     };
 
-    // 1. Automatically extract unique Departments, Branches, and Positions for filter dropdowns
+    // 1. Automatically extract unique Departments, Branches, Positions, and Statuses for filter dropdowns
     const uniqueDepartments = [...new Set(users.map(u => u.department?.name).filter(Boolean))].sort();
     const uniqueBranches = [...new Set(users.flatMap(u => u.branches?.map(b => b.name) || []).filter(Boolean))].sort();
     const uniquePositions = [...new Set(users.map(u => u.position?.name).filter(Boolean))].sort();
+    const uniqueStatuses = [...new Set(users.map(u => u.status).filter(Boolean))].sort();
 
     // 2. The Live Filter & Sort Math
     const filteredUsers = [...users]
@@ -111,7 +113,11 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
             const matchesPosition = filterPosition === '' || 
                 employee.position?.name === filterPosition;
 
-            return matchesSearch && matchesDept && matchesBranch && matchesPosition;
+            // Status matches exactly
+            const matchesStatus = filterStatus === '' || 
+                employee.status === filterStatus;
+
+            return matchesSearch && matchesDept && matchesBranch && matchesPosition && matchesStatus;
         })
         .sort((a, b) => {
             const aValue = getSortValue(a, sortField).toLowerCase();
@@ -585,7 +591,6 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
     const handleAccountAction = (employee) => {
         setActiveDropdown(null); 
         
-        // Use status explicitly instead of has_password to combat batch import defaults
         if (employee.status === 'Pending Setup') {
             router.post(route('employees.send-activation', [employee.id]), {}, {
                 preserveScroll: true,
@@ -731,7 +736,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                 Edit Roles
                             </button>
 
-                            {/* BULK ACTIONS DROPDOWN (ONLY SHOWS IF USERS ARE SELECTED) */}
+                            {/* BULK ACTIONS DROPDOWN */}
                             {selectedUsers.length > 0 && (
                                 <div className="relative inline-block flex-shrink-0">
                                     <button
@@ -769,7 +774,8 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                                 href={route('admin.employees.export', {
                                     search: filterSearch,
                                     department: filterDepartment,
-                                    branch: filterBranch
+                                    branch: filterBranch,
+                                    status: filterStatus
                                 })}
                                 onClick={() => triggerToast('Preparing export. Download will start shortly...', 'success')}
                                 className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-bold uppercase tracking-widest text-indigo-700 shadow-sm hover:bg-indigo-100 transition flex-shrink-0"
@@ -804,8 +810,8 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                        <div className="flex-1 relative">
+                    <div className="flex flex-wrap gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <div className="flex-1 min-w-[200px] relative">
                             <input
                                 type="text"
                                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-8"
@@ -825,7 +831,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                         </div>
 
                         <select
-                            className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             value={filterDepartment}
                             onChange={(e) => setFilterDepartment(e.target.value)}
                         >
@@ -836,7 +842,7 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                         </select>
 
                         <select
-                            className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             value={filterPosition}
                             onChange={(e) => setFilterPosition(e.target.value)}
                         >
@@ -847,13 +853,24 @@ export default function EmployeeManagement({ auth, users = [], departments = [],
                         </select>
 
                         <select
-                            className="block w-full sm:w-48 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             value={filterBranch}
                             onChange={(e) => setFilterBranch(e.target.value)}
                         >
                             <option value="">All Branches</option>
                             {uniqueBranches.map(branch => (
                                 <option key={branch} value={branch}>{branch}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                        >
+                            <option value="">All Statuses</option>
+                            {uniqueStatuses.map(status => (
+                                <option key={status} value={status}>{status}</option>
                             ))}
                         </select>
                     </div>
