@@ -32,13 +32,21 @@ class SetupAccountController extends Controller
             return redirect()->route('login')->with('error', 'Invalid request. Please contact IT support for assistance.');
         }
 
-        // 2. Securely check the hashed token using the repository
+        // 2. THE FIX: Use the repository to securely check the hashed token
         $isValidToken = Password::broker()->getRepository()->exists($user, $token);
 
-        // 🟢 THE FIX: Removed the 'link.expired' logic.
-        // If the token is invalid, send them directly back to the login page.
         if (!$isValidToken) {
-            return redirect()->route('login')->with('error', 'This setup link is invalid or has expired. Please request a new one or contact IT support.');
+            // 🟢 SMART ERROR DETECTION: Check if they clicked an old link in an email thread
+            $dbTokenRecord = DB::table('password_reset_tokens')->where('email', $email)->first();
+            
+            if ($dbTokenRecord) {
+                // A token exists for this email in the DB, but the one in the URL doesn't match!
+                // This proves they clicked an older email link inside an email thread.
+                return redirect()->route('link.expired')->with('error', 'You clicked an older link! Because you requested a new link recently, your email app grouped them together. Please scroll to the VERY BOTTOM of your email thread for the newest, valid link.');
+            }
+
+            // Standard expiration message if no token exists in the database at all
+            return redirect()->route('link.expired')->with('error', 'This setup link is invalid or has expired. Please contact IT support for a new one.');
         }
 
         // 3. Prevent already-active users from accessing this page
@@ -66,13 +74,13 @@ class SetupAccountController extends Controller
             function ($user, $password) {
                 $user->password = Hash::make($password);
                 
-                // Safety catch: Guarantee the red badge is cleared
+                // 🟢 Safety catch: Guarantee the red badge is cleared
                 $user->status = 'Active'; 
                 $user->save();
                 
                 event(new PasswordReset($user));
 
-                // Notify the Admin team (Wrapped in try/catch to prevent 500 errors)
+                // 🟢 NEW: Notify the Admin team (Wrapped in try/catch to prevent 500 errors!)
                 try {
                     $admins = User::whereHas('role', function ($q) {
                         $q->where('name', 'Admin');
@@ -82,6 +90,7 @@ class SetupAccountController extends Controller
                         Notification::send($admins, new PasswordResetSuccess($user));
                     }
                 } catch (\Throwable $e) {
+                    // If the email fails (or the class is missing), it won't crash the user's screen!
                     \Illuminate\Support\Facades\Log::error('Failed to send admin notification: ' . $e->getMessage());
                 }
             }
