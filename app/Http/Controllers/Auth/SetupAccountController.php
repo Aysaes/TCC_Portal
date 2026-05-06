@@ -10,12 +10,18 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Notifications\PasswordResetSuccess;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class SetupAccountController extends Controller
 {
     public function showSetupForm(Request $request)
     {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+        ]);
+
         $email = $request->email;
         $token = $request->token;
 
@@ -26,13 +32,24 @@ class SetupAccountController extends Controller
             return redirect()->route('login')->with('error', 'Invalid request. Please contact IT support for assistance.');
         }
 
-        // 2. THE FIX: Use Laravel's password broker to securely check the token
-        // This automatically handles the hash comparison and expiration time
-        if (!Password::broker()->tokenExists($user, $token)) {
-            return redirect()->route('link.expired')->with('error', 'This setup link is invalid or has expired. Please contact IT support for assistance.');
+        // 2. THE FIX: Safely check if the exact token matches the database using Laravel's Broker
+        $isValidToken = Password::broker()->tokenExists($user, $token);
+
+        if (!$isValidToken) {
+            // 🟢 SMART ERROR DETECTION: Check if they clicked an old link in an email thread
+            $dbTokenRecord = DB::table('password_reset_tokens')->where('email', $email)->first();
+            
+            if ($dbTokenRecord) {
+                // A token exists for this email in the DB, but the one in the URL doesn't match!
+                // This proves they clicked an older email link inside an email thread.
+                return redirect()->route('link.expired')->with('error', 'You clicked an older link! Because you requested a new link recently, your email app grouped them together. Please scroll to the VERY BOTTOM of your email thread for the newest, valid link.');
+            }
+
+            // Standard expiration message if no token exists in the database at all
+            return redirect()->route('link.expired')->with('error', 'This setup link is invalid or has expired. Please contact IT support for a new one.');
         }
 
-        // 3. (Optional but recommended) Prevent already-active users from accessing this page
+        // 3. Prevent already-active users from accessing this page
         if ($user->status === 'Active') {
              return redirect()->route('login')->with('status', 'Your account is already active. Please log in.');
         }
