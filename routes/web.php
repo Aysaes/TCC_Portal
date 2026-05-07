@@ -2,10 +2,12 @@
 
 use App\Models\Announcement;
 use App\Models\CompanyContent;
+use App\Models\ResourceLink; // <-- NEW: Added ResourceLink Model
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\CompanyContentController;
 use App\Http\Controllers\Admin\SystemLogController;
+use App\Http\Controllers\Admin\ResourceLinkController; // <-- NEW: Added Admin Controller
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\CheckDutyMealAccess;
 use App\Http\Controllers\Admin\DocumentController;
@@ -137,13 +139,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard.mission-vision');
 
-    // --- RESOURCES LINKS ---
+    // --- UPDATED: RESOURCES LINKS ---
     Route::get('/resources/internal-links', function () {
-        return Inertia::render('Resources/InternalLinks');
+        $links = ResourceLink::where('type', 'internal')->where('is_active', true)->get();
+        return Inertia::render('Resources/InternalLinks', [
+            'links' => $links
+        ]);
     })->name('resources.internal');
 
     Route::get('/resources/external-links', function () {
-        return Inertia::render('Resources/ExternalLinks');
+        $links = ResourceLink::where('type', 'external')->where('is_active', true)->get();
+        return Inertia::render('Resources/ExternalLinks', [
+            'links' => $links
+        ]);
     })->name('resources.external');
 
     // --- ORGANIZATIONAL CHART (USER VIEW) ---
@@ -166,18 +174,18 @@ Route::middleware('auth')->group(function () {
     ->name('staff.duty-meals.bulk-lock-in');
 
     Route::post('/notifications/{id}/mark-as-read', function (Request $request, $id) {
-    /** @var \App\Models\User $user */
-    $user = $request->user();
+        /** @var \App\Models\User $user */
+        $user = $request->user();
 
-    if ($user) {
-        $notification = $user->notifications()->findOrFail($id);
-        $notification->markAsRead();
-    }
+        if ($user) {
+            $notification = $user->notifications()->findOrFail($id);
+            $notification->markAsRead();
+        }
 
-    return back();
-})->middleware('auth')->name('notifications.read');
+        return back();
+    })->middleware('auth')->name('notifications.read');
 
-Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 });
 Route::get('/notifications/load-more', [NotificationController::class, 'loadMore'])->name('notifications.load-more');
 
@@ -268,6 +276,14 @@ Route::middleware(['auth', AdminMiddleware::class])->prefix('admin')->name('admi
     Route::patch('/documents/category/{id}', [DocumentController::class, 'updateCategory'])->name('.documents.category.update'); 
     Route::delete('/documents/category/{id}', [DocumentController::class, 'destroyCategory'])->name('.documents.category.destroy');
     Route::patch('/documents/category/{id}/toggle-downloadable', [DocumentController::class, 'toggleDownloadable'])->name('.documents.category.toggle-downloadable');
+
+    // ==========================================
+    // NEW: RESOURCE LINKS ADMIN ROUTES
+    // ==========================================
+    Route::get('/resource-links', [ResourceLinkController::class, 'index'])->name('.resource-links.index');
+    Route::post('/resource-links', [ResourceLinkController::class, 'store'])->name('.resource-links.store');
+    Route::put('/resource-links/{resourceLink}', [ResourceLinkController::class, 'update'])->name('.resource-links.update');
+    Route::delete('/resource-links/{resourceLink}', [ResourceLinkController::class, 'destroy'])->name('.resource-links.destroy');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -354,7 +370,7 @@ Route::prefix('prpo')->name('prpo.')->middleware(['auth'])->group(function () {
     Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
     Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
     Route::get('/suppliers/template', [SupplierController::class, 'downloadTemplate'])->name('suppliers.template');
-Route::post('/suppliers/import', [SupplierController::class, 'import'])->name('suppliers.import');
+    Route::post('/suppliers/import', [SupplierController::class, 'import'])->name('suppliers.import');
 
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
