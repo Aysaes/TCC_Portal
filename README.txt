@@ -75,7 +75,7 @@ AWS_USE_PATH_STYLE_ENDPOINT=false
 VITE_APP_NAME="${APP_NAME}"
 ***************************************************************
 
-CLI TO RUN
+CLI TO RUN (in order)
 ***************************************************************
 composer update -W --ignore-platform-req=php
 
