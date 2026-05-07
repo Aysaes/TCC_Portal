@@ -340,8 +340,9 @@ class EmployeeController extends Controller
 
     public function sendActivationLink(User $user)
     {
-        if ($user->has_password) {
-            return back()->with('error', 'This account is already active.');
+        // FIX: Check Status instead of checking if password exists
+        if ($user->status !== 'Pending Setup') {
+            return back()->with('error', 'This account is already active. Send a password reset link instead.');
         }
 
         /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
@@ -382,6 +383,121 @@ class EmployeeController extends Controller
             return back()->with('success', $message);
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to change user status: ' . $e->getMessage());
+        }
+    }
+
+    // =====================================
+    // BULK ACTION METHODS
+    // =====================================
+
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:users,id'
+        ]);
+
+        try {
+            $users = User::whereIn('id', $request->ids)->get();
+            $deletedCount = 0;
+
+            foreach ($users as $user) {
+                // Prevent admin from deleting themselves in a bulk action
+                if (Auth::id() === $user->id) {
+                    Log::warning("Admin attempted to bulk-delete themselves. ID: {$user->id}");
+                    continue; 
+                }
+
+                // Detach branches before deleting, matching your single delete logic
+                $user->branches()->detach();
+                $user->delete();
+                $deletedCount++;
+            }
+
+            Log::info("Successfully bulk deleted {$deletedCount} users.");
+            return back()->with('success', "{$deletedCount} selected employees have been permanently deleted.");
+            
+        } catch (\Exception $e) {
+            Log::error("Failed during bulk delete. Error: " . $e->getMessage());
+            return back()->with('error', 'Failed to delete selected users: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkToggleStatus(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:users,id'
+        ]);
+
+        try {
+            $users = User::whereIn('id', $request->ids)->get();
+
+            foreach ($users as $user) {
+                $user->status = $user->status === 'Disabled' ? 'Active' : 'Disabled';
+                $user->save();
+            }
+
+            return back()->with('success', 'Status toggled for ' . $users->count() . ' selected employees.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to toggle status: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkResetDevice(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:users,id'
+        ]);
+
+        try {
+            // Nullify the authorized_device_ids column matching your single reset method
+            User::whereIn('id', $request->ids)->update([
+                'authorized_device_ids' => null 
+            ]);
+
+            return back()->with('success', "Devices successfully reset for " . count($request->ids) . " employees.");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to reset devices: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkSendLinks(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:users,id'
+        ]);
+
+        try {
+            $users = User::whereIn('id', $request->ids)->get();
+            $broker = Password::broker();
+            $sentCount = 0;
+
+            foreach ($users as $user) {
+                $token = $broker->createToken($user);
+
+                // FIX: Check Status instead of checking if password exists
+                if ($user->status !== 'Pending Setup') {
+                    $user->notify(new AdminPasswordReset($token));
+                    $user->status = 'Password Reset';
+                    $user->save();
+                } else {
+                    $user->notify(new AccountActivation($token));
+                }
+                
+                $sentCount++;
+
+                // Pause script for 1 second between emails to respect Mailtrap rate limits
+                if ($sentCount < $users->count()) {
+                    sleep(1); 
+                }
+            }
+
+            return back()->with('success', "Activation/Reset links sent to {$sentCount} selected employees.");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to send bulk links: ' . $e->getMessage());
         }
     }
 }
