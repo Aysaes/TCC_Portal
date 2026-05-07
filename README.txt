@@ -77,11 +77,17 @@ VITE_APP_NAME="${APP_NAME}"
 
 CLI TO RUN
 ***************************************************************
-composer install 
-
-composer update
+composer update -W --ignore-platform-req=php
 
 npm install
 
 npm run build
 ***************************************************************
+
+If a "maatwebsite" error is encountered, do the following.
+
+1. Go to the php folder of your device (normally inside C:).
+2. Open the php.ini file.
+3. Press Crtl+F then type "extension=gd"
+4. remove the semicolon (;)
+5. Run the composer update again
