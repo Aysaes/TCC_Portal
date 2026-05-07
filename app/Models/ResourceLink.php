@@ -12,6 +12,7 @@ class ResourceLink extends Model
     protected $fillable = [
         'title', 
         'url', 
+        'image_path',
         'description', 
         'type', 
         'is_active'

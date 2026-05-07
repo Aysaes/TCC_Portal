@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 import Modal from '@/Components/Modal';
@@ -18,25 +18,26 @@ export default function ResourceLinks({ auth, links }) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [editingLink, setEditingLink] = useState(null);
     const [linkToDelete, setLinkToDelete] = useState(null);
+    const fileInputRef = useRef(null); 
 
     // Form handling
-    const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, delete: destroy, processing, errors, reset, clearErrors } = useForm({
         title: '',
         url: '',
         description: '',
         type: 'internal',
         is_active: true,
+        image: null, 
     });
 
-    // Open modal for creating a new link
     const openCreateModal = () => {
         setEditingLink(null);
         reset();
+        if (fileInputRef.current) fileInputRef.current.value = ""; 
         clearErrors();
         setIsModalOpen(true);
     };
 
-    // Open modal for editing an existing link
     const openEditModal = (link) => {
         setEditingLink(link);
         setData({
@@ -45,26 +46,39 @@ export default function ResourceLinks({ auth, links }) {
             description: link.description || '',
             type: link.type,
             is_active: link.is_active,
+            image: null, 
         });
+        if (fileInputRef.current) fileInputRef.current.value = ""; 
         clearErrors();
         setIsModalOpen(true);
     };
 
-    // Handle form submission (Create or Update)
+    // 🟢 UPDATED: Handle form submission correctly for files
     const handleSubmit = (e) => {
         e.preventDefault();
+        
         if (editingLink) {
-            put(route('admin.resource-links.update', editingLink.id), {
+            // Must use main router.post to safely package the file payload during an edit
+            router.post(route('admin.resource-links.update', editingLink.id), {
+                _method: 'put',
+                title: data.title,
+                url: data.url,
+                description: data.description || '',
+                type: data.type,
+                is_active: data.is_active ? 1 : 0,
+                image: data.image,
+            }, {
+                forceFormData: true,
                 onSuccess: () => setIsModalOpen(false),
             });
         } else {
             post(route('admin.resource-links.store'), {
+                forceFormData: true,
                 onSuccess: () => setIsModalOpen(false),
             });
         }
     };
 
-    // Handle delete confirmation
     const confirmDelete = (link) => {
         setLinkToDelete(link);
         setIsDeleteModalOpen(true);
@@ -77,11 +91,7 @@ export default function ResourceLinks({ auth, links }) {
     };
 
     return (
-        <SidebarLayout
-            activeModule="Admin"
-            sidebarLinks={adminLinks}
-            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Resource Links Management</h2>}
-        >
+        <SidebarLayout activeModule="Admin" sidebarLinks={adminLinks} header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Resource Links Management</h2>}>
             <Head title="Manage Resource Links" />
 
             <div className="py-12">
@@ -101,6 +111,7 @@ export default function ResourceLinks({ auth, links }) {
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                     <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logo</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
@@ -111,6 +122,13 @@ export default function ResourceLinks({ auth, links }) {
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {links && links.length > 0 ? links.map((link) => (
                                         <tr key={link.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {link.image_path ? (
+                                                    <img src={`/storage/${link.image_path}`} alt="logo" className="h-8 w-8 object-contain rounded bg-gray-50 p-1 border" />
+                                                ) : (
+                                                    <span className="text-xs text-gray-400">Auto</span>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{link.title}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${link.type === 'internal' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
@@ -130,7 +148,7 @@ export default function ResourceLinks({ auth, links }) {
                                         </tr>
                                     )) : (
                                         <tr>
-                                            <td colSpan="5" className="px-6 py-4 text-center text-gray-500">No resource links found.</td>
+                                            <td colSpan="6" className="px-6 py-4 text-center text-gray-500">No resource links found.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -151,51 +169,49 @@ export default function ResourceLinks({ auth, links }) {
                     <div className="space-y-4">
                         <div>
                             <InputLabel htmlFor="title" value="Link Title" />
-                            <TextInput
-                                id="title"
-                                type="text"
-                                className="mt-1 block w-full"
-                                value={data.title}
-                                onChange={e => setData('title', e.target.value)}
-                                required
-                            />
+                            <TextInput id="title" type="text" className="mt-1 block w-full" value={data.title} onChange={e => setData('title', e.target.value)} required />
                             <InputError message={errors.title} className="mt-2" />
                         </div>
 
                         <div>
                             <InputLabel htmlFor="url" value="Target URL" />
-                            <TextInput
-                                id="url"
-                                type="url"
-                                className="mt-1 block w-full"
-                                value={data.url}
-                                onChange={e => setData('url', e.target.value)}
-                                placeholder="https://..."
-                                required
-                            />
+                            <TextInput id="url" type="text" className="mt-1 block w-full" value={data.url} onChange={e => setData('url', e.target.value)} placeholder="https://..." required />
                             <InputError message={errors.url} className="mt-2" />
+                        </div>
+
+                        {/* 🟢 NEW IMAGE UPLOAD FIELD 🟢 */}
+                        <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <InputLabel htmlFor="image" value="Custom Logo Upload (Optional)" className="font-bold text-gray-700" />
+                            <p className="text-xs text-gray-500 mb-2">If left blank, the system will try to automatically fetch the company logo.</p>
+                            
+                            <input
+                                type="file"
+                                id="image"
+                                accept="image/*"
+                                ref={fileInputRef}
+                                onChange={e => setData('image', e.target.files[0])}
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                            />
+                            <InputError message={errors.image} className="mt-2" />
+                            
+                            {/* Show the existing image if we are editing and one exists */}
+                            {editingLink && editingLink.image_path && !data.image && (
+                                <div className="mt-3">
+                                    <p className="text-xs text-gray-500 mb-1">Current Image:</p>
+                                    <img src={`/storage/${editingLink.image_path}`} alt="Current Logo" className="h-16 object-contain rounded border bg-white p-1" />
+                                </div>
+                            )}
                         </div>
 
                         <div>
                             <InputLabel htmlFor="description" value="Short Description (Optional)" />
-                            <TextInput
-                                id="description"
-                                type="text"
-                                className="mt-1 block w-full"
-                                value={data.description}
-                                onChange={e => setData('description', e.target.value)}
-                            />
+                            <TextInput id="description" type="text" className="mt-1 block w-full" value={data.description} onChange={e => setData('description', e.target.value)} />
                             <InputError message={errors.description} className="mt-2" />
                         </div>
 
                         <div>
                             <InputLabel htmlFor="type" value="Directory Type" />
-                            <select
-                                id="type"
-                                className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                                value={data.type}
-                                onChange={e => setData('type', e.target.value)}
-                            >
+                            <select id="type" className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" value={data.type} onChange={e => setData('type', e.target.value)}>
                                 <option value="internal">Internal Links</option>
                                 <option value="external">External Links</option>
                             </select>
@@ -203,13 +219,7 @@ export default function ResourceLinks({ auth, links }) {
                         </div>
 
                         <div className="flex items-center mt-4">
-                            <input
-                                id="is_active"
-                                type="checkbox"
-                                className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                checked={data.is_active}
-                                onChange={e => setData('is_active', e.target.checked)}
-                            />
+                            <input id="is_active" type="checkbox" className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" checked={data.is_active} onChange={e => setData('is_active', e.target.checked)} />
                             <label htmlFor="is_active" className="ml-2 text-sm text-gray-600">Active (Visible to employees)</label>
                         </div>
                     </div>

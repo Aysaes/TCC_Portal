@@ -3,39 +3,42 @@ import { Head } from '@inertiajs/react';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 
 // --- NEW: Automated Logo Fetcher Component ---
-const ResourceLogo = ({ url, title }) => {
+const ResourceLogo = ({ link }) => { // 🟢 FIX 1: Accept the full 'link' object
     const [hasError, setHasError] = useState(false);
 
-    // Automatically extract the domain
+    // Automatically extract the domain from the URL
     const domain = useMemo(() => {
         try {
-            return new URL(url).hostname;
+            return new URL(link.url).hostname;
         } catch (e) {
             return null;
         }
-    }, [url]);
+    }, [link.url]);
 
-    // Fetch from Clearbit Logo API
-    const logoUrl = domain ? `https://logo.clearbit.com/${domain}` : null;
+    // 🟢 FIX 2: Check for custom uploaded image first!
+    // If image_path exists in the database, use it. Otherwise, use Clearbit API.
+    const logoUrl = link.image_path 
+        ? `/storage/${link.image_path}` 
+        : (domain ? `https://logo.clearbit.com/${domain}` : null);
 
-    // Blue-themed Fallback
+    // If there is no logo at all, or the image fails to load, fallback to our styled letter
     if (!logoUrl || hasError) {
         return (
             <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-28 h-28 rounded-full bg-blue-50 group-hover:bg-white group-hover:shadow-md transition-all duration-500">
                 <span className="text-4xl font-extrabold text-blue-400 group-hover:text-blue-600 transition-colors duration-500 uppercase">
-                    {title.charAt(0)}
+                    {link.title.charAt(0)}
                 </span>
             </div>
         );
     }
 
-    // Render automated image
+    // Render the image (Custom Upload OR Automated Logo)
     return (
         <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-28 h-28 rounded-full bg-white shadow-sm border border-gray-100 group-hover:shadow-md transition-all duration-500 p-4">
             <img
                 src={logoUrl}
-                alt={`${title} logo`}
-                onError={() => setHasError(true)} // Triggers fallback if image is missing
+                alt={`${link.title} logo`}
+                onError={() => setHasError(true)} // Triggers the fallback if image is missing
                 className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
             />
         </div>
@@ -68,8 +71,8 @@ export default function InternalLinks({ links = [] }) {
                             <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="group relative flex flex-col items-center text-center gap-6 p-10 bg-white rounded-3xl shadow-sm hover:shadow-2xl border border-gray-100 hover:border-blue-200 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
-                                {/* Call our new automated logo component here */}
-                                <ResourceLogo url={link.url} title={link.title} />
+                                {/* 🟢 FIX 3: Pass the entire link object to the component */}
+                                <ResourceLogo link={link} />
                                 
                                 <div className="relative z-10">
                                     <span className="block text-xl font-bold text-gray-900 group-hover:text-blue-700 transition-colors duration-300">
