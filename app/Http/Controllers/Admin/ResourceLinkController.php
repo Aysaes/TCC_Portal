@@ -12,13 +12,17 @@ class ResourceLinkController extends Controller
 {
     public function index()
     {
-        $links = ResourceLink::orderBy('created_at', 'desc')->get();
+        // 🟢 Orders by the custom sort_order column for the admin view!
+        $links = ResourceLink::orderBy('type', 'desc')
+                             ->orderBy('sort_order', 'asc')
+                             ->orderBy('created_at', 'desc')
+                             ->get();
+                             
         return Inertia::render('Admin/ResourceLinks', [
             'links' => $links
         ]);
     }
 
-    // Save a new link
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -35,7 +39,9 @@ class ResourceLinkController extends Controller
             $validated['image_path'] = $path;
         }
 
-        // 🟢 Remove the raw file array so Laravel doesn't try to save it to DB
+        // 🟢 Automatically set the new item to the bottom of its list
+        $validated['sort_order'] = ResourceLink::where('type', $request->type)->max('sort_order') + 1;
+
         unset($validated['image']);
 
         ResourceLink::create($validated);
@@ -43,7 +49,6 @@ class ResourceLinkController extends Controller
         return redirect()->back()->with('success', 'Resource link added successfully.');
     }
 
-    // Update an existing link
     public function update(Request $request, ResourceLink $resourceLink)
     {
         $validated = $request->validate([
@@ -56,7 +61,6 @@ class ResourceLinkController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            // Delete old image
             if ($resourceLink->image_path) {
                 Storage::disk('public')->delete($resourceLink->image_path);
             }
@@ -64,23 +68,35 @@ class ResourceLinkController extends Controller
             $validated['image_path'] = $path;
         }
 
-        // 🟢 Remove the raw file array so Laravel doesn't try to save it to DB
         unset($validated['image']);
-
         $resourceLink->update($validated);
 
         return redirect()->back()->with('success', 'Resource link updated successfully.');
     }
 
-    // Delete a link
+    // 🟢 Handle the drag and drop saving!
+    public function reorder(Request $request)
+    {
+        $request->validate([
+            'items' => 'required|array',
+            'items.*.id' => 'required|exists:resource_links,id',
+            'items.*.sort_order' => 'required|integer',
+        ]);
+
+        // Bulk update the new order for all affected items
+        foreach ($request->items as $item) {
+            ResourceLink::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+        }
+
+        return redirect()->back();
+    }
+
     public function destroy(ResourceLink $resourceLink)
     {
         if ($resourceLink->image_path) {
             Storage::disk('public')->delete($resourceLink->image_path);
         }
-
         $resourceLink->delete();
-
         return redirect()->back()->with('success', 'Resource link deleted successfully.');
     }
 }

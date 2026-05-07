@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import SidebarLayout from '@/Layouts/SidebarLayout';
 
-// --- NEW: Automated Logo Fetcher Component ---
-const ResourceLogo = ({ link }) => { // 🟢 FIX 1: Accept the full 'link' object
+// --- Automated Logo Fetcher Component ---
+const ResourceLogo = ({ link }) => { 
     const [hasError, setHasError] = useState(false);
 
     // Automatically extract the domain from the URL
@@ -15,13 +15,12 @@ const ResourceLogo = ({ link }) => { // 🟢 FIX 1: Accept the full 'link' objec
         }
     }, [link.url]);
 
-    // 🟢 FIX 2: Check for custom uploaded image first!
-    // If image_path exists in the database, use it. Otherwise, use Clearbit API.
+    // Check for custom uploaded image first
     const logoUrl = link.image_path 
         ? `/storage/${link.image_path}` 
         : (domain ? `https://logo.clearbit.com/${domain}` : null);
 
-    // If there is no logo at all, or the image fails to load, fallback to our styled letter
+    // Fallback to red letter icon
     if (!logoUrl || hasError) {
         return (
             <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-24 h-24 rounded-full bg-red-50 group-hover:bg-white group-hover:shadow-md transition-all duration-500">
@@ -32,13 +31,13 @@ const ResourceLogo = ({ link }) => { // 🟢 FIX 1: Accept the full 'link' objec
         );
     }
 
-    // Render the image (Custom Upload OR Automated Logo)
+    // Render the image
     return (
         <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-24 h-24 rounded-full bg-white shadow-sm border border-gray-100 group-hover:shadow-md transition-all duration-500 p-4">
             <img
                 src={logoUrl}
                 alt={`${link.title} logo`}
-                onError={() => setHasError(true)} // Triggers the fallback if image is missing
+                onError={() => setHasError(true)} 
                 className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
             />
         </div>
@@ -46,6 +45,9 @@ const ResourceLogo = ({ link }) => { // 🟢 FIX 1: Accept the full 'link' objec
 };
 
 export default function ExternalLinks({ links = [] }) {
+    // 🟢 FORCE SORTING BY SORT_ORDER ON THE FRONTEND 🟢
+    const sortedLinks = [...links].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
     const generalSidebarLinks = [
         { href: route('dashboard'), label: 'Overview', active: route().current('dashboard') },
         { href: route('dashboard.announcements'), label: 'Announcements', active: route().current('dashboard.announcements') },
@@ -65,13 +67,12 @@ export default function ExternalLinks({ links = [] }) {
             <Head title="External Links" />
 
             <div className="bg-gray-50/50 p-6 shadow-sm sm:rounded-2xl sm:p-12 min-h-[65vh] flex flex-col items-center justify-center border border-gray-100">
-                {links.length > 0 ? (
+                {sortedLinks.length > 0 ? (
                     <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full">
-                        {links.map((link) => (
+                        {sortedLinks.map((link) => (
                             <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="group relative flex flex-col items-center text-center gap-6 p-8 bg-white rounded-2xl shadow-sm hover:shadow-2xl border border-gray-100 hover:border-red-200 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
-                                {/* 🟢 FIX 3: Pass the entire link object to the component */}
                                 <ResourceLogo link={link} />
                                 
                                 <div className="relative z-10 flex-grow flex flex-col justify-center">

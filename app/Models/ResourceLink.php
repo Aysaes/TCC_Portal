@@ -15,6 +15,7 @@ class ResourceLink extends Model
         'image_path',
         'description', 
         'type', 
-        'is_active'
+        'is_active',
+        'sort_order'
     ];
 }

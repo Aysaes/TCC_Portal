@@ -20,6 +20,9 @@ export default function ResourceLinks({ auth, links }) {
     const [linkToDelete, setLinkToDelete] = useState(null);
     const fileInputRef = useRef(null); 
 
+    // 🟢 Drag and Drop State
+    const [draggedItem, setDraggedItem] = useState(null);
+
     // Form handling
     const { data, setData, post, delete: destroy, processing, errors, reset, clearErrors } = useForm({
         title: '',
@@ -29,6 +32,60 @@ export default function ResourceLinks({ auth, links }) {
         is_active: true,
         image: null, 
     });
+
+    // --- Drag and Drop Handlers ---
+    const handleDragStart = (e, link) => {
+        setDraggedItem(link);
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => e.target.classList.add('opacity-40', 'bg-indigo-50'), 0);
+    };
+
+    const handleDragEnd = (e) => {
+        e.target.classList.remove('opacity-40', 'bg-indigo-50');
+        setDraggedItem(null);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        e.currentTarget.classList.add('border-t-2', 'border-indigo-400');
+    };
+
+    const handleDragLeave = (e) => {
+        e.currentTarget.classList.remove('border-t-2', 'border-indigo-400');
+    };
+
+    const handleDrop = (e, targetLink, groupType) => {
+        e.preventDefault();
+        e.currentTarget.classList.remove('border-t-2', 'border-indigo-400');
+        
+        // Prevent dropping on itself or between different groups (Internal vs External)
+        if (!draggedItem || draggedItem.id === targetLink.id) return;
+        if (draggedItem.type !== groupType) return; 
+
+        // Extract the current group
+        const currentGroup = links.filter(l => l.type === groupType);
+        
+        const currentIndex = currentGroup.findIndex(l => l.id === draggedItem.id);
+        const targetIndex = currentGroup.findIndex(l => l.id === targetLink.id);
+
+        // Rearrange array locally
+        const newGroup = [...currentGroup];
+        newGroup.splice(currentIndex, 1);
+        newGroup.splice(targetIndex, 0, draggedItem);
+
+        // Package data for backend
+        const orderedItems = newGroup.map((item, index) => ({
+            id: item.id,
+            sort_order: index
+        }));
+
+        // Send to controller
+        router.post(route('admin.resource-links.reorder'), { items: orderedItems }, {
+            preserveScroll: true,
+        });
+    };
+    // ---------------------------------
 
     const openCreateModal = () => {
         setEditingLink(null);
@@ -53,12 +110,10 @@ export default function ResourceLinks({ auth, links }) {
         setIsModalOpen(true);
     };
 
-    // 🟢 UPDATED: Handle form submission correctly for files
     const handleSubmit = (e) => {
         e.preventDefault();
         
         if (editingLink) {
-            // Must use main router.post to safely package the file payload during an edit
             router.post(route('admin.resource-links.update', editingLink.id), {
                 _method: 'put',
                 title: data.title,
@@ -90,6 +145,54 @@ export default function ResourceLinks({ auth, links }) {
         });
     };
 
+    const internalLinks = links?.filter(link => link.type === 'internal') || [];
+    const externalLinks = links?.filter(link => link.type === 'external') || [];
+
+    // 🟢 Updated Row with Draggable attributes
+    const renderRow = (link) => (
+        <tr 
+            key={link.id} 
+            draggable
+            onDragStart={(e) => handleDragStart(e, link)}
+            onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, link, link.type)}
+            className="hover:bg-gray-50 transition-colors cursor-move"
+            title="Drag to reorder"
+        >
+            {/* Drag Handle Icon */}
+            <td className="px-3 py-4 whitespace-nowrap text-gray-400 text-center w-10">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                </svg>
+            </td>
+            
+            <td className="px-6 py-4 whitespace-nowrap pointer-events-none">
+                {link.image_path ? (
+                    <img src={`/storage/${link.image_path}`} alt="logo" draggable="false" className="h-8 w-8 object-contain rounded bg-white shadow-sm p-1 border border-gray-200" />
+                ) : (
+                    <span className="text-xs text-gray-400 italic">Auto</span>
+                )}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 pointer-events-none">{link.title}</td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">
+                <a href={link.url} target="_blank" rel="noopener noreferrer" onDragStart={(e) => e.preventDefault()} className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer relative z-10">{link.url}</a>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap pointer-events-none">
+                {link.is_active ? (
+                    <span className="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                ) : (
+                    <span className="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600">Hidden</span>
+                )}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative z-10">
+                <button onClick={() => openEditModal(link)} className="text-indigo-600 hover:text-indigo-900 mr-4 transition-colors">Edit</button>
+                <button onClick={() => confirmDelete(link)} className="text-red-600 hover:text-red-900 transition-colors">Delete</button>
+            </td>
+        </tr>
+    );
+
     return (
         <SidebarLayout activeModule="Admin" sidebarLinks={adminLinks} header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Resource Links Management</h2>}>
             <Head title="Manage Resource Links" />
@@ -97,58 +200,55 @@ export default function ResourceLinks({ auth, links }) {
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     
-                    {/* Header & Add Button */}
                     <div className="mb-6 flex justify-between items-center">
-                        <p className="text-gray-600">Manage links displayed in the Internal and External Resources directories.</p>
-                        <PrimaryButton onClick={openCreateModal}>
-                            + Add New Link
-                        </PrimaryButton>
+                        <p className="text-gray-600">Drag and drop rows to reorder how they appear in the user directories.</p>
+                        <PrimaryButton onClick={openCreateModal}>+ Add New Link</PrimaryButton>
                     </div>
 
-                    {/* Links Table */}
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg border border-gray-200">
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200 select-none">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logo</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        {/* Added header space for the drag icon */}
+                                        <th className="px-3 py-3 w-10"></th> 
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Logo</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Title</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Target URL</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {links && links.length > 0 ? links.map((link) => (
-                                        <tr key={link.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {link.image_path ? (
-                                                    <img src={`/storage/${link.image_path}`} alt="logo" className="h-8 w-8 object-contain rounded bg-gray-50 p-1 border" />
-                                                ) : (
-                                                    <span className="text-xs text-gray-400">Auto</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{link.title}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${link.type === 'internal' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-                                                    {link.type.toUpperCase()}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">
-                                                <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{link.url}</a>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {link.is_active ? <span className="text-green-600 font-semibold text-sm">Active</span> : <span className="text-gray-400 font-semibold text-sm">Hidden</span>}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button onClick={() => openEditModal(link)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                                                <button onClick={() => confirmDelete(link)} className="text-red-600 hover:text-red-900">Delete</button>
-                                            </td>
-                                        </tr>
-                                    )) : (
+                                    
+                                    {internalLinks.length > 0 && (
+                                        <>
+                                            <tr className="bg-slate-100 border-t border-slate-200">
+                                                {/* Adjusted colSpan from 5 to 6 to account for the new drag icon column */}
+                                                <td colSpan="6" className="px-6 py-3 text-sm font-bold text-slate-800 uppercase tracking-wide">
+                                                    Internal Systems ({internalLinks.length})
+                                                </td>
+                                            </tr>
+                                            {internalLinks.map(renderRow)}
+                                        </>
+                                    )}
+
+                                    {externalLinks.length > 0 && (
+                                        <>
+                                            <tr className="bg-slate-100 border-t border-slate-200">
+                                                <td colSpan="6" className="px-6 py-3 text-sm font-bold text-slate-800 uppercase tracking-wide">
+                                                    External / Gov Portals ({externalLinks.length})
+                                                </td>
+                                            </tr>
+                                            {externalLinks.map(renderRow)}
+                                        </>
+                                    )}
+
+                                    {links.length === 0 && (
                                         <tr>
-                                            <td colSpan="6" className="px-6 py-4 text-center text-gray-500">No resource links found.</td>
+                                            <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                                                No resource links have been added yet.
+                                            </td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -179,7 +279,6 @@ export default function ResourceLinks({ auth, links }) {
                             <InputError message={errors.url} className="mt-2" />
                         </div>
 
-                        {/* 🟢 NEW IMAGE UPLOAD FIELD 🟢 */}
                         <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
                             <InputLabel htmlFor="image" value="Custom Logo Upload (Optional)" className="font-bold text-gray-700" />
                             <p className="text-xs text-gray-500 mb-2">If left blank, the system will try to automatically fetch the company logo.</p>
@@ -194,7 +293,6 @@ export default function ResourceLinks({ auth, links }) {
                             />
                             <InputError message={errors.image} className="mt-2" />
                             
-                            {/* Show the existing image if we are editing and one exists */}
                             {editingLink && editingLink.image_path && !data.image && (
                                 <div className="mt-3">
                                     <p className="text-xs text-gray-500 mb-1">Current Image:</p>
@@ -212,8 +310,8 @@ export default function ResourceLinks({ auth, links }) {
                         <div>
                             <InputLabel htmlFor="type" value="Directory Type" />
                             <select id="type" className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" value={data.type} onChange={e => setData('type', e.target.value)}>
-                                <option value="internal">Internal Links</option>
-                                <option value="external">External Links</option>
+                                <option value="internal">Internal Systems</option>
+                                <option value="external">External / Gov Portals</option>
                             </select>
                             <InputError message={errors.type} className="mt-2" />
                         </div>
@@ -233,7 +331,6 @@ export default function ResourceLinks({ auth, links }) {
                 </form>
             </Modal>
 
-            {/* Delete Confirmation Modal */}
             <Modal show={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} maxWidth="sm">
                 <div className="p-6">
                     <h2 className="text-lg font-medium text-gray-900 mb-4">Confirm Deletion</h2>
