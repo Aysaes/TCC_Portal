@@ -226,7 +226,7 @@ export default function ResourceLinks({ auth, links }) {
                                             <tr className="bg-slate-100 border-t border-slate-200">
                                                 {/* Adjusted colSpan from 5 to 6 to account for the new drag icon column */}
                                                 <td colSpan="6" className="px-6 py-3 text-sm font-bold text-slate-800 uppercase tracking-wide">
-                                                    Internal Systems ({internalLinks.length})
+                                                    Internal Links ({internalLinks.length})
                                                 </td>
                                             </tr>
                                             {internalLinks.map(renderRow)}
@@ -237,7 +237,7 @@ export default function ResourceLinks({ auth, links }) {
                                         <>
                                             <tr className="bg-slate-100 border-t border-slate-200">
                                                 <td colSpan="6" className="px-6 py-3 text-sm font-bold text-slate-800 uppercase tracking-wide">
-                                                    External / Gov Portals ({externalLinks.length})
+                                                    External Links ({externalLinks.length})
                                                 </td>
                                             </tr>
                                             {externalLinks.map(renderRow)}
@@ -310,8 +310,8 @@ export default function ResourceLinks({ auth, links }) {
                         <div>
                             <InputLabel htmlFor="type" value="Directory Type" />
                             <select id="type" className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" value={data.type} onChange={e => setData('type', e.target.value)}>
-                                <option value="internal">Internal Systems</option>
-                                <option value="external">External / Gov Portals</option>
+                                <option value="internal">Internal Links</option>
+                                <option value="external">External Links</option>
                             </select>
                             <InputError message={errors.type} className="mt-2" />
                         </div>
