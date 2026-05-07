@@ -83,8 +83,15 @@ class ManpowerRequestController extends Controller
                     });
 
                 } elseif ($safeRole === 'operations manager') {
-                    // 🟢 OM: Only Receptionist and TCC Driver
-                    $query->whereIn('name', ['Receptionist']);
+                    // 🟢 OM: Access limited to specific departments only
+                    $query->whereHas('department', function ($q) {
+                        $q->whereIn('name', [
+                            'Veterinarians', 
+                            'Inventory', 
+                            'Clinic Assistants', 
+                            'Housekeeping'
+                        ]); 
+                    });
 
                 } elseif ($safeRole === 'chief vet' || $safeRole === 'chief veterinarian') {
                     // Chief Vet: Veterinarians Dept OR specific TLs
