@@ -10,7 +10,7 @@ return new class extends Migration{
         Schema::create('resource_links', function (Blueprint $table) {
             $table->id();
             $table->string('title');
-            $table->string('url');
+            $table->text('url');
             $table->text('description')->nullable();
             $table->enum('type', ['internal', 'external']);
             $table->boolean('is_active')->default(true);

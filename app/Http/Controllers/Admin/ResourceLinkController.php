@@ -22,7 +22,7 @@ class ResourceLinkController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'url' => 'required|url|max:255',
+            'url' => 'required|url',
             'description' => 'nullable|string',
             'type' => 'required|in:internal,external',
             'is_active' => 'boolean',
@@ -38,7 +38,7 @@ class ResourceLinkController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'url' => 'required|url|max:255',
+            'url' => 'required|url',
             'description' => 'nullable|string',
             'type' => 'required|in:internal,external',
             'is_active' => 'boolean',
